@@ -1,0 +1,27 @@
+name: Architecture rules
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/architecture-check.yml'
+
+jobs:
+  archunit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurer JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Rendre mvnw exécutable
+        run: chmod +x backend/mvnw
+
+      - name: Vérifier les règles d'architecture
+        working-directory: backend
+        run: ./mvnw test -Dtest=ArchitectureTest
