@@ -1,0 +1,11 @@
+target/
+*.class
+*.log
+.mvn/wrapper/maven-wrapper.jar
+.idea/
+*.iml
+.vscode/
+HELP.md
+
+# Ne jamais commiter de clé privée réelle
+src/main/resources/keys/ed25519_private*.pem
