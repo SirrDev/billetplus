@@ -1,0 +1,65 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: billetplus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: billetplus
+      POSTGRES_USER: billetplus
+      POSTGRES_PASSWORD: billetplus_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U billetplus -d billetplus"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: billetplus-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Décommenter une fois le squelette Spring Boot en place (feature/backend-bootstrap)
+  # backend:
+  #   build:
+  #     context: ../backend
+  #     dockerfile: Dockerfile
+  #   container_name: billetplus-backend
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   environment:
+  #     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/billetplus
+  #     SPRING_DATASOURCE_USERNAME: billetplus
+  #     SPRING_DATASOURCE_PASSWORD: billetplus_dev
+  #     SPRING_REDIS_HOST: redis
+  #   ports:
+  #     - "8080:8080"
+
+  # Décommenter une fois le squelette Vite/React en place (feature/web-bootstrap)
+  # web:
+  #   build:
+  #     context: ../web
+  #     dockerfile: Dockerfile.dev
+  #   container_name: billetplus-web
+  #   ports:
+  #     - "5173:5173"
+  #   environment:
+  #     VITE_API_URL: http://localhost:8080
+
+volumes:
+  postgres_data:
