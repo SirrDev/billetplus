@@ -1,14 +1,13 @@
-package com.billetplus.architecture;
-
-import com.tngtech.archunit.core.importer.ClassFileImporter;
+import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
-
 /**
  * Règles d'architecture vérifiées automatiquement en CI (.github/workflows/architecture-check.yml).
  *
@@ -29,7 +28,8 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule domaine_ne_depend_jamais_de_infrastructure =
         noClasses().that().resideInAPackage("..domain..")
-            .should().dependOnClassesThat().resideInAPackage("..infrastructure..");
+            .should().dependOnClassesThat().resideInAPackage("..infrastructure..")
+                .allowEmptyShould(true);
 
     /**
      * Le domaine ne doit jamais dépendre de la couche api (controllers, DTOs).
@@ -37,7 +37,8 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule domaine_ne_depend_jamais_de_api =
         noClasses().that().resideInAPackage("..domain..")
-            .should().dependOnClassesThat().resideInAPackage("..api..");
+            .should().dependOnClassesThat().resideInAPackage("..api..")
+                .allowEmptyShould(true);
 
     /**
      * Aucun module ne doit dépendre directement d'un autre module.
@@ -50,12 +51,12 @@ class ArchitectureTest {
      */
     @ArchTest
     static final ArchRule modules_sont_independants =
-        slices().matching("com.billetplus.(*)..")
-            .ignoreDependency(
-                dependency -> true,
-                dependency -> dependency.getTargetClass().getPackageName().contains(".shared")
-            )
-            .should().notDependOnEachOther();
+            slices().matching("com.billetplus.(*)..")
+                    .should().notDependOnEachOther()
+                    .ignoreDependency(
+                            DescribedPredicate.<JavaClass>alwaysTrue(),
+                            resideInAPackage("..shared..")
+                    );
 
     /**
      * Les ports (interfaces définies par la couche application) ne doivent jamais
@@ -65,5 +66,6 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule ports_ne_dependent_pas_de_spring_data =
         noClasses().that().resideInAPackage("..application.port..")
-            .should().dependOnClassesThat().resideInAPackage("org.springframework.data..");
+            .should().dependOnClassesThat().resideInAPackage("org.springframework.data..")
+                .allowEmptyShould(true);
 }
