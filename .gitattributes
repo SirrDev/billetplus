@@ -1,0 +1,18 @@
+# Normalise les fins de ligne indépendamment de l'OS du contributeur.
+# Évite le bruit de diff (LF vs CRLF) dans les PR entre Dev A (Windows) et Dev B.
+
+* text=auto eol=lf
+
+# Les scripts shell doivent impérativement rester en LF, même générés sous Windows —
+# un CRLF dans un script bash le casse silencieusement en environnement Linux/CI.
+*.sh text eol=lf
+
+# Le wrapper Maven est un script shell malgré l'absence d'extension .sh
+mvnw text eol=lf
+mvnw.cmd text eol=crlf
+
+# Binaires — jamais de conversion
+*.png binary
+*.jpg binary
+*.jar binary
+*.pem binary
