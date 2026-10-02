@@ -1,3 +1,5 @@
+package com.billetplus.architecture;
+
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -8,6 +10,7 @@ import com.tngtech.archunit.lang.ArchRule;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+
 /**
  * Règles d'architecture vérifiées automatiquement en CI (.github/workflows/architecture-check.yml).
  *
@@ -23,13 +26,12 @@ class ArchitectureTest {
 
     /**
      * Le domaine ne doit jamais dépendre de l'infrastructure (JPA, HTTP, clients externes).
-     * S'applique en priorité aux modules de niveau 3 (tickets, orders) — voir ADR 0002.
+     * Vérifiée réellement depuis feature/backend-auth-user-entity (auth/domain/ existe).
      */
     @ArchTest
     static final ArchRule domaine_ne_depend_jamais_de_infrastructure =
         noClasses().that().resideInAPackage("..domain..")
-            .should().dependOnClassesThat().resideInAPackage("..infrastructure..")
-                .allowEmptyShould(true);
+            .should().dependOnClassesThat().resideInAPackage("..infrastructure..");
 
     /**
      * Le domaine ne doit jamais dépendre de la couche api (controllers, DTOs).
@@ -37,8 +39,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule domaine_ne_depend_jamais_de_api =
         noClasses().that().resideInAPackage("..domain..")
-            .should().dependOnClassesThat().resideInAPackage("..api..")
-                .allowEmptyShould(true);
+            .should().dependOnClassesThat().resideInAPackage("..api..");
 
     /**
      * Aucun module ne doit dépendre directement d'un autre module.
@@ -51,21 +52,25 @@ class ArchitectureTest {
      */
     @ArchTest
     static final ArchRule modules_sont_independants =
-            slices().matching("com.billetplus.(*)..")
-                    .should().notDependOnEachOther()
-                    .ignoreDependency(
-                            DescribedPredicate.<JavaClass>alwaysTrue(),
-                            resideInAPackage("..shared..")
-                    );
+        slices().matching("com.billetplus.(*)..")
+            .should().notDependOnEachOther()
+            .ignoreDependency(
+                DescribedPredicate.<JavaClass>alwaysTrue(),
+                resideInAPackage("..shared..")
+            );
 
     /**
-     * Les ports (interfaces définies par la couche application) ne doivent jamais
-     * exposer de type Spring Data — sinon la fuite d'infrastructure remonte
-     * jusqu'à l'application, pas seulement au domaine.
+     * Les ports (interfaces définies par la couche application, modules niveau 3
+     * type tickets/orders) ne doivent jamais exposer de type Spring Data — sinon
+     * la fuite d'infrastructure remonte jusqu'à l'application, pas seulement au domaine.
+     *
+     * Ne s'applique pas encore réellement : aucun module niveau 3 (application/port/)
+     * n'existe pour l'instant — auth est niveau 2 (JPA-as-domain), sans sous-package port/.
+     * À retirer dès feature/backend-tickets-domain-model ou feature/backend-orders-domain-model.
      */
     @ArchTest
     static final ArchRule ports_ne_dependent_pas_de_spring_data =
-        noClasses().that().resideInAPackage("..application.port..")
-            .should().dependOnClassesThat().resideInAPackage("org.springframework.data..")
-                .allowEmptyShould(true);
+        ((ArchRule) noClasses().that().resideInAPackage("..application.port..")
+            .should().dependOnClassesThat().resideInAPackage("org.springframework.data.."))
+            .allowEmptyShould(true);
 }
