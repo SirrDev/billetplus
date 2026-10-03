@@ -4,9 +4,11 @@ import com.billetplus.auth.api.dto.*;
 import com.billetplus.auth.application.AuthService;
 import com.billetplus.auth.domain.User;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -44,5 +46,12 @@ public class AuthController {
             request.toRole()
         );
         return ResponseEntity.created(java.net.URI.create("/api/users/" + user.getId())).build();
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<MeResponse> me(Authentication authentication) {
+        UUID userId = (UUID) authentication.getPrincipal();
+        User user = authService.getCurrentUser(userId);
+        return ResponseEntity.ok(MeResponse.from(user));
     }
 }
