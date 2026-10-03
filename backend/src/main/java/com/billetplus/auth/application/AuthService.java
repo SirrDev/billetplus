@@ -73,6 +73,12 @@ public class AuthService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public User getCurrentUser(UUID userId) {
+        return userRepository.findById(userId)
+            .orElseThrow(() -> new java.util.NoSuchElementException("Utilisateur introuvable"));
+    }
+
     @Transactional
     public User register(String email, String motDePasseClair, String nomComplet, Role role) {
         if (userRepository.existsByEmail(email)) {

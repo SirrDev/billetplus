@@ -31,7 +31,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable()) // API stateless consommée par la PWA, pas de session cookie
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
+                // Seuls login/refresh/register sont publics — /me exige un token valide.
+                .requestMatchers("/api/auth/login", "/api/auth/refresh", "/api/auth/register").permitAll()
                 .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
                 .anyRequest().authenticated()
