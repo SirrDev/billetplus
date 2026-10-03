@@ -14,7 +14,6 @@ import java.util.UUID;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(nullable = false, unique = true)
@@ -44,6 +43,7 @@ public class User {
         if (motDePasseHash == null || motDePasseHash.isBlank()) {
             throw new IllegalArgumentException("Le mot de passe est obligatoire");
         }
+        this.id = UUID.randomUUID();
         this.email = email.toLowerCase().trim();
         this.motDePasseHash = motDePasseHash;
         this.nomComplet = nomComplet;
