@@ -64,13 +64,11 @@ class ArchitectureTest {
      * type tickets/orders) ne doivent jamais exposer de type Spring Data — sinon
      * la fuite d'infrastructure remonte jusqu'à l'application, pas seulement au domaine.
      *
-     * Ne s'applique pas encore réellement : aucun module niveau 3 (application/port/)
-     * n'existe pour l'instant — auth est niveau 2 (JPA-as-domain), sans sous-package port/.
-     * À retirer dès feature/backend-tickets-domain-model ou feature/backend-orders-domain-model.
+     * Vérifiée réellement depuis feature/backend-tickets-ed25519-signer
+     * (tickets/application/port/QRSigner.java existe).
      */
     @ArchTest
     static final ArchRule ports_ne_dependent_pas_de_spring_data =
-        ((ArchRule) noClasses().that().resideInAPackage("..application.port..")
-            .should().dependOnClassesThat().resideInAPackage("org.springframework.data.."))
-            .allowEmptyShould(true);
+        noClasses().that().resideInAPackage("..application.port..")
+            .should().dependOnClassesThat().resideInAPackage("org.springframework.data..");
 }
