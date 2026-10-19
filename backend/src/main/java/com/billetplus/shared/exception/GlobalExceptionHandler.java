@@ -2,7 +2,11 @@ package com.billetplus.shared.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -10,11 +14,20 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
  * Traduction centralisée des exceptions en réponses HTTP. Pur détail
  * d'infrastructure transverse — aucune règle métier ici, cohérent avec
  * la discipline shared/ posée dans ADR 0001.
+ *
+ * Correspondances :
+ * BadCredentials → 401, IllegalArgument → 400, NoSuchElement → 404,
+ * BusinessConflict → 409, AccessDenied → 401 (anonyme) ou 403 (connecté),
+ * MethodArgumentNotValid → 400.
+ *
+ * Une IllegalStateException ordinaire n'a volontairement PAS de handler :
+ * c'est un défaut interne, qui doit rester une erreur 500.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -29,17 +42,37 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
-    @ExceptionHandler(java.util.NoSuchElementException.class)
-    public ResponseEntity<Map<String, Object>> handleNotFound(java.util.NoSuchElementException e) {
+    @ExceptionHandler(NoSuchElementException.class)
+    public ResponseEntity<Map<String, Object>> handleNotFound(NoSuchElementException e) {
         return buildResponse(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(BusinessConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleBusinessConflict(BusinessConflictException e) {
+        return buildResponse(HttpStatus.CONFLICT, e.getMessage());
+    }
+
+    /**
+     * Un accès refusé à un visiteur non authentifié est un 401 (« identifie-toi »),
+     * pas un 403 (« tu es identifié mais sans droit »). Un @PreAuthorize refusé
+     * lève AuthorizationDeniedException, sous-classe d'AccessDeniedException :
+     * ce handler la couvre aussi.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException e) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean anonyme = auth == null || auth instanceof AnonymousAuthenticationToken;
+        return anonyme
+                ? buildResponse(HttpStatus.UNAUTHORIZED, "Authentification requise")
+                : buildResponse(HttpStatus.FORBIDDEN, "Accès refusé");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
-            .map(err -> err.getField() + ": " + err.getDefaultMessage())
-            .reduce((a, b) -> a + "; " + b)
-            .orElse("Requête invalide");
+                .map(err -> err.getField() + ": " + err.getDefaultMessage())
+                .reduce((a, b) -> a + "; " + b)
+                .orElse("Requête invalide");
         return buildResponse(HttpStatus.BAD_REQUEST, message);
     }
 
