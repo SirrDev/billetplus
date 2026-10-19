@@ -1,5 +1,6 @@
 package com.billetplus.events.domain;
 
+import com.billetplus.shared.exception.BusinessConflictException;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -78,22 +79,41 @@ public class Event {
         this.creeLe = Instant.now();
     }
 
+    /**
+     * @throws BusinessConflictException si l'événement n'est pas en brouillon (traduit en HTTP 409)
+     */
     public void publier() {
         if (status != EventStatus.BROUILLON) {
-            throw new IllegalStateException("Seul un événement en brouillon peut être publié");
+            throw new BusinessConflictException("Seul un événement en brouillon peut être publié");
         }
         this.status = EventStatus.PUBLIE;
     }
 
+    /**
+     * @throws BusinessConflictException si l'événement est déjà terminé (traduit en HTTP 409)
+     */
     public void annuler() {
         if (status == EventStatus.TERMINE) {
-            throw new IllegalStateException("Impossible d'annuler un événement déjà terminé");
+            throw new BusinessConflictException("Impossible d'annuler un événement déjà terminé");
         }
         this.status = EventStatus.ANNULE;
     }
 
     public boolean estPublie() {
         return status == EventStatus.PUBLIE;
+    }
+
+    /**
+     * Règle de visibilité : un brouillon n'est visible que par son organisateur.
+     * Un événement publié, annulé ou terminé est public (les acheteurs doivent
+     * pouvoir constater une annulation).
+     *
+     * @param viewerId identifiant du visiteur, ou null s'il n'est pas connecté
+     */
+    public boolean estVisiblePar(UUID viewerId) {
+        // organizerId n'est jamais null (garanti par le constructeur et la colonne NOT NULL) ;
+        // organizerId.equals(null) vaut false, ce qui couvre aussi le visiteur anonyme.
+        return status != EventStatus.BROUILLON || organizerId.equals(viewerId);
     }
 
     public UUID getId() {
