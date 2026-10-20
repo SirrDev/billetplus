@@ -79,13 +79,26 @@ public class AuthService {
             .orElseThrow(() -> new java.util.NoSuchElementException("Utilisateur introuvable"));
     }
 
+    /**
+     * Inscription publique (route accessible sans jeton) : le seul rôle qu'un
+     * visiteur anonyme peut obtenir est ORGANISATEUR.
+     *
+     * Le rôle est volontairement fixé ICI et non fourni par l'appelant : aucune
+     * méthode publique de ce service n'accepte un Role en paramètre, donc aucune
+     * route ne peut, par erreur, laisser un client s'attribuer ADMIN ou AGENT.
+     * Les comptes AGENT (créés par un organisateur) et ADMIN (créé hors API) auront
+     * chacun leur propre cas d'usage, avec son propre contrôle d'accès, quand le
+     * besoin se présentera — voir HANDOFF.md, section 7.
+     *
+     * @throws IllegalArgumentException si un compte existe déjà avec cet email (traduit en HTTP 400)
+     */
     @Transactional
-    public User register(String email, String motDePasseClair, String nomComplet, Role role) {
+    public User registerOrganisateur(String email, String motDePasseClair, String nomComplet) {
         if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Un compte existe déjà avec cet email");
         }
         String hash = passwordEncoder.encode(motDePasseClair);
-        User user = new User(email, hash, nomComplet, role);
+        User user = new User(email, hash, nomComplet, Role.ORGANISATEUR);
         return userRepository.save(user);
     }
 }
