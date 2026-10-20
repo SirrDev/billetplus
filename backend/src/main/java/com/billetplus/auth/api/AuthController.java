@@ -33,17 +33,19 @@ public class AuthController {
     }
 
     /**
-     * Endpoint minimal pour créer un compte — suffisant au MVP (pas de
-     * validation email, pas d'auto-inscription publique restreinte par rôle).
-     * À durcir en V2 si l'auto-inscription publique est ouverte aux acheteurs.
+     * Inscription publique (route sans jeton, voir SecurityConfig) : crée toujours un
+     * compte ORGANISATEUR. Le client ne peut pas choisir son rôle — RegisterRequest
+     * n'a pas de champ « role » — donc il ne peut pas s'attribuer ADMIN ou AGENT.
+     *
+     * Minimal au MVP : pas de validation d'email. À durcir en V2 si l'auto-inscription
+     * est ouverte aux acheteurs (rôle dédié, vérification de l'adresse).
      */
     @PostMapping("/register")
     public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequest request) {
-        User user = authService.register(
+        User user = authService.registerOrganisateur(
             request.email(),
             request.motDePasse(),
-            request.nomComplet(),
-            request.toRole()
+            request.nomComplet()
         );
         return ResponseEntity.created(java.net.URI.create("/api/users/" + user.getId())).build();
     }
