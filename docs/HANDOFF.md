@@ -1,6 +1,6 @@
 # Document de passation — Billet+
 
-Dernière mise à jour : 30 octobre 2026, après les branches n° 6 et 7 de l'inventaire (`feature/backend-orders-domain-model` : **ADR 0006 achat sans compte**, domaine `orders` niveau 3, migration V8). Avant elles, la branche n° 5 (`feature/backend-events-public-listing` : **liste publique et recherche d'événements**, `GET /api/events`) et les **décisions de SirrDev : (A) achat sans compte, (B) remboursement en V2** (section 11.1). Avant elle, la branche n° 4 (`feature/backend-tests-http-routes-existantes` : tests HTTP des routes anciennes, **404 pour un non-propriétaire sur un brouillon**). Avant elle, trois merges locaux de Claude Code : **catégories de billets** (`232d58e`), **comptes `AGENT` et affectation** (`24dc753`, migrations V6 et V7), **route de scan** (`fa562bc`) ; CI verte sur `main` pour les deux premiers selon SirrDev. Avant eux, deux merges faits en local par Claude Code (sans PR, faute de `gh`) : `feature/backend-inter-module-event-status` (**ADR 0005** : un événement annulé annule ses billets et ferme la vente, une réservation sur un brouillon répond 404) et `feature/backend-tests-contexte-complet` (premier test du contexte complet). Avant eux, la PR #26 `feature/backend-tickets-validate-scan-usecase` (contrôle d'un billet à l'entrée : signature Ed25519, cinq issues, double scan simultané rejeté). Avant elle, la PR #24 `fix/infra-localhost-only` (PostgreSQL et Redis de dev publiés sur `127.0.0.1` seulement, bruit des repositories Redis coupé), et la PR #22 `feature/backend-tickets-redis-seat-lock` (réservation temporaire des places dans Redis pendant le paiement, ADR 0003), suivie d'un démarrage réel confirmé (base en V5). Plus tôt le même jour : PR #20 `feature/backend-tickets-quota-lock` (garde d'idempotence atomique des émissions, migration V5, 101 tests sur le runner, 0 ignoré), PR #18 `fix/ci-restore-backend-workflows` (**la CI backend et le job ArchUnit tournent de nouveau** sur les PR), PR #16 `feature/backend-tickets-jpa-mapper` (persistance JPA niveau 3 du module `tickets`, migration V4, `IssueTicketUseCase`), PR #17 (HANDOFF), PR #14 (alignement du dépôt) et PR #15 (configuration Claude Code)). Ce document complète le contexte du projet (ADR, dépôt GitHub synchronisé) pour reprendre le travail sans rien réexpliquer. En cas de doute entre ce document et le code, **le code du dépôt fait foi** — mais attention : la synchronisation GitHub ne voit que les fichiers **commités, poussés et mergés**, et elle n'est rafraîchie qu'après un clic sur « Sync now » dans le projet.
+Dernière mise à jour : 30 octobre 2026, après la branche n° 8 de l'inventaire (`feature/backend-orders-create-usecase` : **création d'une commande sans compte avec réservation des places**, `POST /api/orders` et `GET /api/orders/{id}`). Avant elle, les branches n° 6 et 7 (`feature/backend-orders-domain-model` : **ADR 0006 achat sans compte**, domaine `orders` niveau 3, migration V8). Avant elles, la branche n° 5 (`feature/backend-events-public-listing` : **liste publique et recherche d'événements**, `GET /api/events`) et les **décisions de SirrDev : (A) achat sans compte, (B) remboursement en V2** (section 11.1). Avant elle, la branche n° 4 (`feature/backend-tests-http-routes-existantes` : tests HTTP des routes anciennes, **404 pour un non-propriétaire sur un brouillon**). Avant elle, trois merges locaux de Claude Code : **catégories de billets** (`232d58e`), **comptes `AGENT` et affectation** (`24dc753`, migrations V6 et V7), **route de scan** (`fa562bc`) ; CI verte sur `main` pour les deux premiers selon SirrDev. Avant eux, deux merges faits en local par Claude Code (sans PR, faute de `gh`) : `feature/backend-inter-module-event-status` (**ADR 0005** : un événement annulé annule ses billets et ferme la vente, une réservation sur un brouillon répond 404) et `feature/backend-tests-contexte-complet` (premier test du contexte complet). Avant eux, la PR #26 `feature/backend-tickets-validate-scan-usecase` (contrôle d'un billet à l'entrée : signature Ed25519, cinq issues, double scan simultané rejeté). Avant elle, la PR #24 `fix/infra-localhost-only` (PostgreSQL et Redis de dev publiés sur `127.0.0.1` seulement, bruit des repositories Redis coupé), et la PR #22 `feature/backend-tickets-redis-seat-lock` (réservation temporaire des places dans Redis pendant le paiement, ADR 0003), suivie d'un démarrage réel confirmé (base en V5). Plus tôt le même jour : PR #20 `feature/backend-tickets-quota-lock` (garde d'idempotence atomique des émissions, migration V5, 101 tests sur le runner, 0 ignoré), PR #18 `fix/ci-restore-backend-workflows` (**la CI backend et le job ArchUnit tournent de nouveau** sur les PR), PR #16 `feature/backend-tickets-jpa-mapper` (persistance JPA niveau 3 du module `tickets`, migration V4, `IssueTicketUseCase`), PR #17 (HANDOFF), PR #14 (alignement du dépôt) et PR #15 (configuration Claude Code)). Ce document complète le contexte du projet (ADR, dépôt GitHub synchronisé) pour reprendre le travail sans rien réexpliquer. En cas de doute entre ce document et le code, **le code du dépôt fait foi** — mais attention : la synchronisation GitHub ne voit que les fichiers **commités, poussés et mergés**, et elle n'est rafraîchie qu'après un clic sur « Sync now » dans le projet.
 
 ---
 
@@ -84,7 +84,8 @@ Docker (PostGIS + Redis), squelette Spring Boot, squelette PWA, CI GitHub Action
 | — | `feature/backend-tickets-scan-route` | ✅ Mergée le 30/10/2026, en local (merge `fa562bc` ; commits `2ca151f`, `b64368e`) | Route de contrôle d'entrée, rejeu d'un scan simultané (section 4.12). CI verte selon SirrDev |
 | — | `feature/backend-tests-http-routes-existantes` | ✅ Mergée le 30/10/2026, en local (voir `git log --merges`) | 12 tests HTTP des routes `/api/auth`, `/api/events`, `/api/venues` avec de **vrais jetons JWT** ; base commune `ContexteCompletTestBase` (contexte partagé) ; non-propriétaire : 404 sur un brouillon, 403 sur un événement visible (section 4.13). CI verte selon SirrDev |
 | — | `feature/backend-events-public-listing` | ✅ Mergée le 30/10/2026, en local (voir `git log --merges`) | `GET /api/events?q=&page=&taille=` public : publiés, à venir ou en cours, recherche par titre (index trigramme), pagination bornée à 50 (section 4.14). CI verte selon SirrDev |
-| — | `feature/backend-orders-domain-model` | ✅ Mergée le 30/10/2026, en local (voir `git log --merges`) | ADR 0006, domaine `orders` (commande, lignes, téléphone, jeton d'accès), migration V8, persistance JPA niveau 3 (section 4.15). Aucune route. *CI à confirmer* |
+| — | `feature/backend-orders-domain-model` | ✅ Mergée le 30/10/2026, en local (voir `git log --merges`) | ADR 0006, domaine `orders` (commande, lignes, téléphone, jeton d'accès), migration V8, persistance JPA niveau 3 (section 4.15). Aucune route. CI verte selon SirrDev |
+| — | `feature/backend-orders-create-usecase` | ✅ Mergée le 30/10/2026, en local (voir `git log --merges`) | Port public `tickets.api.publique.PlacesEnVente`, `CreateOrderUseCase` (commande et réservations dans une transaction, places rendues si elle échoue), `ConsulterCommandeUseCase`, routes publiques `/api/orders` (section 4.16). *CI à confirmer* |
 | 12–17 | `tickets-pdf-export`, `orders-domain-model`, `orders-create-usecase`, `orders-wave-gateway`, `orders-confirm-payment-usecase`, `rate-limiting` | ⬜ | |
 
 Branches volontairement supprimées (ne pas recréer) : `backend-auth-rbac-roles` (absorbée dans auth-tokens), `backend-events-categories-quotas` (redondante : `TicketCategory` vit dans `tickets/domain`).
@@ -113,6 +114,8 @@ Squelette fonctionnel, aucune branche `feature/web-*` commencée. Le `docker-com
 | `POST /api/events` | `ORGANISATEUR` | l'organisateur vient du jeton, jamais du corps de la requête |
 | `GET /api/events/{id}` | public, **sensible à l'identité** | un brouillon n'est visible que par son organisateur, sinon **404** |
 | `GET /api/events?q=&page=&taille=` | public | liste publique paginée (section 4.14) |
+| `POST /api/orders` | public | achat sans compte : crée la commande, réserve les places, renvoie **une seule fois** le jeton d'accès (section 4.16) |
+| `GET /api/orders/{id}` | public, **jeton dans l'en-tête `X-Jeton-Commande`** | 404 identique pour une commande inconnue ou un jeton absent ou faux |
 | `GET /api/events/mine` | `ORGANISATEUR` | |
 | `POST /api/events/{id}/publier` | `ORGANISATEUR` **propriétaire** | 409 si l'événement n'est plus en brouillon |
 | `POST /api/events/{id}/annuler` | `ORGANISATEUR` **propriétaire** | 409 si l'événement est `TERMINE` |
@@ -136,7 +139,7 @@ Pourquoi `/error` : sans cette règle, Spring Security 6 soumet à l'authentific
 
 ### 4.4 Tests
 
-**311 tests, 0 échec, 0 ignoré, mesurés le 30/10/2026 (`./mvnw clean verify`, Docker démarré)**, dont 92 tests d'intégration Testcontainers : 29 PostGIS (`TicketPersistenceIntegrationTest`), 9 PostGIS (`OrderPersistenceIntegrationTest`), 13 Redis (`RedisSeatReservationStoreIntegrationTest`), et **41 sur le contexte complet**, qui partagent un seul contexte Spring (`ContexteCompletIntegrationTest` 24, `RoutesExistantesHttpIntegrationTest` 12, `ListePubliqueEvenementsHttpIntegrationTest` 5, dont 36 par HTTP). **7 règles ArchUnit.** *(Historique : 55 le 20/10 ; de 92 à 196 le 29/10 ; 222, 234, 247, 259 puis 311 le 30/10.)*
+**330 tests, 0 échec, 0 ignoré, mesurés le 30/10/2026 (`./mvnw clean verify`, Docker démarré)**, dont 98 tests d'intégration Testcontainers : 29 PostGIS (`TicketPersistenceIntegrationTest`), 9 PostGIS (`OrderPersistenceIntegrationTest`), 13 Redis (`RedisSeatReservationStoreIntegrationTest`), et **47 sur le contexte complet**, qui partagent un seul contexte Spring (`ContexteCompletIntegrationTest` 24, `RoutesExistantesHttpIntegrationTest` 12, `CommandesHttpIntegrationTest` 6, `ListePubliqueEvenementsHttpIntegrationTest` 5, dont 42 par HTTP). **7 règles ArchUnit.** *(Historique : 55 le 20/10 ; de 92 à 196 le 29/10 ; 222, 234, 247, 259, 311 puis 330 le 30/10.)*
 
 ⚠️ Sans Docker, les 13 tests d'intégration sont **ignorés** (`disabledWithoutDocker`) et la suite reste verte : toujours lire la ligne `Skipped` avant d'annoncer un résultat.
 
@@ -434,6 +437,21 @@ Les scénarios manuels de la section 6 restent valables, mais ils ne sont plus l
 
 **Tests** : `OrderTest` (14), `NumeroTelephoneTest` (21), `JetonAccesTest` (5), `MoneyTest` (3), `OrderPersistenceIntegrationTest` (9, dont deux transactions qui se chevauchent : la seconde échoue en `OptimisticLockingFailureException`).
 
+### 4.16 Création et lecture d'une commande sans compte (branche n° 8)
+
+- **Port public `tickets.api.publique.PlacesEnVente`** (ADR 0005), implémenté par `PlacesEnVenteService` (package-private, dans `tickets`) :
+  - `prixSiEnVente(eventId, categoryId)` : vide si la catégorie est inconnue, appartient à un autre événement, ou si l'événement est fermé à la vente ;
+  - `reserver` et `liberer` délèguent à `ReserveSeatsUseCase` et `ReleaseSeatsUseCase`.
+  `orders` n'importe rien d'autre de `tickets`, et n'attrape aucune exception de son domaine.
+- **`CreateOrderUseCase`** (`@Transactional`) : téléphone normalisé, au plus 10 lignes (vérifié **avant** toute lecture), prix lus côté serveur (404 identique pour une catégorie inconnue, d'un autre événement ou d'un événement fermé), limite par téléphone, puis `Order.creer`, `save`, et réservation de chaque catégorie **dans l'ordre croissant de `categoryId`**.
+  - **Une seule transaction** : si une réservation échoue, l'exception annule la transaction, donc la commande n'existe pas en base. Les places déjà réservées sont rendues par un `afterCompletion` (statut autre que `COMMITTED`), qui couvre aussi un échec de la validation. Un échec de libération est journalisé (`WARN`) sans interrompre les autres, et la réservation expire d'elle-même.
+  - Sonde de régression faite : sans le rendu des places, `CommandesHttpIntegrationTest.si_une_categorie_manque_de_places_rien_n_est_garde_de_la_commande` échoue (409 au lieu de 201).
+- **Configuration** (`application.yml`) : `billetplus.commande.delai-paiement: 4m`, qui doit être **strictement inférieur** à `billetplus.reservation.duree` (5 min). Sinon, **l'application refuse de démarrer** (contrôle dans le constructeur). `billetplus.commande.max-en-attente-par-telephone: 3`, par événement, compté sur les commandes en attente encore dans leur délai.
+- **`ConsulterCommandeUseCase`** : commande inconnue, jeton absent ou faux → la même `NoSuchElementException` « Commande introuvable » (404).
+- **Routes** (section 4.1), publiques dans `SecurityConfig` (`POST /api/orders`, `GET /api/orders/*`). Réponses en **`Cache-Control: no-store`**. Le jeton circule dans l'en-tête `X-Jeton-Commande`, jamais dans l'URL. `CommandeDto` n'expose ni le téléphone ni l'empreinte.
+- **Validation** : `CreateOrderRequest` (`telephone` `@Size(max = 30)` avant normalisation en 13 caractères, 1 à 10 lignes, quantité de 1 à 20) ; catégorie en double ou téléphone invalide → 400 (`IllegalArgumentException` du domaine).
+- **Tests** : `CreateOrderUseCaseTest` (8, synchronisation de transaction déclenchée à la main), `ConsulterCommandeUseCaseTest` (2), `PlacesEnVenteServiceTest` (3), `CommandesHttpIntegrationTest` (6, vrais PostgreSQL et Redis).
+
 ## 5. Workflow de livraison d'une branche (procédure rodée)
 
 Chaque bloc est **autonome** : chemins complets, **aucune variable définie dans un bloc précédent** (une variable `$main` définie plus haut n'existe pas dans une nouvelle session PowerShell et donne `Invalid path '/auth'`). Depuis `backend/` :
@@ -626,6 +644,8 @@ Test-Inscription
 - ~~Pas de liste publique d'événements ni de recherche~~ : **résolu** par la branche n° 5 (section 4.14). Restent : **recherche insensible aux accents** (`unaccent` et un index adapté, à faire si le besoin se confirme), recherche par artiste, lieu ou date, et recherche géographique (PostGIS non mappé).
 - **Lieux** : tout organisateur peut créer des lieux globaux, sans propriétaire ni détection de doublon (acceptable au MVP). `VenueDto.seatingPlan` est une `String` sérialisée telle quelle (aucun endpoint ne la définit encore) : à revoir quand le plan de salle sera construit.
 - **`EventDto.organizerId`** est exposé publiquement par `GET /api/events/{id}` : identifiant interne du module `auth`, non secret mais à retirer si le front n'en a pas besoin. *(La liste publique, elle, ne l'expose pas : `EvenementPublicDto`, section 4.14.)*
+- **`POST /api/orders` est public et sans limitation par IP** (branche n° 8) : la limite par téléphone (3 commandes en attente par événement) est souple. Deux créations simultanées peuvent la dépasser, et des numéros inventés la contournent. Tant que `rate-limiting` (n° 14) n'est pas fait, un script peut bloquer les places d'un événement par vagues de 4 minutes. **À faire avant l'ouverture publique de la billetterie.**
+- **Commande gratuite** : une catégorie à 0 FCFA donne une commande de 0 FCFA, que Wave ne pourra pas encaisser. La branche de paiement devra la confirmer directement, ou la refuser.
 - **Énumération d'emails** : `POST /api/auth/register` répond 400 « Un compte existe déjà avec cet email », ce qui permet de tester l'existence d'un compte. Risque faible au MVP ; à revoir avec l'ouverture de l'inscription aux acheteurs (V2) et le rate limiting (branche 17).
 - ~~Tests HTTP partiels~~ : **résolu** par la branche n° 4. 31 tests HTTP couvrent désormais toutes les routes (section 4.13). Les scénarios manuels de la section 6 restent un complément.
 - ~~Un autre organisateur reçoit 403, et non 404, sur l'événement brouillon de quelqu'un d'autre~~ : **résolu** (branche n° 4). 404 sur un brouillon, 403 sur un événement visible (section 4.13).
@@ -754,7 +774,7 @@ Test-Inscription
 
 ## 11. Prochaine étape précise
 
-**Avant de commencer** : `git switch main` puis `git pull` (le `main` local doit être sur `2f126a9` ou plus récent), puis « Sync now » dans le projet. Docker démarré, sinon les 92 tests d'intégration sont ignorés en local (en CI, l'étape « Refuser les tests ignorés » ferait échouer le run).
+**Avant de commencer** : `git switch main` puis `git pull` (le `main` local doit être sur `2f126a9` ou plus récent), puis « Sync now » dans le projet. Docker démarré, sinon les 98 tests d'intégration sont ignorés en local (en CI, l'étape « Refuser les tests ignorés » ferait échouer le run).
 
 **Mode de travail depuis le 29/10/2026 au soir** : SirrDev a autorisé Claude Code à coder, tester, relire, commiter, pousser **et merger** lui-même. Faute de `gh` (non installé) et parce que le dépôt est privé, les merges se font **en local** (`git merge --no-ff`, puis `git push origin main`), sans PR. Avant chaque merge, Claude Code lance la commande exacte de la CI (`./mvnw clean verify`), puis le contrôle des tests ignorés. La CI tourne sur le push de `main`, mais **seul SirrDev peut en voir le résultat**. Installer `gh` (`winget install GitHub.cli`, puis `gh auth login`) permettrait de revenir aux PR et de lire la CI.
 
@@ -771,7 +791,7 @@ Ordre proposé, du plus bloquant au moins bloquant. **(P)** = branche du plan in
 | 5 | ~~**Liste publique et recherche** d'événements~~ ✅ (section 4.14) | H | — | moyenne |
 | 6 | ~~**Identité de l'acheteur** : achat sans compte, ADR 0006~~ ✅ (section 4.15) | H | ✅ décision A | moyenne |
 | 7 | ~~`orders-domain-model`~~ ✅ (section 4.15) | P | 6 | moyenne |
-| 8 | `orders-create-usecase` (réserve les places : `ReserveSeatsUseCase`) | P | 7 | moyenne |
+| 8 | ~~`orders-create-usecase`~~ ✅ (section 4.16) | P | 7 | moyenne |
 | 9 | `orders-wave-gateway` | P | 7 | lourde |
 | 10 | `orders-confirm-payment-usecase` (webhook, idempotence à la frontière, `IssueTicketUseCase`) | P | 8, 9 | lourde |
 | 11 | ~~**Remboursement**~~ → **V2** (décision B). Au MVP : statut « payé sans billet » et liste pour l'administrateur, inclus dans la n° 10 | H | 10 | courte |
@@ -787,21 +807,24 @@ Soit **16 branches**, plus la mise à jour du HANDOFF après chaque lot. Selon l
 - **(A) Identité de l'acheteur : achat sans compte.** L'acheteur donne son numéro de téléphone (Wave) ; il reçoit ses billets par un lien secret. Pas de rôle acheteur ni d'inscription ouverte au MVP. Conséquences : section 7, « Révisions imposées par la décision (A) ».
 - **(B) Remboursement : en V2.** Pour l'événement pilote, procédure manuelle, à partir de la liste des commandes « payé sans billet » et de celles d'un événement annulé, que `orders` doit fournir.
 
-### 11.2 Prochaine branche : `feature/backend-orders-create-usecase` (n° 8)
+### 11.2 Prochaine branche : `feature/backend-orders-wave-gateway` (n° 9)
 
-**Objectif** : la création d'une commande sans compte, qui **réserve les places** avant tout paiement, et sa route publique.
+**Objectif** : ouvrir une session de paiement Wave pour une commande en attente, derrière un port `orders.application.port` (adaptateur HTTP dans `orders.infrastructure`).
 
-**Pistes** *(non actées, à valider avec le plan)* :
-- **port public du module `tickets`** (ADR 0005), dans `tickets.api.publique` (des interfaces seulement, 6ᵉ règle ArchUnit) : lire une catégorie (événement, prix) et réserver ou libérer des places. Implémentation dans `tickets`, qui délègue à `ReserveSeatsUseCase` et `ReleaseSeatsUseCase`. `orders` n'importe rien d'autre de `tickets` ;
-- `CreateOrderUseCase` : catégories toutes du même événement, événement ouvert à la vente (`StatutEvenements`), prix lus côté serveur, commande **persistée avant** la réservation, réservation dans l'ordre croissant de `categoryId`, et libération des catégories déjà réservées si une réservation échoue ;
-- **délai de paiement strictement plus court que la réservation** (5 min) : par exemple 4 min, en configuration (`billetplus.commande.delai-paiement`), avec un contrôle au démarrage ;
-- `POST /api/orders` public (à ouvrir dans `SecurityConfig`) : corps `{eventId, telephone, lignes[{categoryId, quantite}]}` validé (`@Size`, `@NotNull`, quantité 1–20) ; réponse 201 avec l'`orderId`, le montant, l'échéance et **le jeton en clair, une seule fois** ;
-- `GET /api/orders/{id}` avec le jeton dans un en-tête (`X-Jeton-Commande`), 404 identique pour une commande inconnue ou un jeton faux ;
-- limites par téléphone (commandes en attente par événement) ; la limitation par IP reste dans `rate-limiting` (n° 14).
+**À réunir avant de coder** (SirrDev) :
+- la **documentation officielle de l'API Wave Checkout** (création de session, webhook, signature, politique de relance, durée de vie d'une session) ; aucune hypothèse sur son format ne doit être codée sans elle ;
+- un **accès de test** (sandbox ou compte marchand de test). **La clé d'API et le secret du webhook ne doivent jamais être communiqués à Claude** : ils passent par des variables d'environnement (`WAVE_API_KEY`, `WAVE_WEBHOOK_SECRET`), comme `JWT_SECRET`.
 
-**Pièges** : un cas d'usage qui lit puis modifie doit être `@Transactional` ; la réservation Redis n'est pas transactionnelle, donc une commande dont la réservation échoue ne doit pas rester `EN_ATTENTE_PAIEMENT` ; ne jamais renvoyer ni journaliser le jeton ailleurs que dans la réponse de création.
+**Pistes** *(non actées)* :
+- port `PaiementGateway` : `ouvrirSession(orderId, montant, expireLe)` → URL de paiement et identifiant de session Wave ; migration V9 pour conserver l'identifiant de session (unique) sur la commande ;
+- **session Wave plus courte que le délai de la commande** (4 min), et refus d'ouvrir une session pour une commande expirée ou payée ;
+- route `POST /api/orders/{id}/paiement` protégée par le jeton de la commande ;
+- adaptateur testé contre un faux serveur HTTP (WireMock ou `MockRestServiceServer`) : délais d'attente, erreurs 4xx/5xx, réponse mal formée ;
+- **commande à 0 FCFA** : décider de la confirmer sans Wave, ou de la refuser (section 7).
+
+**Pièges** : ne jamais journaliser la clé d'API ni le corps complet des réponses Wave ; poser un délai d'attente de connexion et de lecture sur le client HTTP ; un appel HTTP ne doit pas tenir une transaction PostgreSQL ouverte.
 ---
 
 ## 12. Premier message suggéré pour la nouvelle conversation
 
-> Je reprends Billet+ (voir HANDOFF.md du projet). L'ADR 0006 et le domaine `orders` sont mergés et le projet est resynchronisé. Continue avec `feature/backend-orders-create-usecase` (section 11.2) et propose un plan avant de coder.
+> Je reprends Billet+ (voir HANDOFF.md du projet). La création de commande (`POST /api/orders`) est mergée et le projet est resynchronisé. Voici la documentation de l'API Wave Checkout : [...]. Continue avec `feature/backend-orders-wave-gateway` (section 11.2) et propose un plan avant de coder.
