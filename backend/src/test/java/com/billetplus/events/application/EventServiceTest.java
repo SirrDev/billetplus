@@ -79,8 +79,10 @@ class EventServiceTest {
         Event event = new Event("Concert", null, Instant.now(), null, venue(), organizerId);
         when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
 
+        // Brouillon d'un autre : 404, indiscernable d'un identifiant inconnu.
         assertThatThrownBy(() -> service().publier(event.getId(), autreUtilisateur))
-            .isInstanceOf(AccessDeniedException.class);
+            .isInstanceOf(NoSuchElementException.class)
+            .hasMessage("Événement introuvable : " + event.getId());
 
         verify(eventRepository, never()).save(any());
     }
@@ -93,6 +95,19 @@ class EventServiceTest {
         when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
 
         assertThatThrownBy(() -> service().annuler(event.getId(), autreUtilisateur))
+            .isInstanceOf(NoSuchElementException.class);
+    }
+
+    /** Événement publié : son existence est publique, un autre organisateur reçoit 403. */
+    @Test
+    void refuse_en_403_qu_un_autre_utilisateur_annule_un_evenement_publie() {
+        UUID organizerId = UUID.randomUUID();
+        Event event = new Event("Concert", null, Instant.now(), null, venue(), organizerId);
+        event.publier();
+        when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+
+        assertThatThrownBy(() -> service().annuler(event.getId(), UUID.randomUUID()))
             .isInstanceOf(AccessDeniedException.class);
+        verify(eventRepository, never()).save(any());
     }
 }

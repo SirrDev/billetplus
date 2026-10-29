@@ -125,8 +125,11 @@ class EventServiceAccessTest {
         Event event = brouillonDe(UUID.randomUUID());
         when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
 
+        // Brouillon d'un autre : 404, même message qu'un identifiant inconnu (le 403
+        // révélait l'existence du brouillon).
         assertThatThrownBy(() -> service().publier(event.getId(), UUID.randomUUID()))
-            .isInstanceOf(AccessDeniedException.class);
+            .isInstanceOf(NoSuchElementException.class)
+            .hasMessage("Événement introuvable : " + event.getId());
 
         verify(eventRepository, never()).save(any());
         assertThat(event.getStatus()).isEqualTo(EventStatus.BROUILLON);
@@ -138,7 +141,7 @@ class EventServiceAccessTest {
         when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
 
         assertThatThrownBy(() -> service().annuler(event.getId(), UUID.randomUUID()))
-            .isInstanceOf(AccessDeniedException.class);
+            .isInstanceOf(NoSuchElementException.class);
 
         verify(eventRepository, never()).save(any());
         assertThat(event.getStatus()).isEqualTo(EventStatus.BROUILLON);

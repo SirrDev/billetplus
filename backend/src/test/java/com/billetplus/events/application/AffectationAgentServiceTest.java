@@ -36,9 +36,10 @@ class AffectationAgentServiceTest {
         return new AffectationAgentService(eventService, affectationRepository, comptes);
     }
 
+    /** Le contrôle de propriété vit dans EventService.getPourSonOrganisateur (testé avec EventService). */
     private Event evenement() {
         Event event = new Event("Concert", null, Instant.now(), null, new Venue("Grand Theatre", "Dakar", null, null), organisateur);
-        when(eventService.get(event.getId())).thenReturn(event);
+        lenient().when(eventService.getPourSonOrganisateur(event.getId(), organisateur)).thenReturn(event);
         return event;
     }
 
@@ -77,11 +78,13 @@ class AffectationAgentServiceTest {
         verify(affectationRepository, never()).save(any());
     }
 
-    /** Même règle qu'EventService.publier / annuler : un non-propriétaire reçoit 403. */
+    /** Même règle qu'EventService.publier / annuler, déléguée à getPourSonOrganisateur : rien n'est lu ni écrit. */
     @Test
     void un_autre_organisateur_ne_peut_ni_affecter_ni_retirer() {
         Event event = evenement();
         UUID autre = UUID.randomUUID();
+        when(eventService.getPourSonOrganisateur(event.getId(), autre))
+            .thenThrow(new AccessDeniedException("Vous n'êtes pas l'organisateur de cet événement"));
 
         assertThatThrownBy(() -> service().affecter(event.getId(), agent, autre)).isInstanceOf(AccessDeniedException.class);
         assertThatThrownBy(() -> service().retirer(event.getId(), agent, autre)).isInstanceOf(AccessDeniedException.class);
