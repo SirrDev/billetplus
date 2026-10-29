@@ -34,6 +34,14 @@ public final class Money {
         return new Money(this.montantFcfa.subtract(autre.montantFcfa));
     }
 
+    /** Montant multiplié par une quantité (par exemple prix unitaire × nombre de places). */
+    public Money fois(int quantite) {
+        if (quantite < 0) {
+            throw new IllegalArgumentException("La quantité ne peut pas être négative");
+        }
+        return new Money(montantFcfa.multiply(BigInteger.valueOf(quantite)));
+    }
+
     public BigInteger valeur() {
         return montantFcfa;
     }
