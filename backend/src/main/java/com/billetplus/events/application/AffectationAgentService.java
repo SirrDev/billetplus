@@ -17,8 +17,8 @@ import java.util.UUID;
  *
  * Seul l'organisateur de l'événement affecte, et seulement SES agents (créés
  * par lui, lu par le port public du module auth, ADR 0005). Même contrôle de
- * propriété qu'EventService.publier / annuler : événement inconnu → 404,
- * non-propriétaire → 403.
+ * propriété qu'EventService.publier / annuler (EventService.getPourSonOrganisateur) :
+ * événement inconnu ou brouillon d'un autre → 404, événement visible d'un autre → 403.
  */
 @Service
 public class AffectationAgentService {
@@ -39,7 +39,7 @@ public class AffectationAgentService {
      *
      * @throws NoSuchElementException    si l'événement n'existe pas, ou si l'agent n'est pas un
      *                                   agent de cet organisateur (même réponse pour un agent inconnu)
-     * @throws AccessDeniedException     si le demandeur n'est pas l'organisateur de l'événement
+     * @throws AccessDeniedException     si l'événement, visible, appartient à un autre organisateur
      * @throws BusinessConflictException si l'événement est annulé ou terminé
      */
     @Transactional
@@ -74,10 +74,6 @@ public class AffectationAgentService {
     }
 
     private Event evenementDe(UUID eventId, UUID organisateurId) {
-        Event event = eventService.get(eventId);
-        if (!event.getOrganizerId().equals(organisateurId)) {
-            throw new AccessDeniedException("Vous n'êtes pas l'organisateur de cet événement");
-        }
-        return event;
+        return eventService.getPourSonOrganisateur(eventId, organisateurId);
     }
 }

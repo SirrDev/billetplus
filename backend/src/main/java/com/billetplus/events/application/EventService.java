@@ -100,10 +100,32 @@ public class EventService {
      * Un organisateur ne peut agir que sur ses propres événements — règle
      * métier, pas seulement un contrôle de rôle RBAC (@PreAuthorize vérifie
      * "est organisateur", pas "est LE organisateur de CET événement").
+     *
+     * Réponse alignée sur la visibilité (branche feature/backend-tests-http-routes-existantes) :
+     * - événement que le demandeur ne peut pas voir (brouillon d'un autre) :
+     *   NoSuchElementException (404), même message qu'un identifiant inconnu,
+     *   pour que l'existence d'un brouillon ne se déduise pas d'un 403 ;
+     * - événement visible (publié, annulé, terminé) d'un autre organisateur :
+     *   AccessDeniedException (403), son existence étant déjà publique.
      */
     private void verifierProprietaire(Event event, UUID requestingUserId) {
         if (!event.getOrganizerId().equals(requestingUserId)) {
+            if (!event.estVisiblePar(requestingUserId)) {
+                throw new NoSuchElementException("Événement introuvable : " + event.getId());
+            }
             throw new AccessDeniedException("Vous n'êtes pas l'organisateur de cet événement");
         }
+    }
+
+    /**
+     * L'événement, si {@code requestingUserId} en est l'organisateur. Même règle
+     * que publier / annuler (voir verifierProprietaire) : brouillon d'un autre → 404,
+     * événement visible d'un autre → 403. Utilisé par les autres services du module.
+     */
+    @Transactional(readOnly = true)
+    public Event getPourSonOrganisateur(UUID eventId, UUID requestingUserId) {
+        Event event = get(eventId);
+        verifierProprietaire(event, requestingUserId);
+        return event;
     }
 }
