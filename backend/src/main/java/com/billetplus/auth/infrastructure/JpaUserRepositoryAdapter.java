@@ -1,9 +1,11 @@
 package com.billetplus.auth.infrastructure;
 
 import com.billetplus.auth.application.UserRepository;
+import com.billetplus.auth.domain.Role;
 import com.billetplus.auth.domain.User;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,5 +36,15 @@ class JpaUserRepositoryAdapter implements UserRepository {
     @Override
     public boolean existsByEmail(String email) {
         return springRepo.existsByEmail(email.toLowerCase().trim());
+    }
+
+    @Override
+    public List<User> findByCreePar(UUID createurId) {
+        return springRepo.findByCreeParOrderByCreeLeAsc(createurId);
+    }
+
+    @Override
+    public boolean existsByRole(Role role) {
+        return springRepo.existsByRole(role);
     }
 }

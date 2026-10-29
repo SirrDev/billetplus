@@ -32,6 +32,14 @@ public class User {
     @Column(nullable = false, updatable = false)
     private Instant creeLe;
 
+    /**
+     * Organisateur qui a créé ce compte : renseigné pour un AGENT (contrainte V6
+     * chk_users_agent_a_un_createur), nul pour un compte inscrit ou un ADMIN.
+     * Référence la même table, donc le même module : FK autorisée.
+     */
+    @Column(updatable = false)
+    private UUID creePar;
+
     protected User() {
         // requis par JPA
     }
@@ -49,6 +57,25 @@ public class User {
         this.nomComplet = nomComplet;
         this.role = role;
         this.creeLe = Instant.now();
+    }
+
+    /**
+     * Compte AGENT créé par un organisateur, qui en est propriétaire. Le rôle est
+     * fixé ici, jamais choisi par l'appelant (même principe que l'inscription).
+     *
+     * @throws IllegalArgumentException si l'organisateur est absent
+     */
+    public static User agentCreePar(UUID organisateurId, String email, String motDePasseHash, String nomComplet) {
+        if (organisateurId == null) {
+            throw new IllegalArgumentException("Un agent a toujours un organisateur créateur");
+        }
+        User agent = new User(email, motDePasseHash, nomComplet, Role.AGENT);
+        agent.creePar = organisateurId;
+        return agent;
+    }
+
+    public UUID getCreePar() {
+        return creePar;
     }
 
     public UUID getId() {

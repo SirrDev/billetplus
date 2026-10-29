@@ -34,4 +34,22 @@ class UserTest {
         assertThat(user.estAgent()).isFalse();
         assertThat(user.estAdmin()).isFalse();
     }
+
+    @Test
+    void un_agent_est_toujours_cree_par_un_organisateur_qui_en_est_proprietaire() {
+        java.util.UUID organisateur = java.util.UUID.randomUUID();
+
+        User agent = User.agentCreePar(organisateur, "Agent@Example.COM", "hash", "Agent");
+
+        assertThat(agent.estAgent()).isTrue();
+        assertThat(agent.getCreePar()).isEqualTo(organisateur);
+        assertThat(agent.getEmail()).isEqualTo("agent@example.com");
+        assertThatThrownBy(() -> User.agentCreePar(null, "a@example.com", "hash", "A"))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void un_compte_inscrit_n_a_pas_de_createur() {
+        assertThat(new User("orga@example.com", "hash", "Orga", Role.ORGANISATEUR).getCreePar()).isNull();
+    }
 }
