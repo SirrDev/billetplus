@@ -2,8 +2,11 @@ package com.billetplus.tickets.infrastructure.persistence;
 
 import com.billetplus.shared.Money;
 import com.billetplus.tickets.application.port.QRSigner;
+import com.billetplus.tickets.application.port.QrVerificationResult;
 import com.billetplus.tickets.application.port.SeatReservationStore;
 import com.billetplus.tickets.application.usecase.IssueTicketUseCase;
+import com.billetplus.tickets.application.usecase.ResultatScan;
+import com.billetplus.tickets.application.usecase.ValidateTicketScanUseCase;
 import com.billetplus.tickets.domain.Ticket;
 import com.billetplus.tickets.domain.TicketCategory;
 import com.billetplus.tickets.domain.TicketStatus;
@@ -36,6 +39,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -73,7 +77,7 @@ import static org.mockito.Mockito.when;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({JpaTicketCategoryRepositoryAdapter.class, JpaTicketRepositoryAdapter.class,
-         JpaTicketIssuanceRepositoryAdapter.class, IssueTicketUseCase.class})
+         JpaTicketIssuanceRepositoryAdapter.class, IssueTicketUseCase.class, ValidateTicketScanUseCase.class})
 // Absente de @DataJpaTest mais active dans l'application : sans elle, le test
 // ne verrait pas la traduction d'exceptions que Spring applique aux beans
 // @Repository (qui transformerait une BusinessConflictException en 500).
@@ -99,11 +103,10 @@ class TicketPersistenceIntegrationTest {
     private JpaTicketRepositoryAdapter tickets;
     @Autowired
     private JpaTicketIssuanceRepositoryAdapter emissions;
-    /** Lecture directe des billets : le port TicketRepository n'expose pas encore de findById. */
-    @Autowired
-    private SpringDataTicketRepository ticketsSpringData;
     @Autowired
     private IssueTicketUseCase issueTicket;
+    @Autowired
+    private ValidateTicketScanUseCase validateScan;
     /** La vraie signature Ed25519 a ses propres tests ; ici seule la transaction compte. */
     @MockBean
     private QRSigner qrSigner;
@@ -140,8 +143,9 @@ class TicketPersistenceIntegrationTest {
         return enregistrer(new TicketCategory(UUID.randomUUID(), "VIP", Money.ofFcfa(15_000), quotaTotal));
     }
 
+    /** Par le port, hors transaction : findById n'en exige pas (contrairement à save). */
     private Ticket lireBillet(UUID id) {
-        return tx.execute(s -> TicketMapper.versDomaine(ticketsSpringData.findById(id).orElseThrow()));
+        return tickets.findById(id).orElseThrow();
     }
 
     private long versionEnBase(String table, UUID id) {
@@ -249,12 +253,31 @@ class TicketPersistenceIntegrationTest {
     }
 
     @Test
+    void un_billet_inconnu_n_est_pas_trouve() {
+        assertThat(tickets.findById(UUID.randomUUID())).isEmpty();
+    }
+
+    /** Un billet scanné se relit avec son statut et sa date de scan : c'est ce que lira le contrôle d'entrée. */
+    @Test
+    void un_billet_scanne_se_relit_avec_son_statut_et_sa_date_de_scan() {
+        TicketCategory category = categorieEnregistree(10);
+        Ticket ticket = new Ticket(category.getEventId(), category.getId(), UUID.randomUUID());
+        ticket.marquerCommeScanne();
+        enregistrer(ticket);
+
+        Ticket relu = lireBillet(ticket.getId());
+
+        assertThat(relu.getStatus()).isEqualTo(TicketStatus.SCANNE);
+        assertThat(relu.getScanneLe()).isEqualTo(ticket.getScanneLe());
+    }
+
+    @Test
     void un_scan_persiste_le_statut_et_la_date_de_scan() {
         TicketCategory category = categorieEnregistree(10);
         Ticket ticket = enregistrer(new Ticket(category.getEventId(), category.getId(), UUID.randomUUID()));
 
         tx.executeWithoutResult(s -> {
-            Ticket lu = TicketMapper.versDomaine(ticketsSpringData.findById(ticket.getId()).orElseThrow());
+            Ticket lu = tickets.findById(ticket.getId()).orElseThrow();
             lu.marquerCommeScanne();
             tickets.save(lu);
         });
@@ -276,10 +299,10 @@ class TicketPersistenceIntegrationTest {
         Ticket ticket = enregistrer(new Ticket(category.getEventId(), category.getId(), UUID.randomUUID()));
 
         assertThatThrownBy(() -> tx.executeWithoutResult(s -> {
-            Ticket luParA = TicketMapper.versDomaine(ticketsSpringData.findById(ticket.getId()).orElseThrow());
+            Ticket luParA = tickets.findById(ticket.getId()).orElseThrow();
 
             nouvelleTx.executeWithoutResult(s2 -> {
-                Ticket luParB = TicketMapper.versDomaine(ticketsSpringData.findById(ticket.getId()).orElseThrow());
+                Ticket luParB = tickets.findById(ticket.getId()).orElseThrow();
                 luParB.marquerCommeScanne();
                 tickets.save(luParB);
             });
@@ -561,5 +584,56 @@ class TicketPersistenceIntegrationTest {
         assertThat(quotaVenduEnBase(category.getId())).isEqualTo(3 * reussies).isLessThanOrEqualTo(10);
         assertThat(nombreDeBillets()).isEqualTo(3 * reussies);
         assertThat(nombreDEmissions()).isEqualTo(reussies);
+    }
+
+    // ---- Contrôle d'entrée (ValidateTicketScanUseCase), dans sa vraie transaction ----
+
+    @Test
+    void un_scan_valide_persiste_le_billet_scanne() {
+        TicketCategory category = categorieEnregistree(10);
+        Ticket ticket = enregistrer(new Ticket(category.getEventId(), category.getId(), UUID.randomUUID()));
+        qrAuthentiquePour(ticket);
+
+        ResultatScan resultat = validateScan.execute("qr", ticket.getEventId());
+
+        assertThat(resultat.issue()).isEqualTo(ResultatScan.Issue.ACCEPTE);
+        assertThat(lireBillet(ticket.getId()).getStatus()).isEqualTo(TicketStatus.SCANNE);
+        assertThat(versionEnBase("tickets", ticket.getId())).isEqualTo(1);
+    }
+
+    /**
+     * 8 agents scannent le même billet au même instant (QR copié et présenté à
+     * plusieurs portes). Un seul passe. Les autres voient soit DEJA_SCANNE (ils
+     * ont lu le billet après la validation du premier), soit un conflit de
+     * version (ils l'ont lu EMIS avant : c'est le @Version qui les arrête, 409 à
+     * lire comme « déjà scanné »). Jamais deux entrées pour un billet.
+     */
+    @Test
+    void des_scans_simultanes_du_meme_billet_ne_laissent_entrer_qu_une_fois() throws Exception {
+        TicketCategory category = categorieEnregistree(10);
+        Ticket ticket = enregistrer(new Ticket(category.getEventId(), category.getId(), UUID.randomUUID()));
+        qrAuthentiquePour(ticket);
+
+        List<Object> resultats = enParallele(THREADS, i -> () -> validateScan.execute("qr", ticket.getEventId()));
+
+        assertThat(resultats).filteredOn(r -> r instanceof ResultatScan rs && rs.issue() == ResultatScan.Issue.ACCEPTE)
+            .hasSize(1);
+        assertThat(resultats).filteredOn(r -> !(r instanceof ResultatScan rs && rs.issue() == ResultatScan.Issue.ACCEPTE))
+            .hasSize(THREADS - 1)
+            .allSatisfy(r -> {
+                if (r instanceof ResultatScan rs) {
+                    assertThat(rs.issue()).isEqualTo(ResultatScan.Issue.DEJA_SCANNE);
+                } else {
+                    assertThat(r).isInstanceOf(OptimisticLockingFailureException.class);
+                }
+            });
+        assertThat(lireBillet(ticket.getId()).getStatus()).isEqualTo(TicketStatus.SCANNE);
+        assertThat(versionEnBase("tickets", ticket.getId())).isEqualTo(1);  // une seule écriture validée
+    }
+
+    /** Le signataire est simulé ici (la vraie signature a ses tests) : il « vérifie » le QR de ce billet. */
+    private void qrAuthentiquePour(Ticket ticket) {
+        when(qrSigner.verify(any(String.class))).thenReturn(QrVerificationResult.valide(
+            ticket.getId(), ticket.getEventId(), ticket.getEmisLe().truncatedTo(ChronoUnit.MILLIS)));
     }
 }
