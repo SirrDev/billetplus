@@ -26,5 +26,5 @@ Crée le cas d'usage `$usecase` dans le module `$module`.
 ## 3. Vérifier
 
 - Compile et exécute depuis `backend/` : `.\mvnw test` puis `.\mvnw test "-Dtest=ArchitectureTest"`.
-- Si un nouveau package a été créé, vérifie que les 5 règles ArchUnit s'y appliquent (jamais de `allowEmptyShould`).
+- Si un nouveau package a été créé, vérifie que les 7 règles ArchUnit s'y appliquent (jamais de `allowEmptyShould`).
 - Rapporte le résultat **réel** des tests, la liste des fichiers créés, et ce qui reste à faire (adaptateur JPA, contrôleur, migration). Ne commite rien : `/ship` s'en charge.

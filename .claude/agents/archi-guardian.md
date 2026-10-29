@@ -21,7 +21,7 @@ Tu es le gardien de l'architecture de Billet+ (monolithe modulaire Spring Boot, 
 - **`shared`** : types techniques uniquement. Toute logique métier dans `shared` est une violation.
 - **Cas d'usage** : une classe par cas d'usage dans `application/usecase/`, pas de service fourre-tout en niveau 3.
 - **Identifiants** : générés en mémoire, jamais `@GeneratedValue`.
-- **ArchUnit** : les 5 règles de `ArchitectureTest` restent actives, sans `allowEmptyShould(true)`. Pour tout nouveau package, vérifie qu'au moins une classe tombe sous chaque règle.
+- **ArchUnit** : les 7 règles de `ArchitectureTest` restent actives (dont, depuis l'ADR 0005, l'ouverture limitée à `api.publique`), sans `allowEmptyShould(true)`. Pour tout nouveau package, vérifie qu'au moins une classe tombe sous chaque règle.
 
 ## Format de réponse
 
