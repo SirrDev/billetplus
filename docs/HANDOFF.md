@@ -1,6 +1,6 @@
 # Document de passation — Billet+
 
-Dernière mise à jour : 29 octobre 2026 (PR #16 `feature/backend-tickets-jpa-mapper` mergée dans `main` : persistance JPA niveau 3 du module `tickets`, migration V4 et cas d'usage `IssueTicketUseCase` ; le même jour, PR #14 (alignement du dépôt) et PR #15 (configuration Claude Code) mergées). Ce document complète le contexte du projet (ADR, dépôt GitHub synchronisé) pour reprendre le travail sans rien réexpliquer. En cas de doute entre ce document et le code, **le code du dépôt fait foi** — mais attention : la synchronisation GitHub ne voit que les fichiers **commités, poussés et mergés**, et elle n'est rafraîchie qu'après un clic sur « Sync now » dans le projet.
+Dernière mise à jour : 29 octobre 2026, fin de journée (PR #18 `fix/ci-restore-backend-workflows` mergée : **la CI backend et le job ArchUnit tournent de nouveau** sur les PR. Plus tôt le même jour : PR #16 `feature/backend-tickets-jpa-mapper` (persistance JPA niveau 3 du module `tickets`, migration V4, `IssueTicketUseCase`), PR #17 (HANDOFF), PR #14 (alignement du dépôt) et PR #15 (configuration Claude Code)). Ce document complète le contexte du projet (ADR, dépôt GitHub synchronisé) pour reprendre le travail sans rien réexpliquer. En cas de doute entre ce document et le code, **le code du dépôt fait foi** — mais attention : la synchronisation GitHub ne voit que les fichiers **commités, poussés et mergés**, et elle n'est rafraîchie qu'après un clic sur « Sync now » dans le projet.
 
 ---
 
@@ -65,6 +65,8 @@ Docker (PostGIS + Redis), squelette Spring Boot, squelette PWA, CI GitHub Action
 | 7 | `backend-tickets-jpa-mapper` | ✅ **Mergée le 29/10/2026** (PR #16, merge `22845ba` ; 10 commits de `9b75555` à `5c601ec`) | Migration V4, ports, entités JPA + mappers + adaptateurs, verrou `@Version`, `IssueTicketUseCase`, 5ᵉ règle ArchUnit, premiers tests d'intégration (section 4.6) |
 | 8 | `tickets-issue-usecase` | 🟡 **Cœur livré dans la branche 7** (`c17e5e6`, `996c87e`) | Reste : vérifier que l'événement est `PUBLIE` avant d'émettre (section 7). Ne pas recréer la branche pour le reste : l'intégrer à `tickets-quota-lock` ou à `orders-confirm-payment-usecase` |
 | — | `infra-claude-code-setup` | ✅ Mergée le 29/10/2026 (PR #15, merge `c3affef`) | `CLAUDE.md`, agents, skills, règles de `.claude/` |
+| — | `fix/docs-handoff-pr16` | ✅ Mergée le 29/10/2026 (PR #17, merge `08c4a1a` ; commit `e77f602`) | Mise à jour du HANDOFF après la PR #16 |
+| — | `fix/ci-restore-backend-workflows` | ✅ Mergée le 29/10/2026 (PR #18, merge `bcb82e7` ; commits `015e9a7`, `b331130`) | CI backend et job ArchUnit restaurés (section 4.7), `CONTRIBUTING.md` à 5 règles |
 | 9–17 | `tickets-quota-lock`, `tickets-redis-seat-lock`, `tickets-validate-scan-usecase`, `tickets-pdf-export`, `orders-domain-model`, `orders-create-usecase`, `orders-wave-gateway`, `orders-confirm-payment-usecase`, `rate-limiting` | ⬜ | |
 
 Branches volontairement supprimées (ne pas recréer) : `backend-auth-rbac-roles` (absorbée dans auth-tokens), `backend-events-categories-quotas` (redondante : `TicketCategory` vit dans `tickets/domain`).
@@ -73,7 +75,7 @@ Branches volontairement supprimées (ne pas recréer) : `backend-auth-rbac-roles
 
 Commits : `2ce6a53` (`infra/docker-compose.yml` : image `postgis/postgis:16-3.4`, propriété Redis de Spring Boot 3, port `5432:5432`), `55daf4a` (`.gitattributes` normalisé, `qodana.yaml` en `projectJDK: "21"`), `c1e48c4` (ADR 0001 à 0004 versionnés dans `docs/architecture/adr/`), `37e272c` (`CONTRIBUTING.md` PowerShell + ArchUnit), `8e17bd5` (cahier des charges aligné sur les ADR).
 
-Le `docker-compose.yml` local n'est plus modifié hors Git : `git status` est propre sur `main`. ⚠️ `CONTRIBUTING.md:88` dit encore « Quatre règles sont actives » : il y en a 5 depuis la PR #16, à corriger (la liste qui suit n'a pas la 5ᵉ). La règle « jamais de `git add .` » reste en vigueur.
+Le `docker-compose.yml` local n'est plus modifié hors Git : `git status` est propre sur `main`. `CONTRIBUTING.md` liste les 5 règles ArchUnit depuis `b331130` (PR #18). La règle « jamais de `git add .` » reste en vigueur.
 
 ### Frontend (PWA) : Phase 0 seulement
 
@@ -115,7 +117,7 @@ Pourquoi `/error` : sans cette règle, Spring Security 6 soumet à l'authentific
 
 ### 4.4 Tests
 
-**92 tests, 0 échec, 0 ignoré, remesurés le 29/10/2026 sur `main` (`22845ba`, `.\mvnw clean test`, Docker démarré)**, dont 13 tests d'intégration Testcontainers (`TicketPersistenceIntegrationTest`) et 5 règles ArchUnit. *(Historique : 55 tests le 20/10/2026.)* Les tests d'intégration ne démarrent que la couche JPA (`@DataJpaTest`) : aucun test ne démarre encore le contexte complet ni les règles HTTP/sécurité (section 7).
+**92 tests, 0 échec, 0 ignoré, remesurés le 29/10/2026 sur `main` (`bcb82e7`, `.\mvnw clean test`, Docker démarré)**, dont 13 tests d'intégration Testcontainers (`TicketPersistenceIntegrationTest`) et 5 règles ArchUnit. *(Historique : 55 tests le 20/10/2026.)* Les tests d'intégration ne démarrent que la couche JPA (`@DataJpaTest`) : aucun test ne démarre encore le contexte complet ni les règles HTTP/sécurité (section 7).
 
 ⚠️ Sans Docker, les 13 tests d'intégration sont **ignorés** (`disabledWithoutDocker`) et la suite reste verte : toujours lire la ligne `Skipped` avant d'annoncer un résultat.
 
@@ -149,6 +151,21 @@ Aucune route HTTP ajoutée. **Décisions (à respecter)** :
 
 **Vérifié** : 92 tests verts, dont, sur PostGIS réel : survente concurrente rejetée (seule la réservation validée en premier subsiste), double scan concurrent rejeté, `save()` hors transaction refusé, émission puis rejeu refusé, annulation complète sur panne de signature. Démarrage réel sur le port 8081 le 29/10/2026 : Flyway applique V4 et `ddl-auto: validate` passe. Ce démarrage a été fait **avant** les correctifs `MANDATORY`, 409 et plafond, et n'a pas été relancé depuis. Relecture `archi-guardian`, `db-schema-reviewer` et `security-reviewer` faite, avec ses points traités ou reportés en section 7.
 
+### 4.7 CI backend restaurée (`fix/ci-restore-backend-workflows`, PR #18, mergée le 29/10/2026)
+
+Deux workflows, restaurés depuis `0e38483` (supprimés par erreur par `32b0ba4` le 19/08) :
+
+- **`backend-ci.yml` (« Backend CI »)** : JDK 21 Temurin, `./mvnw clean verify` sur `ubuntu-latest`, rapports Surefire publiés en artefact `backend-surefire-reports` (conservés 7 jours, même en cas d'échec).
+  - **Plus de service PostgreSQL ni Redis** : aucun test ne démarre le contexte complet, et les tests d'intégration lancent leur propre conteneur PostGIS (Testcontainers, Docker fourni par le runner). L'ancien service utilisait `postgres:16`, sans PostGIS.
+  - **Étape « Refuser les tests ignorés »** : additionne `Tests run` et `Skipped` des rapports Surefire. Elle échoue si au moins un test est ignoré, ou si aucun test n'a tourné. C'est le garde-fou contre le piège 18 (tests Testcontainers ignorés, CI verte sans rien vérifier). Testée en local sur trois cas : vrais rapports, un rapport avec 13 tests ignorés, aucun rapport.
+- **`architecture-check.yml` (« Architecture rules »)** : `./mvnw test -Dtest=ArchitectureTest`, pour un statut ArchUnit distinct sur la PR.
+- **Déclenchement** des deux workflows : PR qui touche `backend/**` ou le fichier du workflow, et push sur `main` qui touche `backend/**`. Une PR de documentation pure ne déclenche donc **aucun** des deux. C'est voulu, mais un statut absent ne prouve rien.
+- **Aucun secret requis** : `Ed25519QRSignerTest` génère sa propre paire de clés. Si un futur test démarre le contexte complet, il faudra fournir une clé de test, **jamais** la clé de dev, ni aucun secret commité.
+
+**Vérifié** :
+- en local : YAML valides, `./mvnw clean verify` réussi, 92 tests verts ;
+- sur la PR #18 : run vert, selon SirrDev le 29/10/2026. Le vert de l'étape « Refuser les tests ignorés » implique au moins un test exécuté et 0 ignoré. *Le nombre exact de tests exécutés sur le runner n'a pas été relevé (à confirmer dans le log du prochain run).*
+
 ---
 
 ## 5. Workflow de livraison d'une branche (procédure rodée)
@@ -175,7 +192,7 @@ git log --oneline -3
 git push -u origin HEAD
 ```
 
-`git push -u origin HEAD` pousse la branche courante sans retaper son nom : le 29/10/2026, un nom de branche coupé au collage (`feature/backend-tickets-jpa-`) a donné `src refspec ... does not match any`. ⚠️ Tant que la CI backend n'est pas restaurée (section 7), aucun workflow ne vérifie les tests backend sur une PR.
+`git push -u origin HEAD` pousse la branche courante sans retaper son nom : le 29/10/2026, un nom de branche coupé au collage (`feature/backend-tickets-jpa-`) a donné `src refspec ... does not match any`. Depuis la PR #18, une PR qui touche `backend/` déclenche « Backend CI » et « Architecture rules » (section 4.7) : attendre ces deux statuts verts avant de merger.
 
 Créer la branche depuis un `main` à jour : `git switch main`, `git pull`, puis `git switch -c <branche>`.
 
@@ -349,7 +366,6 @@ Test-Inscription
 - Warning au démarrage « Using generated security password » : bruit inoffensif (`UserDetailsServiceAutoConfiguration`) ; peut être exclu plus tard.
 - Le refresh token n'est pas révocable (limite assumée au MVP, documentée dans `AuthService`).
 - `QuotaDepasseException` étend `BusinessConflictException` (409) depuis `feature/backend-tickets-jpa-mapper`. `TicketAlreadyScannedException` reste à traiter (branche 11).
-- **CI backend absente de `main`** : le commit `32b0ba4` (« fix(web): ajoute la configuration Vitest... », 19/08) a supprimé par erreur `.github/workflows/backend-ci.yml` et `architecture-check.yml`. Depuis, aucune PR backend ne passe les tests ni ArchUnit en CI. À restaurer depuis `0e38483` dans `fix/ci-restore-backend-workflows`.
 - **Garde anti double émission non atomique** (`IssueTicketUseCase`) : deux appels simultanés pour la même (commande, catégorie) passent tous deux `existsByOrderIdAndCategoryId` ; seul l'échec de version sur `ticket_categories` fait tomber le second. Si `tickets-quota-lock` remplace le `@Version` par un `UPDATE` SQL atomique, cette protection disparaît. À faire dans `tickets-quota-lock` : table d'idempotence `ticket_issuances(order_id, category_id)` avec clé primaire (migration V5), insérée en premier dans la transaction, et test à deux threads (`CountDownLatch`) qui exige exactement N billets et un quota consommé une seule fois.
 - **Précision des dates du QR** : le QR signe `emisLe` à la **milliseconde** (`Ed25519QRSigner`, champ `iat`), alors que `Ticket` le garde à la microseconde. Toute comparaison entre un QR vérifié et la base doit se faire après `truncatedTo(ChronoUnit.MILLIS)` (branche 11).
 - **Contrat de `orders-confirm-payment` envers `IssueTicketUseCase`** : catégorie, commande et quantité lues en base, jamais dans la notification Wave ; signature et anti-rejeu Wave vérifiés avant l'appel ; montant recalculé côté serveur ; passage à PAYE dans la même transaction ; un 409 `BilletsDejaEmisException` traité comme un succès idempotent (200 à Wave). Plafond : 20 billets par émission (`QUANTITE_MAX_PAR_EMISSION`), à appliquer aussi à la création de commande.
@@ -415,31 +431,18 @@ Test-Inscription
 19. **Surefire ne lance pas les classes `*IT.java`** (il ne prend que `*Test`, `*Tests`, `*TestCase`, et Failsafe n'est pas configuré) : un test d'intégration nommé `...IT` ne s'exécute jamais. Nommer les tests d'intégration `...IntegrationTest`.
 20. **`Instant.now()` à 100 ns sous Windows, `TIMESTAMPTZ` à la microseconde** : un billet relu en base différait du billet émis (`...177817400Z` contre `...177817Z`). Trouvé par le test d'intégration. Solution : `Ticket` tronque ses horodatages à la microseconde (domaine). Le QR, lui, signe à la milliseconde.
 21. **`@Service` sans implémentation de ses ports** : `IssueTicketUseCase` a été écrit avant les adaptateurs. Les tests unitaires restaient verts, mais le contexte Spring ne pouvait pas démarrer faute de bean. Les commits ont été ordonnés pour que chaque commit démarre (adaptateurs avant cas d'usage).
-22. **CI backend supprimée par un commit du frontend** : `32b0ba4` (19/08, « fix(web): ... ») a effacé `backend-ci.yml` et `architecture-check.yml` sans que personne le remarque. Diagnostic : `git log --diff-filter=D -- .github/workflows/`. Leçon : relire `git diff --cached --stat` aussi pour les suppressions.
+22. **CI backend supprimée par un commit du frontend** : `32b0ba4` (19/08, « fix(web): ... ») a effacé `backend-ci.yml` et `architecture-check.yml` sans que personne le remarque. Diagnostic : `git log --diff-filter=D -- .github/workflows/`. Leçon : relire `git diff --cached --stat` aussi pour les suppressions. **Résolu** par la PR #18 du 29/10/2026 (section 4.7). Entre le 19/08 et le 29/10, les PR #6 à #16 ont été mergées sans CI backend (liste tirée de `git log --merges --since=2026-08-19`) : leurs tests n'ont été vérifiés qu'en local.
 23. **Vérifier qu'une règle ArchUnit contrôle vraiment quelque chose** : la tester à l'envers avec une classe sonde qui la viole, puis supprimer la sonde et relancer en `clean` (voir section 8).
 
 ---
 
 ## 11. Prochaine étape précise
 
-**Avant de commencer** : `git switch main` puis `git pull` (le `main` local doit être sur `22845ba` ou plus récent), puis « Sync now » dans le projet. Docker démarré, sinon les 13 tests d'intégration sont ignorés.
+**Avant de commencer** : `git switch main` puis `git pull` (le `main` local doit être sur `bcb82e7` ou plus récent), puis « Sync now » dans le projet. Docker démarré, sinon les 13 tests d'intégration sont ignorés en local (en CI, l'étape « Refuser les tests ignorés » ferait échouer le run). Supprimer les branches locales déjà mergées : `git branch -d feature/backend-tickets-jpa-mapper fix/docs-handoff-pr16 fix/ci-restore-backend-workflows`.
 
-### 11.1 D'abord : `fix/ci-restore-backend-workflows` (priorité, hors plan)
+*(La restauration de la CI, prévue ici en priorité, est faite : PR #18, section 4.7.)*
 
-**Objectif** : rétablir la vérification automatique des PR backend, absente de `main` depuis le commit `32b0ba4` du 19/08 (section 7). Sans elle, aucune des branches suivantes n'est vérifiée par la CI.
-
-**Fichiers** : récupérer `.github/workflows/backend-ci.yml` et `.github/workflows/architecture-check.yml` depuis le commit `0e38483` (`git show 0e38483:<chemin>` ou `git restore --source=0e38483 -- <chemin>`), puis les adapter.
-
-**Pièges connus (lus dans `0e38483`)** :
-- Le service `postgres` de `backend-ci.yml` utilise l'image **`postgres:16`, sans PostGIS** (leçon 3). Les tests n'utilisent pas ce service : les tests d'intégration démarrent leur propre conteneur PostGIS par Testcontainers. Le plus simple est de supprimer ce service (et celui de Redis, aucun test ne s'en sert), ou sinon de passer à `postgis/postgis:16-3.4`.
-- `ubuntu-latest` fournit Docker : les tests Testcontainers doivent y **s'exécuter, et non être ignorés**. Le premier run doit afficher 92 tests et `Skipped: 0` dans les rapports Surefire (artefact `backend-surefire-reports`).
-- `./mvnw clean verify` lance aussi les 5 règles ArchUnit. Le job séparé `architecture-check.yml` les relance pour avoir un statut distinct sur la PR.
-- Aucune clé Ed25519 n'est requise : `Ed25519QRSignerTest` génère sa propre paire de clés, et aucun test ne démarre le contexte complet (vérifié le 29/10/2026).
-- Profiter de la branche pour corriger `CONTRIBUTING.md:88` (« Quatre règles » → 5, ajouter la 5ᵉ à la liste).
-
-**Vérification** : ouvrir la PR et constater les deux workflows verts sur GitHub, avec le nombre de tests dans les logs. Un workflow qui ne se déclenche pas (filtre `paths`) ne prouve rien : la PR doit toucher `.github/workflows/` (inclus dans les filtres) ou `backend/`.
-
-### 11.2 Ensuite : branche 9, `feature/backend-tickets-quota-lock`
+### Branche 9 : `feature/backend-tickets-quota-lock`
 
 **Objectif** : rendre l'anti-survente et l'anti double émission robustes sous forte concurrence.
 
@@ -450,10 +453,10 @@ Test-Inscription
 - Si le verrou passe à un `UPDATE ... SET quota_vendu = quota_vendu + :q WHERE quota_vendu + :q <= quota_total` atomique : garder `TicketCategory.reserver()` comme source de vérité métier, et ne pas perdre la garde d'idempotence.
 - Reprendre le reste de la branche 8 si tranché : contrôle que l'événement est `PUBLIE` (section 7).
 
-**Pièges** : la propagation `MANDATORY` des `save()` impose un `@Transactional` sur tout nouveau cas d'usage ; un test de concurrence doit utiliser de vraies transactions séparées (`TransactionTemplate`, `PROPAGATION_REQUIRES_NEW` ou des threads), pas la transaction annulée par défaut d'un `@DataJpaTest` (voir `TicketPersistenceIntegrationTest`). Ne pas modifier V4, déjà appliquée : ajouter V5.
+**Pièges** : la propagation `MANDATORY` des `save()` impose un `@Transactional` sur tout nouveau cas d'usage ; un test de concurrence doit utiliser de vraies transactions séparées (`TransactionTemplate`, `PROPAGATION_REQUIRES_NEW` ou des threads), pas la transaction annulée par défaut d'un `@DataJpaTest` (voir `TicketPersistenceIntegrationTest`). Ne pas modifier V4, déjà appliquée : ajouter V5. Ce sera la première branche fonctionnelle vérifiée par la CI restaurée : relever dans le log de « Refuser les tests ignorés » le nombre de tests exécutés sur le runner. Il doit être égal au nombre local.
 
 ---
 
 ## 12. Premier message suggéré pour la nouvelle conversation
 
-> Je reprends Billet+ (voir HANDOFF.md du projet). La PR #16 `feature/backend-tickets-jpa-mapper` est mergée et le projet est resynchronisé. Je veux attaquer [`fix/ci-restore-backend-workflows` | `feature/backend-tickets-quota-lock`]. Lis la section 11 et propose un plan avant de coder.
+> Je reprends Billet+ (voir HANDOFF.md du projet). Les PR #16 (persistance tickets) et #18 (CI backend restaurée) sont mergées et le projet est resynchronisé. Je veux attaquer `feature/backend-tickets-quota-lock`. Lis la section 11 et propose un plan avant de coder.
