@@ -70,10 +70,12 @@ public class Ticket {
     }
 
     /**
-     * Horodatage à la microseconde, la précision de TIMESTAMPTZ. emisLe entre
-     * dans le contenu signé du QR code (ADR 0004) : la valeur signée doit être
-     * exactement celle qui sera relue en base, sinon un QR recalculé plus tard
-     * (renvoi, export PDF) ne correspondrait plus au QR d'origine.
+     * Horodatage à la microseconde, la précision de TIMESTAMPTZ : un billet
+     * relu en base est ainsi strictement égal au billet émis en mémoire.
+     *
+     * Attention : le QR code ne signe emisLe qu'à la MILLISECONDE
+     * (Ed25519QRSigner, champ iat). Toute comparaison entre la date d'un QR
+     * vérifié et emisLe doit donc se faire après truncatedTo(ChronoUnit.MILLIS).
      */
     private static Instant maintenant() {
         return Instant.now().truncatedTo(ChronoUnit.MICROS);
