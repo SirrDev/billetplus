@@ -1,5 +1,6 @@
 package com.billetplus.shared.exception;
 
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -23,8 +24,8 @@ import java.util.NoSuchElementException;
  *
  * Correspondances :
  * BadCredentials → 401, IllegalArgument → 400, NoSuchElement → 404,
- * BusinessConflict → 409, AccessDenied → 401 (anonyme) ou 403 (connecté),
- * MethodArgumentNotValid → 400.
+ * BusinessConflict → 409, OptimisticLockingFailure → 409,
+ * AccessDenied → 401 (anonyme) ou 403 (connecté), MethodArgumentNotValid → 400.
  *
  * Une IllegalStateException ordinaire n'a volontairement PAS de handler :
  * c'est un défaut interne, qui doit rester une erreur 500.
@@ -50,6 +51,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessConflictException.class)
     public ResponseEntity<Map<String, Object>> handleBusinessConflict(BusinessConflictException e) {
         return buildResponse(HttpStatus.CONFLICT, e.getMessage());
+    }
+
+    /**
+     * Conflit de version (@Version) : une autre requête a modifié la même
+     * ressource entre la lecture et l'écriture (réservation de quota ou scan
+     * concurrents). L'opération a été annulée et peut être retentée : c'est un
+     * 409, pas une erreur serveur. Message générique : ni entité, ni identifiant,
+     * ni version exposés.
+     */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<Map<String, Object>> handleOptimisticLock(OptimisticLockingFailureException e) {
+        return buildResponse(HttpStatus.CONFLICT,
+                "La ressource a été modifiée par une autre requête, veuillez réessayer");
     }
 
     /**
