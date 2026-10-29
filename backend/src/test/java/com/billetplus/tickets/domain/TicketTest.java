@@ -24,6 +24,15 @@ class TicketTest {
     }
 
     @Test
+    void les_horodatages_sont_a_la_microseconde_comme_en_base() {
+        Ticket ticket = ticket();
+        ticket.marquerCommeScanne();
+
+        assertThat(ticket.getEmisLe().getNano() % 1_000).isZero();
+        assertThat(ticket.getScanneLe().getNano() % 1_000).isZero();
+    }
+
+    @Test
     void marquer_comme_scanne_change_le_statut_et_horodate() {
         Ticket ticket = ticket();
 

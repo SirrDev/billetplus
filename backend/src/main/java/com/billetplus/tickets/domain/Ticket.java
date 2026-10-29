@@ -3,6 +3,7 @@ package com.billetplus.tickets.domain;
 import com.billetplus.tickets.domain.exception.TicketAlreadyScannedException;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 /**
@@ -29,7 +30,7 @@ public class Ticket {
         this.categoryId = categoryId;
         this.orderId = orderId;
         this.status = TicketStatus.EMIS;
-        this.emisLe = Instant.now();
+        this.emisLe = maintenant();
     }
 
     public static Ticket reconstituer(UUID id, UUID eventId, UUID categoryId, UUID orderId,
@@ -65,7 +66,17 @@ public class Ticket {
                 "Impossible de scanner un billet au statut " + status);
         }
         this.status = TicketStatus.SCANNE;
-        this.scanneLe = Instant.now();
+        this.scanneLe = maintenant();
+    }
+
+    /**
+     * Horodatage à la microseconde, la précision de TIMESTAMPTZ. emisLe entre
+     * dans le contenu signé du QR code (ADR 0004) : la valeur signée doit être
+     * exactement celle qui sera relue en base, sinon un QR recalculé plus tard
+     * (renvoi, export PDF) ne correspondrait plus au QR d'origine.
+     */
+    private static Instant maintenant() {
+        return Instant.now().truncatedTo(ChronoUnit.MICROS);
     }
 
     public void annuler() {
