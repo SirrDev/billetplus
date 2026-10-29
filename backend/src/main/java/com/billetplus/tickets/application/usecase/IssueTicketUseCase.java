@@ -32,6 +32,14 @@ import java.util.UUID;
 @Service
 public class IssueTicketUseCase {
 
+    /**
+     * Plafond de billets par émission. Borne la durée de la transaction (une
+     * insertion et une signature par billet, catégorie verrouillée pendant ce
+     * temps) et la taille d'une commande. Le module orders devra appliquer la
+     * même limite à la création de la commande.
+     */
+    public static final int QUANTITE_MAX_PAR_EMISSION = 20;
+
     private final TicketCategoryRepository categoryRepository;
     private final TicketRepository ticketRepository;
     private final QRSigner qrSigner;
@@ -45,7 +53,8 @@ public class IssueTicketUseCase {
     }
 
     /**
-     * @throws IllegalArgumentException si un paramètre est absent ou si la quantité n'est pas strictement positive
+     * @throws IllegalArgumentException si un paramètre est absent, si la quantité n'est pas strictement
+     *                                  positive ou si elle dépasse {@link #QUANTITE_MAX_PAR_EMISSION}
      * @throws NoSuchElementException   si la catégorie n'existe pas
      * @throws BilletsDejaEmisException si des billets de cette catégorie ont déjà été émis pour la commande
      * @throws QuotaDepasseException    si la quantité dépasse le quota restant
@@ -54,6 +63,10 @@ public class IssueTicketUseCase {
     public List<IssuedTicket> execute(UUID categoryId, UUID orderId, int quantite) {
         if (categoryId == null || orderId == null) {
             throw new IllegalArgumentException("categoryId et orderId sont obligatoires");
+        }
+        if (quantite > QUANTITE_MAX_PAR_EMISSION) {
+            throw new IllegalArgumentException(
+                "Au plus %d billets par émission".formatted(QUANTITE_MAX_PAR_EMISSION));
         }
 
         TicketCategory category = categoryRepository.findById(categoryId)

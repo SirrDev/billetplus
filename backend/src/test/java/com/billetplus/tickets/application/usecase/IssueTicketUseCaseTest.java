@@ -139,6 +139,29 @@ class IssueTicketUseCaseTest {
     }
 
     @Test
+    void accepte_exactement_le_plafond_de_billets_par_emission() {
+        TicketCategory category = categorie(100);
+        when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));
+        when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        List<IssuedTicket> emis = useCase().execute(
+            category.getId(), UUID.randomUUID(), IssueTicketUseCase.QUANTITE_MAX_PAR_EMISSION);
+
+        assertThat(emis).hasSize(IssueTicketUseCase.QUANTITE_MAX_PAR_EMISSION);
+    }
+
+    @Test
+    void refuse_une_emission_au_dela_du_plafond_sans_rien_lire_ni_ecrire() {
+        UUID categoryId = UUID.randomUUID();
+
+        assertThatThrownBy(() -> useCase().execute(
+            categoryId, UUID.randomUUID(), IssueTicketUseCase.QUANTITE_MAX_PAR_EMISSION + 1))
+            .isInstanceOf(IllegalArgumentException.class);
+
+        verifyNoInteractions(categoryRepository, ticketRepository, qrSigner);
+    }
+
+    @Test
     void refuse_une_commande_ou_une_categorie_absente() {
         assertThatThrownBy(() -> useCase().execute(null, UUID.randomUUID(), 1))
             .isInstanceOf(IllegalArgumentException.class);
