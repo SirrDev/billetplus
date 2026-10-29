@@ -47,6 +47,10 @@ public class SecurityConfig {
                         // Parcourir les événements/lieux ne requiert pas de compte (acheteur anonyme).
                         // Créer/publier/annuler reste protégé par @PreAuthorize sur les controllers.
                         .requestMatchers(HttpMethod.GET, "/api/events/**", "/api/venues/**").permitAll()
+                        // Achat sans compte (ADR 0006) : créer une commande et la relire avec son
+                        // jeton ne demandent aucun compte. Le jeton est contrôlé par le cas d'usage.
+                        .requestMatchers(HttpMethod.POST, "/api/orders").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/orders/*").permitAll()
                         .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         // Tomcat redirige vers /error pour produire les réponses 4xx/5xx. Sans cette règle,

@@ -1,11 +1,14 @@
 package com.billetplus.orders.infrastructure.persistence;
 
 import com.billetplus.orders.application.port.OrderRepository;
+import com.billetplus.orders.domain.NumeroTelephone;
 import com.billetplus.orders.domain.Order;
+import com.billetplus.orders.domain.OrderStatus;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -52,5 +55,11 @@ class JpaOrderRepositoryAdapter implements OrderRepository {
             })
             .orElseGet(() -> OrderMapper.versNouvelleEntite(order));
         return OrderMapper.versDomaine(springRepo.save(entity));
+    }
+
+    @Override
+    public long compterEnAttente(NumeroTelephone telephone, UUID eventId, Instant maintenant) {
+        return springRepo.countByTelephoneAndEventIdAndStatusAndExpireLeAfter(
+            telephone.valeur(), eventId, OrderStatus.EN_ATTENTE_PAIEMENT, maintenant);
     }
 }
