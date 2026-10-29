@@ -59,4 +59,42 @@ class StatutEvenementsServiceTest {
         assertThat(service().estOuvertALaVente(null)).isFalse();
         verifyNoInteractions(eventRepository);
     }
+
+    @Test
+    void reconnait_l_organisateur_et_lui_seul() {
+        UUID organisateur = UUID.randomUUID();
+        Event event = new Event("Concert", null, Instant.now(), null,
+            new Venue("Grand Theatre", "Dakar", null, null), organisateur);
+        when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+
+        assertThat(service().estOrganisateur(event.getId(), organisateur)).isTrue();
+        assertThat(service().estOrganisateur(event.getId(), UUID.randomUUID())).isFalse();
+        assertThat(service().estOrganisateur(event.getId(), null)).isFalse();
+    }
+
+    @Test
+    void un_evenement_inconnu_n_a_pas_d_organisateur() {
+        UUID inconnu = UUID.randomUUID();
+        when(eventRepository.findById(inconnu)).thenReturn(Optional.empty());
+
+        assertThat(service().estOrganisateur(inconnu, UUID.randomUUID())).isFalse();
+        assertThat(service().accepteDesCategories(inconnu)).isFalse();
+    }
+
+    /** La billetterie se configure en brouillon et une fois publié, plus après annulation. */
+    @Test
+    void accepte_des_categories_en_brouillon_et_publie_mais_pas_annule() {
+        Event brouillon = evenement();
+        Event publie = evenement();
+        publie.publier();
+        Event annule = evenement();
+        annule.annuler();
+        for (Event e : new Event[]{brouillon, publie, annule}) {
+            when(eventRepository.findById(e.getId())).thenReturn(Optional.of(e));
+        }
+
+        assertThat(service().accepteDesCategories(brouillon.getId())).isTrue();
+        assertThat(service().accepteDesCategories(publie.getId())).isTrue();
+        assertThat(service().accepteDesCategories(annule.getId())).isFalse();
+    }
 }
