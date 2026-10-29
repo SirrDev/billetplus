@@ -30,4 +30,11 @@ public interface StatutEvenements {
      * billetterie (catégories) : brouillon ou publié. Faux s'il est annulé ou terminé.
      */
     boolean accepteDesCategories(UUID eventId);
+
+    /**
+     * Vrai si {@code agentId} est affecté au contrôle d'entrée de l'événement :
+     * condition pour scanner ses billets (route de scan, contrat de
+     * ValidateTicketScanUseCase). Faux pour un identifiant absent ou inconnu.
+     */
+    boolean estAgentAffecte(UUID eventId, UUID agentId);
 }

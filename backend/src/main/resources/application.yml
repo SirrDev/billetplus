@@ -50,6 +50,12 @@ billetplus:
     qr-signing:
       private-key-path: ${QR_PRIVATE_KEY_PATH:classpath:keys/ed25519_private_dev.pem}
       public-key-path: classpath:keys/ed25519_public.pem
+  # Premier compte ADMIN, créé au démarrage s'il n'en existe aucun
+  # (PremierAdminInitializer). Jamais de valeur ici : uniquement par variables
+  # d'environnement. Vides, rien n'est créé (cas normal en dev et en CI).
+  admin:
+    email: ${BILLETPLUS_ADMIN_EMAIL:}
+    mot-de-passe: ${BILLETPLUS_ADMIN_MOT_DE_PASSE:}
   # Réservation temporaire des places pendant le paiement Wave (ADR 0003).
   # Plus longue que le tunnel de paiement (1 à 2 minutes) : trop courte, elle
   # expirerait pendant un paiement en cours.

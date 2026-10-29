@@ -1,7 +1,9 @@
 package com.billetplus.auth.application;
 
+import com.billetplus.auth.domain.Role;
 import com.billetplus.auth.domain.User;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,4 +20,9 @@ public interface UserRepository {
     User save(User user);
 
     boolean existsByEmail(String email);
+
+    /** Comptes créés par cet utilisateur (les agents d'un organisateur), du plus ancien au plus récent. */
+    List<User> findByCreePar(UUID createurId);
+
+    boolean existsByRole(Role role);
 }
