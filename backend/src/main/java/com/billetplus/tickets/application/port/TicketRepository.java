@@ -1,7 +1,9 @@
 package com.billetplus.tickets.application.port;
 
 import com.billetplus.tickets.domain.Ticket;
+import com.billetplus.tickets.domain.TicketStatus;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,6 +19,9 @@ import java.util.UUID;
 public interface TicketRepository {
 
     Optional<Ticket> findById(UUID id);
+
+    /** Billets d'un événement ayant un statut donné (par exemple tous les EMIS, à annuler). */
+    List<Ticket> findByEventIdAndStatus(UUID eventId, TicketStatus status);
 
     Ticket save(Ticket ticket);
 }

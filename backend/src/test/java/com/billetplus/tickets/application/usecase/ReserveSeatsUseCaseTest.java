@@ -2,12 +2,14 @@ package com.billetplus.tickets.application.usecase;
 
 import com.billetplus.shared.Money;
 import com.billetplus.shared.exception.BusinessConflictException;
+import com.billetplus.events.api.publique.StatutEvenements;
 import com.billetplus.tickets.application.port.SeatReservationStore;
 import com.billetplus.tickets.application.port.TicketCategoryRepository;
 import com.billetplus.tickets.domain.ReservationTemporaire;
 import com.billetplus.tickets.domain.QuantiteParCommande;
 import com.billetplus.tickets.domain.TicketCategory;
 import com.billetplus.tickets.domain.exception.PlacesIndisponiblesException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -39,10 +41,18 @@ class ReserveSeatsUseCaseTest {
     private TicketCategoryRepository categoryRepository;
     @Mock
     private SeatReservationStore reservationStore;
+    @Mock
+    private StatutEvenements statutEvenements;
 
     private ReserveSeatsUseCase useCase() {
-        return new ReserveSeatsUseCase(categoryRepository, reservationStore,
+        return new ReserveSeatsUseCase(categoryRepository, reservationStore, statutEvenements,
             Clock.fixed(MAINTENANT, ZoneOffset.UTC), CINQ_MINUTES);
+    }
+
+    /** Par défaut, l'événement est ouvert à la vente (lenient : certains tests s'arrêtent avant). */
+    @BeforeEach
+    void evenementOuvertALaVente() {
+        lenient().when(statutEvenements.estOuvertALaVente(any())).thenReturn(true);
     }
 
     /** 100 places, 30 déjà vendues : la limite des réservations est 70. */
@@ -146,5 +156,23 @@ class ReserveSeatsUseCaseTest {
             .isInstanceOf(IllegalArgumentException.class);
 
         verifyNoInteractions(categoryRepository, reservationStore);
+    }
+
+    /**
+     * Événement brouillon, annulé ou terminé : même réponse qu'une catégorie
+     * inconnue (même exception, même message), pour qu'un brouillon reste
+     * indiscernable, et aucune place n'est bloquée (ADR 0005).
+     */
+    @Test
+    void refuse_de_reserver_pour_un_evenement_non_ouvert_exactement_comme_une_categorie_inconnue() {
+        TicketCategory category = categorieAvecTrenteVendues();
+        when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));
+        when(statutEvenements.estOuvertALaVente(category.getEventId())).thenReturn(false);
+
+        assertThatThrownBy(() -> useCase().execute(category.getId(), UUID.randomUUID(), 2))
+            .isInstanceOf(NoSuchElementException.class)
+            .hasMessage("Catégorie de billet introuvable : " + category.getId());
+
+        verifyNoInteractions(reservationStore);
     }
 }

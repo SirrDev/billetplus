@@ -1,9 +1,11 @@
 package com.billetplus.tickets.infrastructure.persistence;
 
 import com.billetplus.shared.Money;
+import com.billetplus.events.api.publique.StatutEvenements;
 import com.billetplus.tickets.application.port.QRSigner;
 import com.billetplus.tickets.application.port.QrVerificationResult;
 import com.billetplus.tickets.application.port.SeatReservationStore;
+import com.billetplus.tickets.application.usecase.CancelEventTicketsUseCase;
 import com.billetplus.tickets.application.usecase.IssueTicketUseCase;
 import com.billetplus.tickets.application.usecase.ResultatScan;
 import com.billetplus.tickets.application.usecase.ValidateTicketScanUseCase;
@@ -12,6 +14,7 @@ import com.billetplus.tickets.domain.TicketCategory;
 import com.billetplus.tickets.domain.TicketStatus;
 import com.billetplus.tickets.domain.exception.BilletsDejaEmisException;
 import com.billetplus.tickets.domain.exception.QuotaDepasseException;
+import com.billetplus.tickets.domain.exception.VenteFermeeException;
 import com.billetplus.tickets.domain.exception.TicketAlreadyScannedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -77,7 +80,8 @@ import static org.mockito.Mockito.when;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({JpaTicketCategoryRepositoryAdapter.class, JpaTicketRepositoryAdapter.class,
-         JpaTicketIssuanceRepositoryAdapter.class, IssueTicketUseCase.class, ValidateTicketScanUseCase.class})
+         JpaTicketIssuanceRepositoryAdapter.class, IssueTicketUseCase.class, ValidateTicketScanUseCase.class,
+         CancelEventTicketsUseCase.class})
 // Absente de @DataJpaTest mais active dans l'application : sans elle, le test
 // ne verrait pas la traduction d'exceptions que Spring applique aux beans
 // @Repository (qui transformerait une BusinessConflictException en 500).
@@ -107,12 +111,17 @@ class TicketPersistenceIntegrationTest {
     private IssueTicketUseCase issueTicket;
     @Autowired
     private ValidateTicketScanUseCase validateScan;
+    @Autowired
+    private CancelEventTicketsUseCase cancelEventTickets;
     /** La vraie signature Ed25519 a ses propres tests ; ici seule la transaction compte. */
     @MockBean
     private QRSigner qrSigner;
     /** Redis a ses propres tests (RedisSeatReservationStoreIntegrationTest) ; ici, seul le moment de la libération compte. */
     @MockBean
     private SeatReservationStore reservationStore;
+    /** Le module events n'est pas chargé ici : son port public est simulé, ouvert par défaut. */
+    @MockBean
+    private StatutEvenements statutEvenements;
     @Autowired
     private JdbcTemplate jdbc;
     @Autowired
@@ -129,6 +138,7 @@ class TicketPersistenceIntegrationTest {
         tx = new TransactionTemplate(transactionManager);
         nouvelleTx = new TransactionTemplate(transactionManager);
         nouvelleTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        when(statutEvenements.estOuvertALaVente(any())).thenReturn(true);
     }
 
     private TicketCategory enregistrer(TicketCategory category) {
@@ -635,5 +645,73 @@ class TicketPersistenceIntegrationTest {
     private void qrAuthentiquePour(Ticket ticket) {
         when(qrSigner.verify(any(String.class))).thenReturn(QrVerificationResult.valide(
             ticket.getId(), ticket.getEventId(), ticket.getEmisLe().truncatedTo(ChronoUnit.MILLIS)));
+    }
+
+    // ---- Annulation d'un événement (CancelEventTicketsUseCase, ADR 0005) ----
+
+    /**
+     * Sur un vrai PostgreSQL : seuls les billets EMIS de l'événement passent à
+     * ANNULE. Un billet déjà scanné (événement annulé pendant son déroulement)
+     * et les billets d'un autre événement ne bougent pas. Un second appel ne
+     * change plus rien (idempotent).
+     */
+    @Test
+    void l_annulation_d_un_evenement_annule_ses_billets_valides_et_seulement_eux() {
+        TicketCategory category = categorieEnregistree(10);
+        UUID eventId = category.getEventId();
+        Ticket emis1 = enregistrer(new Ticket(eventId, category.getId(), UUID.randomUUID()));
+        Ticket emis2 = enregistrer(new Ticket(eventId, category.getId(), UUID.randomUUID()));
+        Ticket scanne = new Ticket(eventId, category.getId(), UUID.randomUUID());
+        scanne.marquerCommeScanne();
+        enregistrer(scanne);
+        TicketCategory autreCategorie = categorieEnregistree(10);
+        Ticket autreEvenement = enregistrer(new Ticket(autreCategorie.getEventId(), autreCategorie.getId(), UUID.randomUUID()));
+
+        Integer annules = tx.execute(s -> cancelEventTickets.execute(eventId));
+
+        assertThat(annules).isEqualTo(2);
+        assertThat(lireBillet(emis1.getId()).getStatus()).isEqualTo(TicketStatus.ANNULE);
+        assertThat(lireBillet(emis2.getId()).getStatus()).isEqualTo(TicketStatus.ANNULE);
+        assertThat(lireBillet(scanne.getId()).getStatus()).isEqualTo(TicketStatus.SCANNE);
+        assertThat(lireBillet(autreEvenement.getId()).getStatus()).isEqualTo(TicketStatus.EMIS);
+        Integer secondAppel = tx.execute(s -> cancelEventTickets.execute(eventId));
+        assertThat(secondAppel).isZero();
+    }
+
+    /** Une fois l'événement annulé, son billet est refusé à l'entrée (NON_VALIDE) au lieu d'être ACCEPTE. */
+    @Test
+    void un_billet_d_un_evenement_annule_est_refuse_a_l_entree() {
+        TicketCategory category = categorieEnregistree(10);
+        Ticket ticket = enregistrer(new Ticket(category.getEventId(), category.getId(), UUID.randomUUID()));
+        tx.executeWithoutResult(s -> cancelEventTickets.execute(category.getEventId()));
+        qrAuthentiquePour(ticket);
+
+        ResultatScan resultat = validateScan.execute("qr", ticket.getEventId());
+
+        assertThat(resultat).isEqualTo(ResultatScan.nonValide(ticket.getId(), TicketStatus.ANNULE));
+    }
+
+    /** Hors transaction de l'appelant, l'annulation ouvre la sienne (REQUIRED) : les save() MANDATORY passent. */
+    @Test
+    void l_annulation_fonctionne_aussi_sans_transaction_englobante() {
+        TicketCategory category = categorieEnregistree(10);
+        Ticket ticket = enregistrer(new Ticket(category.getEventId(), category.getId(), UUID.randomUUID()));
+
+        assertThat(cancelEventTickets.execute(category.getEventId())).isEqualTo(1);
+        assertThat(lireBillet(ticket.getId()).getStatus()).isEqualTo(TicketStatus.ANNULE);
+    }
+
+    /** Événement annulé après le paiement : l'émission est refusée et ne laisse aucune trace. */
+    @Test
+    void une_emission_pour_un_evenement_ferme_a_la_vente_ne_laisse_aucune_trace() {
+        TicketCategory category = categorieEnregistree(10);
+        when(statutEvenements.estOuvertALaVente(category.getEventId())).thenReturn(false);
+
+        assertThatThrownBy(() -> issueTicket.execute(category.getId(), UUID.randomUUID(), 2))
+            .isInstanceOf(VenteFermeeException.class);
+
+        assertThat(nombreDeBillets()).isZero();
+        assertThat(nombreDEmissions()).isZero();
+        assertThat(quotaVenduEnBase(category.getId())).isZero();
     }
 }

@@ -2,10 +2,12 @@ package com.billetplus.tickets.infrastructure.persistence;
 
 import com.billetplus.tickets.application.port.TicketRepository;
 import com.billetplus.tickets.domain.Ticket;
+import com.billetplus.tickets.domain.TicketStatus;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,6 +33,13 @@ class JpaTicketRepositoryAdapter implements TicketRepository {
     @Override
     public Optional<Ticket> findById(UUID id) {
         return springRepo.findById(id).map(TicketMapper::versDomaine);
+    }
+
+    @Override
+    public List<Ticket> findByEventIdAndStatus(UUID eventId, TicketStatus status) {
+        return springRepo.findByEventIdAndStatus(eventId, status).stream()
+            .map(TicketMapper::versDomaine)
+            .toList();
     }
 
     /**

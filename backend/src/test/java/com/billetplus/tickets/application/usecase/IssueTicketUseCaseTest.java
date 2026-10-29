@@ -2,6 +2,7 @@ package com.billetplus.tickets.application.usecase;
 
 import com.billetplus.shared.Money;
 import com.billetplus.shared.exception.BusinessConflictException;
+import com.billetplus.events.api.publique.StatutEvenements;
 import com.billetplus.tickets.application.port.QRSigner;
 import com.billetplus.tickets.application.port.SeatReservationStore;
 import com.billetplus.tickets.application.port.TicketCategoryRepository;
@@ -13,6 +14,7 @@ import com.billetplus.tickets.domain.TicketCategory;
 import com.billetplus.tickets.domain.TicketStatus;
 import com.billetplus.tickets.domain.exception.BilletsDejaEmisException;
 import com.billetplus.tickets.domain.exception.QuotaDepasseException;
+import com.billetplus.tickets.domain.exception.VenteFermeeException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,9 +50,12 @@ class IssueTicketUseCaseTest {
     private QRSigner qrSigner;
     @Mock
     private SeatReservationStore reservationStore;
+    @Mock
+    private StatutEvenements statutEvenements;
 
     private IssueTicketUseCase useCase() {
-        return new IssueTicketUseCase(categoryRepository, issuanceRepository, ticketRepository, qrSigner, reservationStore);
+        return new IssueTicketUseCase(categoryRepository, issuanceRepository, ticketRepository, qrSigner,
+            reservationStore, statutEvenements);
     }
 
     /**
@@ -61,6 +66,9 @@ class IssueTicketUseCaseTest {
     @BeforeEach
     void activerLaSynchronisationDesTransactions() {
         TransactionSynchronizationManager.initSynchronization();
+        // Par défaut, l'événement est ouvert à la vente ; lenient : beaucoup de
+        // tests s'arrêtent avant ce contrôle (quantité refusée, catégorie inconnue).
+        lenient().when(statutEvenements.estOuvertALaVente(any())).thenReturn(true);
     }
 
     @AfterEach
@@ -272,5 +280,24 @@ class IssueTicketUseCaseTest {
             .isInstanceOf(IllegalArgumentException.class);
 
         verifyNoInteractions(categoryRepository, issuanceRepository, ticketRepository, qrSigner);
+    }
+
+    /**
+     * Événement annulé entre le paiement et sa confirmation (ADR 0005) : aucun
+     * billet n'est émis, rien n'est écrit, et l'appelant (orders) doit rembourser.
+     */
+    @Test
+    void refuse_d_emettre_quand_la_vente_est_fermee_sans_rien_ecrire() {
+        TicketCategory category = categorie(10);
+        when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));
+        when(statutEvenements.estOuvertALaVente(category.getEventId())).thenReturn(false);
+
+        assertThatThrownBy(() -> useCase().execute(category.getId(), UUID.randomUUID(), 2))
+            .isInstanceOf(VenteFermeeException.class)
+            .isInstanceOf(BusinessConflictException.class);
+
+        assertThat(category.getQuotaVendu()).isZero();
+        verifyNoInteractions(issuanceRepository, ticketRepository, qrSigner);
+        verify(categoryRepository, never()).save(any());
     }
 }
