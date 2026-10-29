@@ -7,7 +7,6 @@ import com.billetplus.events.application.VenueService;
 import com.billetplus.events.domain.Event;
 import com.billetplus.events.domain.EventStatus;
 import com.billetplus.shared.Money;
-import com.billetplus.tickets.application.port.QRSigner;
 import com.billetplus.tickets.application.port.TicketCategoryRepository;
 import com.billetplus.tickets.application.usecase.CancelEventTicketsUseCase;
 import com.billetplus.tickets.application.usecase.IssueTicketUseCase;
@@ -21,26 +20,11 @@ import com.billetplus.tickets.domain.exception.VenteFermeeException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.RequestPostProcessor;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -53,7 +37,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -74,38 +57,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * et absente du runner de CI. Ignoré (et non en échec) sans Docker ; en CI,
  * l'étape « Refuser les tests ignorés » ferait alors échouer le run.
  */
-@SpringBootTest
-@AutoConfigureMockMvc
-@Testcontainers(disabledWithoutDocker = true)
-class ContexteCompletIntegrationTest {
+class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
 
-    @Container
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
-        DockerImageName.parse("postgis/postgis:16-3.4").asCompatibleSubstituteFor("postgres"));
-
-    @Container
-    static final GenericContainer<?> REDIS = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
-        .withExposedPorts(6379);
-
-    @DynamicPropertySource
-    static void infrastructure(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-        registry.add("spring.data.redis.host", REDIS::getHost);
-        registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
-    }
-
-    @MockBean
-    private QRSigner qrSigner;
-    /** Espion sur le vrai cas d'usage : permet de simuler une panne pendant l'annulation. */
-    @SpyBean
-    private CancelEventTicketsUseCase cancelEventTickets;
 
     @Autowired
     private ApplicationContext contexte;
-    @Autowired
-    private MockMvc mvc;
     @Autowired
     private VenueService venueService;
     @Autowired
@@ -225,12 +181,6 @@ class ContexteCompletIntegrationTest {
     }
 
     // ---- HTTP : catégories de billets (premiers tests MockMvc du projet) ----
-
-    /** Même authentification que JwtAuthenticationFilter : principal = UUID, autorité ROLE_<rôle>. */
-    private static RequestPostProcessor connecte(UUID userId, String role) {
-        return authentication(new UsernamePasswordAuthenticationToken(
-            userId, null, List.of(new SimpleGrantedAuthority("ROLE_" + role))));
-    }
 
     private static final String VIP = "{\"nom\":\"VIP\",\"prixFcfa\":15000,\"quotaTotal\":100}";
 
@@ -435,6 +385,11 @@ class ContexteCompletIntegrationTest {
         mvc.perform(put("/api/events/{id}/agents/{agentId}", event.getId(), agentDeLAutre).with(connecte(orga, "ORGANISATEUR")))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.message").value("Agent introuvable : " + agentDeLAutre));
+        // Brouillon d'un autre : 404, indiscernable d'un événement inconnu ; une fois publié : 403.
+        mvc.perform(put("/api/events/{id}/agents/{agentId}", event.getId(), agentDeLAutre).with(connecte(autreOrga, "ORGANISATEUR")))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.message").value("Événement introuvable : " + event.getId()));
+        eventService.publier(event.getId(), orga);
         mvc.perform(put("/api/events/{id}/agents/{agentId}", event.getId(), agentDeLAutre).with(connecte(autreOrga, "ORGANISATEUR")))
             .andExpect(status().isForbidden());
         assertThat(statutEvenements.estAgentAffecte(event.getId(), agentDeLAutre)).isFalse();
