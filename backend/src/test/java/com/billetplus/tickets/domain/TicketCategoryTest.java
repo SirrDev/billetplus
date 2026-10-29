@@ -73,4 +73,17 @@ class TicketCategoryTest {
         assertThatThrownBy(() -> new TicketCategory(UUID.randomUUID(), "VIP", Money.ofFcfa(1000), 0))
             .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void refuse_de_creer_une_categorie_sans_prix() {
+        assertThatThrownBy(() -> new TicketCategory(UUID.randomUUID(), "VIP", null, 10))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void accepte_une_categorie_gratuite() {
+        TicketCategory category = new TicketCategory(UUID.randomUUID(), "Invitation", Money.ofFcfa(0), 10);
+
+        assertThat(category.getPrix()).isEqualTo(Money.ofFcfa(0));
+    }
 }

@@ -28,6 +28,9 @@ public class TicketCategory {
         if (nom == null || nom.isBlank()) {
             throw new IllegalArgumentException("Le nom de la catégorie est obligatoire");
         }
+        if (prix == null) {
+            throw new IllegalArgumentException("Le prix est obligatoire (Money.ofFcfa(0) pour une catégorie gratuite)");
+        }
         if (quotaTotal <= 0) {
             throw new IllegalArgumentException("Le quota total doit être strictement positif");
         }
