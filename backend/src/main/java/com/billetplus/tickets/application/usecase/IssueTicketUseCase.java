@@ -1,15 +1,21 @@
 package com.billetplus.tickets.application.usecase;
 
 import com.billetplus.tickets.application.port.QRSigner;
+import com.billetplus.tickets.application.port.SeatReservationStore;
 import com.billetplus.tickets.application.port.TicketCategoryRepository;
 import com.billetplus.tickets.application.port.TicketIssuanceRepository;
 import com.billetplus.tickets.application.port.TicketRepository;
+import com.billetplus.tickets.domain.QuantiteParCommande;
 import com.billetplus.tickets.domain.Ticket;
 import com.billetplus.tickets.domain.TicketCategory;
 import com.billetplus.tickets.domain.exception.BilletsDejaEmisException;
 import com.billetplus.tickets.domain.exception.QuotaDepasseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,27 +44,24 @@ import java.util.UUID;
 @Service
 public class IssueTicketUseCase {
 
-    /**
-     * Plafond de billets par émission. Borne la durée de la transaction (une
-     * insertion et une signature par billet, catégorie verrouillée pendant ce
-     * temps) et la taille d'une commande. Le module orders devra appliquer la
-     * même limite à la création de la commande.
-     */
-    public static final int QUANTITE_MAX_PAR_EMISSION = 20;
+    private static final Logger LOG = LoggerFactory.getLogger(IssueTicketUseCase.class);
 
     private final TicketCategoryRepository categoryRepository;
     private final TicketIssuanceRepository issuanceRepository;
     private final TicketRepository ticketRepository;
     private final QRSigner qrSigner;
+    private final SeatReservationStore reservationStore;
 
     public IssueTicketUseCase(TicketCategoryRepository categoryRepository,
                               TicketIssuanceRepository issuanceRepository,
                               TicketRepository ticketRepository,
-                              QRSigner qrSigner) {
+                              QRSigner qrSigner,
+                              SeatReservationStore reservationStore) {
         this.categoryRepository = categoryRepository;
         this.issuanceRepository = issuanceRepository;
         this.ticketRepository = ticketRepository;
         this.qrSigner = qrSigner;
+        this.reservationStore = reservationStore;
     }
 
     /**
@@ -80,8 +83,8 @@ public class IssueTicketUseCase {
      *       à cette même frontière.</li>
      * </ul>
      *
-     * @throws IllegalArgumentException si un paramètre est absent, si la quantité n'est pas strictement
-     *                                  positive ou si elle dépasse {@link #QUANTITE_MAX_PAR_EMISSION}
+     * @throws IllegalArgumentException si un paramètre est absent ou si la quantité n'est pas
+     *                                  comprise entre 1 et {@link QuantiteParCommande#MAX}
      * @throws NoSuchElementException   si la catégorie n'existe pas
      * @throws BilletsDejaEmisException si des billets de cette catégorie ont déjà été émis pour la commande
      * @throws QuotaDepasseException    si la quantité dépasse le quota restant
@@ -94,10 +97,7 @@ public class IssueTicketUseCase {
         // Vérifiée ici, et pas seulement par TicketCategory.reserver : la quantité
         // est écrite dans le registre d'émission AVANT la réservation, et une
         // quantité invalide y violerait la contrainte CHECK (erreur 500, pas 400).
-        if (quantite <= 0 || quantite > QUANTITE_MAX_PAR_EMISSION) {
-            throw new IllegalArgumentException(
-                "La quantité doit être comprise entre 1 et %d".formatted(QUANTITE_MAX_PAR_EMISSION));
-        }
+        QuantiteParCommande.verifier(quantite);
 
         TicketCategory category = categoryRepository.findById(categoryId)
             .orElseThrow(() -> new NoSuchElementException("Catégorie de billet introuvable : " + categoryId));
@@ -118,6 +118,32 @@ public class IssueTicketUseCase {
             String qrContent = qrSigner.sign(ticket.getId(), ticket.getEventId(), ticket.getEmisLe());
             emis.add(new IssuedTicket(ticket, qrContent));
         }
+
+        libererLaReservationApresValidation(categoryId, orderId);
         return emis;
+    }
+
+    /**
+     * Les places sont désormais vendues (quota_vendu) : la réservation temporaire
+     * ferait double compte jusqu'à son expiration. Elle est libérée APRÈS la
+     * validation de la transaction, jamais avant : si l'émission est annulée,
+     * l'acheteur garde sa réservation pour une nouvelle tentative.
+     *
+     * Une panne Redis à ce moment n'annule pas la vente déjà validée : la
+     * réservation expirera d'elle-même (places bloquées quelques minutes de
+     * trop, sans incohérence).
+     */
+    private void libererLaReservationApresValidation(UUID categoryId, UUID orderId) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    reservationStore.liberer(categoryId, orderId);
+                } catch (RuntimeException e) {
+                    LOG.warn("Réservation non libérée après émission (catégorie {}, commande {}) : "
+                        + "elle expirera d'elle-même", categoryId, orderId, e);
+                }
+            }
+        });
     }
 }

@@ -2,6 +2,7 @@ package com.billetplus.tickets.infrastructure.persistence;
 
 import com.billetplus.shared.Money;
 import com.billetplus.tickets.application.port.QRSigner;
+import com.billetplus.tickets.application.port.SeatReservationStore;
 import com.billetplus.tickets.application.usecase.IssueTicketUseCase;
 import com.billetplus.tickets.domain.Ticket;
 import com.billetplus.tickets.domain.TicketCategory;
@@ -49,6 +50,9 @@ import java.util.function.IntFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -103,6 +107,9 @@ class TicketPersistenceIntegrationTest {
     /** La vraie signature Ed25519 a ses propres tests ; ici seule la transaction compte. */
     @MockBean
     private QRSigner qrSigner;
+    /** Redis a ses propres tests (RedisSeatReservationStoreIntegrationTest) ; ici, seul le moment de la libération compte. */
+    @MockBean
+    private SeatReservationStore reservationStore;
     @Autowired
     private JdbcTemplate jdbc;
     @Autowired
@@ -404,6 +411,8 @@ class TicketPersistenceIntegrationTest {
         assertThat(nombreDeBillets()).isEqualTo(3);
         assertThat(quotaVenduEnBase(category.getId())).isEqualTo(3);
         assertThat(nombreDEmissions()).isEqualTo(1);
+        // Libérée une seule fois : après la vente validée, pas après le rejeu refusé.
+        verify(reservationStore, times(1)).liberer(category.getId(), orderId);
     }
 
     /**
@@ -422,6 +431,8 @@ class TicketPersistenceIntegrationTest {
         assertThat(nombreDEmissions()).isZero();
         assertThat(nombreDeBillets()).isZero();
         assertThat(quotaVenduEnBase(category.getId())).isZero();
+        // Émission annulée : l'acheteur garde sa réservation pour une nouvelle tentative.
+        verifyNoInteractions(reservationStore);
     }
 
     /**
