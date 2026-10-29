@@ -1,5 +1,6 @@
 package com.billetplus.tickets.domain;
 
+import com.billetplus.tickets.domain.exception.BilletNonValideException;
 import com.billetplus.tickets.domain.exception.TicketAlreadyScannedException;
 
 import java.time.Instant;
@@ -55,15 +56,19 @@ public class Ticket {
      * signature côté scanner (voir ADR 0004) qui ne peut garantir l'unicité
      * en mode hors ligne.
      *
+     * Les deux refus sont des conflits métier (409), pas des pannes : présenter
+     * un billet déjà utilisé, annulé ou remboursé est une situation normale à
+     * l'entrée. Aucun état n'est modifié en cas de refus.
+     *
      * @throws TicketAlreadyScannedException si le billet a déjà été scanné
+     * @throws BilletNonValideException      si le billet est annulé ou remboursé
      */
     public void marquerCommeScanne() {
         if (status == TicketStatus.SCANNE) {
             throw new TicketAlreadyScannedException(id, scanneLe);
         }
         if (status != TicketStatus.EMIS) {
-            throw new IllegalStateException(
-                "Impossible de scanner un billet au statut " + status);
+            throw new BilletNonValideException(id, status);
         }
         this.status = TicketStatus.SCANNE;
         this.scanneLe = maintenant();
