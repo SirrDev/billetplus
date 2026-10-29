@@ -1,0 +1,35 @@
+name: Architecture rules
+
+# Restauré depuis 0e38483 : supprimé par erreur par 32b0ba4 (voir docs/HANDOFF.md).
+# Statut distinct sur la PR pour les règles ArchUnit (ADR 0001 et 0002), même
+# si Backend CI les exécute aussi via ./mvnw clean verify.
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/architecture-check.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+
+jobs:
+  archunit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurer JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Rendre mvnw exécutable
+        run: chmod +x backend/mvnw
+
+      - name: Vérifier les règles d'architecture
+        working-directory: backend
+        run: ./mvnw test -Dtest=ArchitectureTest

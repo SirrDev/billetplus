@@ -1,0 +1,65 @@
+name: Backend CI
+
+# Restauré depuis 0e38483 : supprimé par erreur par 32b0ba4 (voir docs/HANDOFF.md).
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # Pas de service PostgreSQL ni Redis : aucun test ne démarre le contexte
+    # complet, et les tests d'intégration lancent leur propre conteneur PostGIS
+    # via Testcontainers (Docker est fourni par ubuntu-latest).
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurer JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Rendre mvnw exécutable
+        run: chmod +x backend/mvnw
+
+      - name: Compiler et tester
+        working-directory: backend
+        run: ./mvnw clean verify
+
+      # Les tests Testcontainers sont ignorés (et non en échec) quand Docker est
+      # indisponible : sans ce contrôle, la CI resterait verte sans avoir rien
+      # vérifié de la persistance.
+      - name: Refuser les tests ignorés
+        working-directory: backend
+        run: |
+          lignes=$(grep -h "^Tests run:" target/surefire-reports/*.txt)
+          total=$(echo "$lignes" | sed -E 's/^Tests run: ([0-9]+).*/\1/' | awk '{s+=$1} END {print s+0}')
+          ignores=$(echo "$lignes" | sed -E 's/.*Skipped: ([0-9]+).*/\1/' | awk '{s+=$1} END {print s+0}')
+          echo "Tests exécutés : $total, ignorés : $ignores"
+          if [ "$total" -eq 0 ]; then
+            echo "::error::Aucun test exécuté"
+            exit 1
+          fi
+          if [ "$ignores" -ne 0 ]; then
+            echo "::error::$ignores test(s) ignoré(s) : Docker est-il disponible sur le runner ?"
+            exit 1
+          fi
+
+      - name: Publier les résultats de tests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-surefire-reports
+          path: backend/target/surefire-reports/
+          retention-days: 7

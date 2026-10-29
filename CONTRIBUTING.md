@@ -85,18 +85,21 @@ Ces règles sont vérifiées par ArchUnit : ne jamais les contourner même si ce
 
 ## Règles ArchUnit (`ArchitectureTest.java`)
 
-Quatre règles sont actives, sans aucun `allowEmptyShould(true)` :
+Cinq règles sont actives, sans aucun `allowEmptyShould(true)` :
 
 1. `domaine_ne_depend_jamais_de_infrastructure`
 2. `domaine_ne_depend_jamais_de_api`
 3. `modules_sont_independants` (le package `shared` est le seul point de partage autorisé, et ne contient aucune logique métier)
 4. `ports_ne_dependent_pas_de_spring_data`
+5. `domaines_niveau_3_sans_jpa_ni_spring` : aucune dépendance à `jakarta.persistence`, `org.hibernate` ni `org.springframework` dans `tickets.domain` et `orders.domain`. Ne vise pas `auth` ni `events`, qui sont en niveau 2 (JPA-as-domain) par décision (ADR 0002).
 
 À chaque ajout d'un nouveau module ou package (`domain/`, `application/port/`) :
 
 - [ ] Vérifier que les règles s'appliquent bien à au moins une classe du nouveau package. Une règle sur un ensemble vide passe au vert sans rien contrôler.
 - [ ] **Ne pas réintroduire `allowEmptyShould(true)`** pour « faire passer » un test : si une règle ne trouve aucune classe, c'est le signe qu'un package est mal nommé ou mal placé.
 - [ ] Relancer `.\mvnw test "-Dtest=ArchitectureTest"` depuis `backend/`.
+
+Pour prouver qu'une règle (nouvelle ou modifiée) contrôle réellement quelque chose, la tester **à l'envers** : ajouter temporairement une classe sonde qui la viole (par exemple une classe annotée `@jakarta.persistence.Entity` dans `tickets/domain/`), constater l'échec, supprimer la sonde, puis relancer avec `.\mvnw clean test`. Le `clean` est indispensable : ArchUnit lit les `.class` de `target/`, et celui de la sonde y resterait.
 
 ## Tests avant de pousser
 
