@@ -31,14 +31,14 @@ import java.util.UUID;
  * OptimisticLockingFailureException à la validation, traduite en 409 : à lire
  * comme « déjà scanné »).
  *
- * <b>Contrat de l'appelant</b> (future route de scan) :
+ * <b>Contrat de l'appelant</b> (respecté par {@link ScanTicketUseCase}, appelé par la route de scan) :
  * <ul>
- *   <li>{@code eventIdDuControle} n'est JAMAIS lu dans le corps ni dans l'URL. Il
- *       vient soit de l'affectation, lue en base, de l'agent identifié par le jeton,
- *       soit d'un événement dont l'organisateur identifié par le jeton est
- *       propriétaire (vérifié par le module events). Sinon : 403, AVANT tout appel
- *       à ce cas d'usage. Sans ce contrôle, n'importe quel agent scannerait pour
- *       n'importe quel événement ;</li>
+ *   <li>{@code eventIdDuControle} n'est accepté que si l'utilisateur identifié par
+ *       le jeton y est affecté comme agent (lu en base), ou en est l'organisateur
+ *       (vérifié par le module events). Un agent affecté à plusieurs événements
+ *       indique lequel il contrôle ; une valeur pour laquelle il n'est pas affecté
+ *       est refusée en 403, AVANT tout appel à ce cas d'usage. Sans ce contrôle,
+ *       n'importe quel agent scannerait pour n'importe quel événement ;</li>
  *   <li>un conflit de version (OptimisticLockingFailureException, 409 : deux
  *       scans simultanés du même billet) n'est jamais présenté comme un « problème
  *       technique, réessayez » : la route rejoue l'appel une fois (sans risque, il
