@@ -1,5 +1,6 @@
-# Normalise les fins de ligne indépendamment de l'OS du contributeur.
-# Évite le bruit de diff (LF vs CRLF) dans les PR entre Dev A (Windows) et Dev B.
+# Normalise les fins de ligne indépendamment de l'OS du contributeur
+# (poste Windows en développement, Linux en CI) : évite le bruit de diff
+# LF vs CRLF dans les pull requests.
 
 * text=auto eol=lf
 
@@ -11,8 +12,12 @@
 mvnw text eol=lf
 mvnw.cmd text eol=crlf
 
-# Binaires — jamais de conversion
+# Binaires — jamais de conversion de fins de ligne.
+# (.docx est une archive ZIP : une conversion la corromprait.)
 *.png binary
 *.jpg binary
+*.ico binary
+*.woff2 binary
 *.jar binary
 *.pem binary
+*.docx binary

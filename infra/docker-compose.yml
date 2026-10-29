@@ -1,8 +1,18 @@
-version: "3.9"
+# Infrastructure de développement local de Billet+ (PostgreSQL/PostGIS + Redis).
+#
+# À lancer depuis la RACINE du dépôt :
+#   docker compose -f infra/docker-compose.yml up -d
+#
+# La clé « version » est volontairement absente : obsolète avec Compose v2,
+# qui l'ignore et affiche un avertissement à chaque commande.
 
 services:
   postgres:
-    image: postgres:16
+    # Image PostGIS, et non postgres:16 : V1__enable_extensions.sql exécute
+    # CREATE EXTENSION postgis, absente de l'image standard (voir ADR 0003).
+    # Après un changement d'image, supprimer aussi le volume :
+    #   docker compose -f infra/docker-compose.yml down -v
+    image: postgis/postgis:16-3.4
     container_name: billetplus-postgres
     restart: unless-stopped
     environment:
@@ -10,6 +20,7 @@ services:
       POSTGRES_USER: billetplus
       POSTGRES_PASSWORD: billetplus_dev
     ports:
+      # Format "HÔTE:CONTENEUR" : PostgreSQL écoute toujours sur 5432 dans le conteneur.
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -31,7 +42,8 @@ services:
       timeout: 5s
       retries: 10
 
-  # Décommenter une fois le squelette Spring Boot en place (feature/backend-bootstrap)
+  # Décommenter une fois backend/Dockerfile créé (le backend se lance pour
+  # l'instant avec .\mvnw spring-boot:run depuis backend/).
   # backend:
   #   build:
   #     context: ../backend
@@ -46,11 +58,14 @@ services:
   #     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/billetplus
   #     SPRING_DATASOURCE_USERNAME: billetplus
   #     SPRING_DATASOURCE_PASSWORD: billetplus_dev
-  #     SPRING_REDIS_HOST: redis
+  #     # Spring Boot 3 : spring.data.redis.host (l'ancien spring.redis.host est ignoré)
+  #     SPRING_DATA_REDIS_HOST: redis
   #   ports:
+  #     # Si 8080 est occupé sur le poste, remapper (ex. "8081:8080").
   #     - "8080:8080"
 
-  # Décommenter une fois le squelette Vite/React en place (feature/web-bootstrap)
+  # Décommenter une fois web/Dockerfile.dev créé. Revoir VITE_API_URL à ce
+  # moment-là : le port 8080 est souvent occupé en local.
   # web:
   #   build:
   #     context: ../web
