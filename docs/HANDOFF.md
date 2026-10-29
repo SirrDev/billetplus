@@ -1,6 +1,6 @@
 # Document de passation — Billet+
 
-Dernière mise à jour : 29 octobre 2026, soir, après la PR #24 `fix/infra-localhost-only` (PostgreSQL et Redis de dev publiés sur `127.0.0.1` seulement, bruit des repositories Redis coupé). Avant elle, la PR #22 `feature/backend-tickets-redis-seat-lock` (réservation temporaire des places dans Redis pendant le paiement, ADR 0003), suivie d'un démarrage réel confirmé (base en V5). Plus tôt le même jour : PR #20 `feature/backend-tickets-quota-lock` (garde d'idempotence atomique des émissions, migration V5, 101 tests sur le runner, 0 ignoré), PR #18 `fix/ci-restore-backend-workflows` (**la CI backend et le job ArchUnit tournent de nouveau** sur les PR), PR #16 `feature/backend-tickets-jpa-mapper` (persistance JPA niveau 3 du module `tickets`, migration V4, `IssueTicketUseCase`), PR #17 (HANDOFF), PR #14 (alignement du dépôt) et PR #15 (configuration Claude Code)). Ce document complète le contexte du projet (ADR, dépôt GitHub synchronisé) pour reprendre le travail sans rien réexpliquer. En cas de doute entre ce document et le code, **le code du dépôt fait foi** — mais attention : la synchronisation GitHub ne voit que les fichiers **commités, poussés et mergés**, et elle n'est rafraîchie qu'après un clic sur « Sync now » dans le projet.
+Dernière mise à jour : 29 octobre 2026, soir, après la PR #26 `feature/backend-tickets-validate-scan-usecase` (contrôle d'un billet à l'entrée : signature Ed25519, cinq issues, double scan simultané rejeté). Avant elle, la PR #24 `fix/infra-localhost-only` (PostgreSQL et Redis de dev publiés sur `127.0.0.1` seulement, bruit des repositories Redis coupé), et la PR #22 `feature/backend-tickets-redis-seat-lock` (réservation temporaire des places dans Redis pendant le paiement, ADR 0003), suivie d'un démarrage réel confirmé (base en V5). Plus tôt le même jour : PR #20 `feature/backend-tickets-quota-lock` (garde d'idempotence atomique des émissions, migration V5, 101 tests sur le runner, 0 ignoré), PR #18 `fix/ci-restore-backend-workflows` (**la CI backend et le job ArchUnit tournent de nouveau** sur les PR), PR #16 `feature/backend-tickets-jpa-mapper` (persistance JPA niveau 3 du module `tickets`, migration V4, `IssueTicketUseCase`), PR #17 (HANDOFF), PR #14 (alignement du dépôt) et PR #15 (configuration Claude Code)). Ce document complète le contexte du projet (ADR, dépôt GitHub synchronisé) pour reprendre le travail sans rien réexpliquer. En cas de doute entre ce document et le code, **le code du dépôt fait foi** — mais attention : la synchronisation GitHub ne voit que les fichiers **commités, poussés et mergés**, et elle n'est rafraîchie qu'après un clic sur « Sync now » dans le projet.
 
 ---
 
@@ -45,7 +45,7 @@ Jamais de relation JPA cross-module : UUID brut uniquement, sans `FOREIGN KEY` e
 
 ## 3. État du dépôt
 
-**Avancement estimé** (ordre de grandeur, pas une mesure) : backend ≈ 55 % (9 branches planifiées mergées sur 17, plus le cœur de la branche 8 livré avec la 7, et un correctif de sécurité) ; MVP complet ≈ 25 % (le frontend n'a aucune branche commencée). Les branches restantes sont plus lourdes que celles déjà faites (module `orders`, paiement Wave, verrou de quota).
+**Avancement estimé** (ordre de grandeur, pas une mesure) : backend ≈ 60 % (10 branches planifiées mergées sur 17, plus le cœur de la branche 8 livré avec la 7, et un correctif de sécurité) ; MVP complet ≈ 25 % (le frontend n'a aucune branche commencée). Les branches restantes sont plus lourdes que celles déjà faites (module `orders`, paiement Wave, verrou de quota).
 
 ### Phase 0 — Socle technique : ✅ mergée
 
@@ -73,7 +73,9 @@ Docker (PostGIS + Redis), squelette Spring Boot, squelette PWA, CI GitHub Action
 | 10 | `tickets-redis-seat-lock` | ✅ **Mergée le 29/10/2026** (PR #22, merge `06ec5bd` ; commits `04b52d9`, `93a0ffa`, `77a555a`) | Réservation temporaire des places dans Redis, script Lua atomique, `ReserveSeatsUseCase` / `ReleaseSeatsUseCase`, 503 si Redis indisponible (section 4.9) |
 | — | `fix/docs-handoff-pr22` | ✅ Mergée le 29/10/2026 (PR #23, merge `d07fbf2` ; commit `70ebb10`) | Mise à jour du HANDOFF après la PR #22 |
 | — | `fix/infra-localhost-only` | ✅ Mergée le 29/10/2026 (PR #24, merge `4cc23a3` ; commits `ec0dd27`, `6449a50`) | PostgreSQL et Redis de dev sur `127.0.0.1` seulement (relecture sécurité de la PR #22) ; `spring.data.redis.repositories.enabled: false`. Branche créée sous le nom `fix/infra-redis-localhost-only`, renommée avant le premier push quand PostgreSQL a été ajouté au périmètre |
-| 11–17 | `tickets-validate-scan-usecase`, `tickets-pdf-export`, `orders-domain-model`, `orders-create-usecase`, `orders-wave-gateway`, `orders-confirm-payment-usecase`, `rate-limiting` | ⬜ | |
+| — | `fix/docs-handoff-pr24` | ✅ Mergée le 29/10/2026 (PR #25, merge `42acb36` ; commit `6c00595`) | Mise à jour du HANDOFF après la PR #24 |
+| 11 | `tickets-validate-scan-usecase` | ✅ **Mergée le 29/10/2026** (PR #26, merge `f637c4d` ; commits `d67445d`, `f136753`) | `ValidateTicketScanUseCase`, `ResultatScan`, `TicketRepository.findById`, refus de scan du domaine en 409 (section 4.10). **Aucune route** : elle attend les comptes `AGENT` |
+| 12–17 | `tickets-pdf-export`, `orders-domain-model`, `orders-create-usecase`, `orders-wave-gateway`, `orders-confirm-payment-usecase`, `rate-limiting` | ⬜ | |
 
 Branches volontairement supprimées (ne pas recréer) : `backend-auth-rbac-roles` (absorbée dans auth-tokens), `backend-events-categories-quotas` (redondante : `TicketCategory` vit dans `tickets/domain`).
 
@@ -123,7 +125,7 @@ Pourquoi `/error` : sans cette règle, Spring Security 6 soumet à l'authentific
 
 ### 4.4 Tests
 
-**134 tests, 0 échec, 0 ignoré, remesurés le 29/10/2026 sur `main` (`4cc23a3`, `.\mvnw clean test`, Docker démarré)**, dont 34 tests d'intégration Testcontainers (21 PostGIS dans `TicketPersistenceIntegrationTest`, dont 3 à 8 threads ; 13 Redis dans `RedisSeatReservationStoreIntegrationTest`, dont 1 à 8 threads) et 5 règles ArchUnit. Runner GitHub de la PR #22 : CI verte, donc 0 ignoré et au moins un test exécuté. *Le nombre exact n'a pas été relevé (à confirmer dans le log de « Refuser les tests ignorés »).* *(Historique : 55 tests le 20/10 ; 92 puis 101 le 29/10, avant puis après la PR #20 ; 101 confirmé sur le runner de la PR #20.)* Les tests d'intégration ne démarrent que des tranches du contexte (`@DataJpaTest`, `@DataRedisTest`) : aucun test ne démarre le contexte complet ni les règles HTTP/sécurité (section 7).
+**156 tests, 0 échec, 0 ignoré, remesurés le 29/10/2026 sur `main` (`f637c4d`, `.\mvnw clean test`, Docker démarré)**, dont 38 tests d'intégration Testcontainers (25 PostGIS dans `TicketPersistenceIntegrationTest`, dont 4 à 8 threads ; 13 Redis dans `RedisSeatReservationStoreIntegrationTest`, dont 1 à 8 threads) et 5 règles ArchUnit. Runners GitHub des PR #22, #24 et #26 : CI verte, donc 0 ignoré et au moins un test exécuté. *Le nombre exact n'a pas été relevé depuis la PR #20 (à confirmer dans le log de « Refuser les tests ignorés »).* *(Historique : 55 tests le 20/10 ; le 29/10, 92, puis 101 (confirmé sur le runner de la PR #20), 134 et 156.)* Les tests d'intégration ne démarrent que des tranches du contexte (`@DataJpaTest`, `@DataRedisTest`) : aucun test ne démarre le contexte complet ni les règles HTTP/sécurité (section 7).
 
 ⚠️ Sans Docker, les 13 tests d'intégration sont **ignorés** (`disabledWithoutDocker`) et la suite reste verte : toujours lire la ligne `Skipped` avant d'annoncer un résultat.
 
@@ -245,6 +247,54 @@ Aucune route HTTP ajoutée. Objet (ADR 0003, ligne 48) : bloquer des places pend
 - une vraie panne Redis de bout en bout (le 503 n'est testé que sur le handler) ;
 - le scénario du paiement lent avec PostgreSQL et Redis ensemble ;
 - le coût du script sous forte charge.
+
+### 4.10 Branche `feature/backend-tickets-validate-scan-usecase` (PR #26, mergée le 29/10/2026)
+
+Aucune route HTTP ajoutée : la route de scan attend les comptes `AGENT` (section 7). **Décisions (à respecter)** :
+
+- **Les issues attendues d'un scan sont renvoyées, jamais levées.** `ValidateTicketScanUseCase.execute(qrContent, eventIdDuControle)` (`@Service @Transactional`) renvoie un `ResultatScan` (*record* et *enum* `Issue`) :
+
+  | Issue | Quand | Données |
+  |---|---|---|
+  | `ACCEPTE` | signature valide, billet `EMIS`, bon événement : le billet passe à `SCANNE` | `ticketId` |
+  | `DEJA_SCANNE` | billet `SCANNE` | `ticketId`, **heure du premier passage** |
+  | `NON_VALIDE` | billet `ANNULE` ou `REMBOURSE` | `ticketId`, statut |
+  | `AUTRE_EVENEMENT` | billet authentique d'un autre événement | `ticketId` |
+  | `INVALIDE` | QR absent, vide, de plus de 1 024 caractères, mal formé ou falsifié, billet inconnu, données signées incohérentes avec la base | **aucune** : un objet unique, identique quelle qu'en soit la cause |
+
+  Les quatre premières issues supposent une signature authentique, que seul le backend produit : les détailler n'aide pas à fabriquer un faux QR.
+- **Ordre des contrôles** :
+  1. taille du QR, **avant toute cryptographie** (`TAILLE_MAX_QR = 1024` ; un QR fait environ 230 caractères) ;
+  2. vérification de la signature (`QRSigner.verify`) ;
+  3. lecture du billet (`TicketRepository.findById`, ajouté au port) ;
+  4. **cohérence QR ↔ base** : `eventId`, et date d'émission comparée **après `truncatedTo(MILLIS)`**, car le QR signe `iat` à la milliseconde et la base garde la microseconde ;
+  5. événement contrôlé ;
+  6. scan, par le domaine.
+
+  La cohérence est testée **avant** l'événement, pour qu'un QR incohérent reste `INVALIDE` au lieu de devenir `AUTRE_EVENEMENT`. L'événement est testé **avant** le scan : un agent de l'événement B ne peut ni consommer un billet de A, ni lire son statut.
+- **La règle du scan reste dans le domaine** (`Ticket.marquerCommeScanne()`). Le cas d'usage attrape ses deux refus, levés avant toute écriture (la transaction n'est donc pas abîmée), et les traduit en `DEJA_SCANNE` et `NON_VALIDE`.
+- **Refus du domaine devenus conflits métier (409)** :
+  - `TicketAlreadyScannedException` étend `BusinessConflictException`, avec les accesseurs `getTicketId()` et `getPremierScanLe()` ;
+  - nouvelle **`BilletNonValideException`** (accesseur `getStatus()`) remplace l'`IllegalStateException` (500) pour un billet `ANNULE` ou `REMBOURSE` ;
+  - **messages génériques** (« Billet déjà scanné », « Billet non valable pour l'entrée ») : le handler 409 renvoie le message au client, donc aucune donnée du billet n'y figure. Les données passent par les accesseurs.
+- **Double scan simultané** : rejeté par le `@Version` des billets, c'est-à-dire un 409 (`OptimisticLockingFailureException`) à la validation. Il ne peut pas devenir `DEJA_SCANNE` dans la transaction. Le contrat de la route impose de rejouer une fois (section 7).
+- **Journalisation** : `LOG.warn` pour un QR authentique d'un billet inconnu ; `LOG.error` pour un QR authentique **incohérent avec la base** (clé compromise ou défaut d'émission : à investiguer). Le contenu du QR, qui est le titre d'accès, n'est jamais journalisé : seul l'UUID du billet l'est.
+- **`eventIdDuControle` est un paramètre obligatoire** : sa provenance est le contrat de la future route (section 7).
+
+**Vérifié** :
+- 156 tests, 0 échec, 0 ignoré ;
+- **6 tests avec le vrai Ed25519** (paire de clés générée, sans Spring) :
+  - un QR réellement signé à l'émission, avec `emisLe` à la microseconde, est accepté ;
+  - une signature modifiée d'un seul caractère donne `INVALIDE` ;
+  - l'identifiant d'un autre billet recopié dans le contenu signé donne `INVALIDE` ;
+  - une autre clé donne `INVALIDE` ;
+  - un contenu quelconque donne `INVALIDE` ;
+  - le même QR présenté deux fois donne `ACCEPTE`, puis `DEJA_SCANNE` ;
+- 11 tests unitaires, un par issue, dont le piège de la milliseconde (`.123456` en base, `.123` dans le QR) ;
+- **8 scans simultanés du même billet** sur PostgreSQL réel : **un seul `ACCEPTE`**, les autres en `DEJA_SCANNE` ou en conflit de version, une seule écriture validée (version 1). Une sonde (retirée) a confirmé la concurrence réelle sur 3 passes (2, 7 et 3 conflits de version) ;
+- relecture `archi-guardian` (conforme) et `security-reviewer` (aucune faille exploitable ; deux corrections de contrat appliquées).
+
+**Non vérifié** : la route HTTP, le démarrage réel avec ce nouveau bean, l'intégration avec la PWA scanner hors ligne.
 
 ---
 
@@ -445,7 +495,19 @@ Test-Inscription
 - `EventService` (niveau 2) lève `AccessDeniedException` de Spring Security : acceptable (comme `AuthService`), mais pour les modules niveau 3 prévoir une exception de domaine.
 - Warning au démarrage « Using generated security password » : bruit inoffensif (`UserDetailsServiceAutoConfiguration`) ; peut être exclu plus tard.
 - Le refresh token n'est pas révocable (limite assumée au MVP, documentée dans `AuthService`).
-- `QuotaDepasseException` étend `BusinessConflictException` (409) depuis `feature/backend-tickets-jpa-mapper`. `TicketAlreadyScannedException` reste à traiter (branche 11).
+- `QuotaDepasseException` étend `BusinessConflictException` (409) depuis `feature/backend-tickets-jpa-mapper`, et `TicketAlreadyScannedException` depuis la PR #26.
+- **⚠️ Un événement annulé n'annule pas ses billets** (relecture sécurité de la PR #26) : le contrôle d'entrée ne vérifie que le statut du billet. `Event.annuler()` (module `events`) ne touche pas aux billets (module `tickets`), et rien ne les relie. **Un billet d'un événement `ANNULE` serait donc `ACCEPTE` à l'entrée.** Ce point dépend de la même décision d'architecture que le contrôle `PUBLIE` (ci-dessous) : `tickets` ne peut pas savoir qu'un événement a été annulé.
+- **Contrat de la future route de scan** (Javadoc de `ValidateTicketScanUseCase`) :
+  - `eventIdDuControle` n'est **jamais** lu dans le corps ni dans l'URL. Il vient de l'affectation, lue en base, de l'agent identifié par le jeton, ou d'un événement dont l'organisateur du jeton est propriétaire (vérifié par le module `events`). Sinon, 403 **avant** tout appel au cas d'usage ;
+  - un conflit de version (409) n'est **jamais** présenté comme « problème technique, réessayez » : la route rejoue l'appel une fois (sans risque, il renvoie alors `DEJA_SCANNE`). L'écran du scanner traite **toute issue autre qu'`ACCEPTE` comme un refus d'entrée**. Sans ça, un agent sous pression pourrait laisser entrer ;
+  - la réponse est le `ResultatScan`, sans les messages des exceptions, et sans donnée de la commande ni de l'acheteur (`orderId`, `categoryId`…) ;
+  - le DTO porte `@Size(max = 1024)`, et la route limite le débit par compte agent ;
+  - tests HTTP à prévoir : agent non affecté → 403 ; anonyme → 401 ; `eventId` injecté dans le corps → ignoré.
+- **Le QR est un jeton porteur, statique et permanent** (limite de conception, PR #26) : une copie (photo, capture d'écran, e-mail transféré) présentée **avant** le titulaire est acceptée, et le vrai titulaire reçoit `DEJA_SCANNE`. Le « premier arrivé gagne » protège la jauge, pas l'acheteur. Pistes pour plus tard :
+  - un code tournant de courte durée, ajouté au QR signé, dans l'application de l'acheteur ;
+  - un contrôle d'identité nominatif pour les billets chers ;
+  - ne jamais renvoyer le QR après le jour J.
+- **En mode hors ligne** (ADR 0004), la PWA scanner vérifie la signature mais **ne détecte pas un double scan entre deux portes** : seul le serveur le fait. La synchronisation des scans faits hors ligne reste à concevoir.
 - **Conflits de version massifs sous forte demande** (constat de la PR #20, section 4.8) : 8 achats simultanés sur une catégorie donnent 1 succès et 7 conflits. **À trancher avant l'ouverture de la billetterie de l'événement pilote**, avec deux leviers :
   - une nouvelle tentative bornée, avec délai aléatoire croissant, à la frontière du webhook (`orders`) ;
   - la requête SQL atomique prévue par l'ADR 0003 (ligne 101 : « à activer si le volume de conflits observé le justifie »). Le test est synthétique : idéalement, la décider sur une mesure de charge réaliste.
@@ -479,7 +541,9 @@ Test-Inscription
 - **Coût d'une émission** : chaque `save()` d'un billet neuf fait un `SELECT` puis un `INSERT` (relecture de l'entité gérée), soit 40 requêtes pour 20 billets. Acceptable au MVP ; piste si besoin : une méthode de port dédiée à la création, ou un `saveAll`.
 - **Redis à durcir en production** (relecture sécurité de la PR #22) : Redis porte désormais un état critique pour la vente (les réservations). Il faudra un mot de passe ou des ACL, un réseau privé, et **`maxmemory-policy noeviction`** : une politique LRU supprimerait des réservations sans prévenir, ce qui mènerait au « payé sans billet ». *(Le volet dev est fait : PR #24 publie Redis et PostgreSQL sur `127.0.0.1` seulement.)*
 - **Mot de passe PostgreSQL de dev commité** (`billetplus_dev`, dans `infra/docker-compose.yml` et `application.yml`) : acceptable en dev depuis que le port n'est publié que sur `127.0.0.1` (PR #24). En production, il devra venir d'une variable d'environnement, comme `JWT_SECRET`.
-- **Démarrage réel après la PR #24 à confirmer** : la connexion du backend par `localhost` aux ports publiés sur `127.0.0.1` est vérifiée en local (connexion TCP sur les deux ports, Redis répond `PONG`, la base garde ses données en V5). Mais la disparition des 5 lignes `Could not safely identify store assignment` (effet de `spring.data.redis.repositories.enabled: false`) n'a pas été observée sur un `spring-boot:run`.
+- **Démarrage réel après les PR #24 et #26 à confirmer** : la connexion du backend par `localhost` aux ports publiés sur `127.0.0.1` est vérifiée en local (connexion TCP sur les deux ports, Redis répond `PONG`, la base garde ses données en V5). Mais deux choses n'ont pas été observées sur un `spring-boot:run` :
+  - la disparition des 5 lignes `Could not safely identify store assignment` (effet de `spring.data.redis.repositories.enabled: false`) ;
+  - le câblage du nouveau bean `ValidateTicketScanUseCase` dans le contexte complet.
 - Une `RedisSystemException` (erreur de script, mémoire pleine) n'est pas une `DataAccessResourceFailureException` : elle finit en 500, pas en 503.
 - En multi-instances, les horloges doivent être synchronisées (NTP) : une instance en avance retire trop tôt des réservations encore valides.
 - `TicketCategory.libererQuota` plafonne silencieusement `quotaVendu` à 0 au lieu de signaler une sur-libération : à décider avec le cas d'usage d'annulation.
@@ -494,7 +558,7 @@ Test-Inscription
 - **Conflit de port 8080** : le conteneur `footbooking-api` (autre projet de SirrDev) publie `0.0.0.0:8080->8080` et occupe donc le port 8080 de Windows (visible via `Get-NetTCPConnection -LocalPort 8080 -State Listen` : processus `com.docker.backend` et `wslrelay`, pas `java`). Ne pas l'arrêter : lancer Billet+ sur 8081 avec `$env:SERVER_PORT = "8081"` (variable valable pour le terminal courant, `application.yml` n'est pas modifié), puis `.\mvnw spring-boot:run`. `footbooking-db` utilise le port 5433 et ne gêne pas Billet+ (5432).
 - Lancer le backend depuis `backend/` : `.\mvnw spring-boot:run`. Démarrage OK : PostgreSQL 16.4, Flyway applique V1–V3, `ddl-auto: validate` passe, Tomcat démarré. **Sans Docker démarré, l'application échoue avec `Connection to localhost:5432 refused`** (erreur sur `flywayInitializer`) — ce n'est pas un défaut du code ; les tests unitaires, eux, restent verts sans base.
 - Arrêter l'infra sans perdre les données : `docker compose -f infra/docker-compose.yml stop`.
-- Tests : `.\mvnw test` puis `.\mvnw test "-Dtest=ArchitectureTest"` (guillemets obligatoires). Résultat de référence au 29/10/2026 : 134 tests, 0 échec, 0 ignoré (Docker démarré ; sans Docker, les 34 tests d'intégration sont ignorés). Les tests d'intégration prennent environ 25 s (PostGIS) et 7 s (Redis). **Démarrage réel confirmé le 29/10/2026 au soir** après la PR #22 : `Started BilletPlusApplication` sur 8081, Flyway « 5 migrations validées, schéma à jour », `ddl-auto: validate` sans erreur. Ce démarrage n'ouvre pas de connexion Redis : elle est ouverte au premier appel. Après la suppression d'une classe, utiliser `.\mvnw clean test` : ArchUnit lit les `.class` de `target/`, et un `.class` orphelin fausserait le résultat.
+- Tests : `.\mvnw test` puis `.\mvnw test "-Dtest=ArchitectureTest"` (guillemets obligatoires). Résultat de référence au 29/10/2026 : 156 tests, 0 échec, 0 ignoré (Docker démarré ; sans Docker, les 38 tests d'intégration sont ignorés). Les tests d'intégration prennent environ 25 s (PostGIS) et 7 s (Redis). **Démarrage réel confirmé le 29/10/2026 au soir** après la PR #22 : `Started BilletPlusApplication` sur 8081, Flyway « 5 migrations validées, schéma à jour », `ddl-auto: validate` sans erreur. Ce démarrage n'ouvre pas de connexion Redis : elle est ouverte au premier appel. Après la suppression d'une classe, utiliser `.\mvnw clean test` : ArchUnit lit les `.class` de `target/`, et un `.class` orphelin fausserait le résultat.
 - Clé Ed25519 de dev : `src/main/resources/keys/ed25519_private_dev.pem` (gitignorée, déjà générée sur la machine de SirrDev) ; régénération : `bash ..\infra\scripts\generate-ed25519-keys.sh`.
 - Surcharger l'URL de la base pour une session sans toucher à `application.yml` : `$env:SPRING_DATASOURCE_URL = "jdbc:postgresql://localhost:5433/billetplus"` — **attention : le port 5433 est celui de `footbooking-db`, pas de Billet+** ; à n'utiliser que si le port 5432 de Billet+ a été remappé. Activer les logs de sécurité : `$env:LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY = "DEBUG"` (puis `Remove-Item Env:...`).
 - Le `git status` doit être lu depuis `backend/` ; les chemins de `docker-compose.yml` apparaissent en `../infra/`.
@@ -552,45 +616,57 @@ Test-Inscription
 31. **`registerSynchronization` exige une transaction active** : les tests unitaires d'un cas d'usage qui l'utilise activent la synchronisation à la main (`TransactionSynchronizationManager.initSynchronization()` dans `@BeforeEach`, `clearSynchronization()` dans `@AfterEach`) et déclenchent eux-mêmes `afterCommit`. Cela permet de vérifier que l'action n'a lieu **qu'après** la validation (PR #22).
 32. **`ports are not available ... bind: Une seule utilisation de chaque adresse de socket` à la recréation d'un conteneur** : après une modification de `ports:` dans `docker-compose.yml`, `up -d` recrée le conteneur, mais l'ancien n'a pas encore libéré le port quand le nouveau démarre. Le nouveau conteneur reste à l'état `Created`, donc le service est arrêté. Diagnostic : `netstat -ano | findstr :6379` ne montre aucun `LISTENING`, seulement un `TIME_WAIT`. Solution : relancer `docker compose -f infra/docker-compose.yml up -d`. Rencontré deux fois le 29/10/2026 (Redis, puis PostgreSQL), sans perte de données, puisqu'il n'y a pas eu de `down -v` (PR #24).
 33. **Élargir le périmètre d'une branche avant le premier push : la renommer** (`git branch -m ancien nouveau`), pour que le nom reflète le contenu. C'est sans risque tant que la branche n'existe pas sur le dépôt distant, ce qui se vérifie avec `git ls-remote --heads origin <ancien>`. Après un push, on ne renomme plus (PR #24).
+34. **Une issue attendue n'est pas une exception** (PR #26) : un billet déjà scanné, annulé ou d'un autre événement est une situation normale à l'entrée. Le cas d'usage les renvoie dans un résultat (`ResultatScan`) au lieu de les lever. Il peut attraper les refus du domaine parce qu'ils sont levés **avant toute écriture** : la transaction n'est donc pas marquée à annuler. Un conflit détecté **à la validation** (`@Version`) ne peut pas être traduit ainsi : il reste une exception (409), que l'appelant doit traiter.
+35. **Un message d'exception métier peut atteindre le client** : `GlobalExceptionHandler` renvoie `e.getMessage()` pour toute `BusinessConflictException`. Un message d'exception du domaine ne contient donc ni identifiant, ni heure, ni stock. Les données passent par des accesseurs, et un test le vérifie (`hasMessageNotContaining(ticket.getId().toString())`, PR #26).
 
 ---
 
 ## 11. Prochaine étape précise
 
-**Avant de commencer** : `git switch main` puis `git pull` (le `main` local doit être sur `4cc23a3` ou plus récent), puis « Sync now » dans le projet. Docker démarré, sinon les 34 tests d'intégration sont ignorés en local (en CI, l'étape « Refuser les tests ignorés » ferait échouer le run). Sur un poste qui n'a pas encore recréé ses conteneurs depuis la PR #24 : `docker compose -f infra/docker-compose.yml up -d` depuis la racine (voir le piège 32 si le port n'est pas libéré à temps). Supprimer les branches locales déjà mergées : `git branch -d feature/backend-tickets-jpa-mapper fix/docs-handoff-pr16 fix/ci-restore-backend-workflows fix/docs-handoff-pr18 feature/backend-tickets-quota-lock fix/docs-handoff-pr20 feature/backend-tickets-redis-seat-lock fix/docs-handoff-pr22 fix/infra-localhost-only` (`-d` refuse toute branche non mergée ; une branche déjà supprimée est signalée puis ignorée).
+**Avant de commencer** : `git switch main` puis `git pull` (le `main` local doit être sur `f637c4d` ou plus récent), puis « Sync now » dans le projet. Docker démarré, sinon les 38 tests d'intégration sont ignorés en local (en CI, l'étape « Refuser les tests ignorés » ferait échouer le run). Supprimer les branches locales déjà mergées : `git branch -d feature/backend-tickets-jpa-mapper fix/docs-handoff-pr16 fix/ci-restore-backend-workflows fix/docs-handoff-pr18 feature/backend-tickets-quota-lock fix/docs-handoff-pr20 feature/backend-tickets-redis-seat-lock fix/docs-handoff-pr22 fix/infra-localhost-only fix/docs-handoff-pr24 feature/backend-tickets-validate-scan-usecase` (`-d` refuse toute branche non mergée ; une branche déjà supprimée est signalée puis ignorée).
 
-*(Branche 9 `tickets-quota-lock` faite : PR #20, section 4.8. Branche 10 `tickets-redis-seat-lock` faite : PR #22, section 4.9. Durcissement infra de dev fait : PR #24.)*
+*(Branches 9, 10 et 11 faites : PR #20, #22 et #26, sections 4.8 à 4.10. Durcissement de l'infra de dev fait : PR #24.)*
 
-### Branche 11 : `feature/backend-tickets-validate-scan-usecase`
+### 11.1 D'abord, recommandé : décider comment un module apprend l'état d'un autre (ADR 0005)
 
-**Objectif** : le cas d'usage de validation d'un billet à l'entrée (scan d'un QR code par un agent), dernier rempart contre le double passage (ADR 0004 : la vérification hors ligne côté scanner ne garantit pas l'unicité).
+Une seule décision d'architecture bloque désormais **trois** sujets (section 7) :
+- le contrôle « événement `PUBLIE` » avant la réservation et l'émission ;
+- la réservation sur la catégorie d'un événement brouillon, qui doit répondre le même 404 qu'un identifiant inconnu ;
+- **les billets d'un événement annulé, qui restent acceptés à l'entrée**.
 
-**Contenu à préciser dans le plan** *(pistes, non actées)* :
-- vérifier la signature du QR avec `QRSigner.verify` (Ed25519), qui ne lève jamais d'exception et renvoie un `QrVerificationResult` ;
-- retrouver le billet. Le port `TicketRepository` n'a aujourd'hui que `save` : il faudra ajouter `findById` ;
-- contrôler la cohérence entre le QR et la base :
-  - le `ticketId` et l'`eventId` du QR doivent correspondre à ceux du billet ;
-  - **la date du QR se compare à la milliseconde** : `emisLe.truncatedTo(ChronoUnit.MILLIS)`, car le QR signe `iat` en millisecondes (section 4.6) ;
-- `Ticket.marquerCommeScanne()` dans une transaction (les `save()` sont en `MANDATORY`). Le `@Version` des billets rejette déjà un double scan simultané (test existant `refuse_un_second_scan_concurrent_du_meme_billet`) ;
-- `TicketAlreadyScannedException` doit étendre `BusinessConflictException` (409), point ouvert depuis la branche 3 (section 7) ;
-- un QR invalide ou falsifié doit donner une réponse **qui ne révèle rien** : même réponse pour un QR invalide et pour un billet inconnu.
+Elle bloquera aussi `orders`, qui devra lire l'événement et la catégorie.
 
-**Prérequis à connaître** :
-- **aucune route ne peut créer un compte `AGENT`** (section 7, point du correctif `/register`). Le cas d'usage peut être écrit et testé sans route, mais la route de scan exigera d'abord un cas d'usage « un organisateur crée un compte agent » dans `auth` ;
-- l'agent ne doit pouvoir scanner que les billets des événements qui le concernent : ce contrôle d'accès est à concevoir avec la route.
+Le désaccord à trancher :
+- l'ADR 0001 (ligne 29) autorise « l'appel direct à un port public exposé par le module » ;
+- la règle ArchUnit `modules_sont_independants` interdit **toute** dépendance entre modules (sauf `shared`).
+
+Pistes *(non actées)* :
+- **(a) Port public par module.** Un package `events.api` (ou `events.application.port.publique`) exposé, et la règle ArchUnit assouplie pour n'autoriser **que** ce package. Lecture synchrone, toujours à jour, simple à tester. Mais `tickets` dépend alors de `events`.
+- **(b) Événements applicatifs** (`ApplicationEventPublisher`). `events` publie par exemple `EvenementPublie` ou `EvenementAnnule` (des types placés dans `shared`), et `tickets` garde localement l'état utile, ou annule ses billets. Aucune dépendance entre modules, et l'ADR comme ArchUnit restent tels quels. En contrepartie : copie d'état, ordre et livraison des événements à garantir (`@TransactionalEventListener(phase = AFTER_COMMIT)`), et rattrapage si un écouteur échoue.
+
+Livrable : `docs/architecture/adr/0005-<titre>.md`, avec la règle ArchUnit ajustée si la piste (a) est retenue. Ensuite, les trois sujets ci-dessus deviennent des branches courtes.
+
+### 11.2 Ensuite : branche 12, `feature/backend-tickets-pdf-export`
+
+**Objectif** : produire le billet en PDF, avec son QR code, pour l'acheteur.
+
+**Faits utiles** :
+- le QR se **recalcule** : Ed25519 est déterministe, et `QRSigner.sign(ticketId, eventId, emisLe)` redonne exactement le même contenu à partir du billet en base (section 4.6). Il n'est pas nécessaire de stocker le QR ;
+- `emisLe` est tronqué à la microseconde en base, et le QR ne signe que la milliseconde : la signature recalculée depuis la base est identique à celle de l'émission (test existant `accepte_un_qr_reellement_signe_a_l_emission`).
+
+**Pistes à préciser dans le plan** *(non actées)* :
+- choix de la bibliothèque PDF et de la génération de l'image du QR (licence compatible) ;
+- port `BilletPdfRenderer` dans `application/port`, adaptateur dans `infrastructure/` ;
+- un cas d'usage qui lit le billet et vérifie que le demandeur est bien l'acheteur de la commande. Cette vérification relève du module `orders`, qui n'existe pas : à concevoir.
 
 **Pièges** :
-- comparaison des dates à la milliseconde (ci-dessus) ;
-- relancer `security-reviewer` : signature, contrôle de rejeu, informations exposées ;
-- tester le double scan concurrent sur le chemin complet du cas d'usage, avec une sonde (piège 26).
+- **le QR est un jeton porteur** (section 7) : le PDF est le titre d'accès. Ne jamais l'exposer sans authentification, ne pas le journaliser, et ne pas le mettre en cache côté serveur ;
+- relancer `security-reviewer`.
 
-**Toujours à trancher avant les branches `orders`** (section 7) :
-- la décision d'architecture « ADR 0001 contre ArchUnit » pour le contrôle `PUBLIE` ;
-- la stratégie face aux conflits de version massifs ;
-- les contrats déjà écrits pour `orders` (émission, réservation, libération, session Wave plus courte que la réservation).
+**Rappel** : la route de scan (branche 11) attend toujours **un cas d'usage de création des comptes `AGENT`** dans `auth` (section 7).
 
 ---
 
 ## 12. Premier message suggéré pour la nouvelle conversation
 
-> Je reprends Billet+ (voir HANDOFF.md du projet). Les PR #22 (réservation temporaire dans Redis) et #24 (infra de dev sur localhost) sont mergées et le projet est resynchronisé. Je veux attaquer `feature/backend-tickets-validate-scan-usecase`. Lis les sections 7 et 11 et propose un plan avant de coder.
+> Je reprends Billet+ (voir HANDOFF.md du projet). La PR #26 (contrôle d'un billet à l'entrée) est mergée et le projet est resynchronisé. Je veux [trancher la décision ADR 0005 (section 11.1) | attaquer `feature/backend-tickets-pdf-export`]. Lis les sections 7 et 11 et propose un plan avant de coder.
