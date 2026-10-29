@@ -1,5 +1,6 @@
 package com.billetplus.tickets.application.usecase;
 
+import com.billetplus.events.api.publique.StatutEvenements;
 import com.billetplus.tickets.application.port.QRSigner;
 import com.billetplus.tickets.application.port.SeatReservationStore;
 import com.billetplus.tickets.application.port.TicketCategoryRepository;
@@ -10,6 +11,7 @@ import com.billetplus.tickets.domain.Ticket;
 import com.billetplus.tickets.domain.TicketCategory;
 import com.billetplus.tickets.domain.exception.BilletsDejaEmisException;
 import com.billetplus.tickets.domain.exception.QuotaDepasseException;
+import com.billetplus.tickets.domain.exception.VenteFermeeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -51,17 +53,20 @@ public class IssueTicketUseCase {
     private final TicketRepository ticketRepository;
     private final QRSigner qrSigner;
     private final SeatReservationStore reservationStore;
+    private final StatutEvenements statutEvenements;
 
     public IssueTicketUseCase(TicketCategoryRepository categoryRepository,
                               TicketIssuanceRepository issuanceRepository,
                               TicketRepository ticketRepository,
                               QRSigner qrSigner,
-                              SeatReservationStore reservationStore) {
+                              SeatReservationStore reservationStore,
+                              StatutEvenements statutEvenements) {
         this.categoryRepository = categoryRepository;
         this.issuanceRepository = issuanceRepository;
         this.ticketRepository = ticketRepository;
         this.qrSigner = qrSigner;
         this.reservationStore = reservationStore;
+        this.statutEvenements = statutEvenements;
     }
 
     /**
@@ -88,6 +93,8 @@ public class IssueTicketUseCase {
      * @throws NoSuchElementException   si la catégorie n'existe pas
      * @throws BilletsDejaEmisException si des billets de cette catégorie ont déjà été émis pour la commande
      * @throws QuotaDepasseException    si la quantité dépasse le quota restant
+     * @throws VenteFermeeException     si l'événement n'est plus ouvert à la vente (annulé depuis le
+     *                                  paiement, par exemple) : l'appelant doit rembourser
      */
     @Transactional
     public List<IssuedTicket> execute(UUID categoryId, UUID orderId, int quantite) {
@@ -101,6 +108,12 @@ public class IssueTicketUseCase {
 
         TicketCategory category = categoryRepository.findById(categoryId)
             .orElseThrow(() -> new NoSuchElementException("Catégorie de billet introuvable : " + categoryId));
+
+        // Avant toute écriture : un événement annulé entre le paiement et sa
+        // confirmation ne reçoit plus de billets (ADR 0005).
+        if (!statutEvenements.estOuvertALaVente(category.getEventId())) {
+            throw new VenteFermeeException();
+        }
 
         // En premier, avant toute réservation : garde d'idempotence atomique
         // (clé primaire de ticket_issuances). Un appel concurrent pour la même

@@ -1,5 +1,6 @@
 package com.billetplus.tickets.application.usecase;
 
+import com.billetplus.events.api.publique.StatutEvenements;
 import com.billetplus.tickets.application.port.SeatReservationStore;
 import com.billetplus.tickets.application.port.TicketCategoryRepository;
 import com.billetplus.tickets.domain.QuantiteParCommande;
@@ -39,15 +40,18 @@ public class ReserveSeatsUseCase {
 
     private final TicketCategoryRepository categoryRepository;
     private final SeatReservationStore reservationStore;
+    private final StatutEvenements statutEvenements;
     private final Clock clock;
     private final Duration dureeReservation;
 
     public ReserveSeatsUseCase(TicketCategoryRepository categoryRepository,
                                SeatReservationStore reservationStore,
+                               StatutEvenements statutEvenements,
                                Clock clock,
                                @Value("${billetplus.reservation.duree:5m}") Duration dureeReservation) {
         this.categoryRepository = categoryRepository;
         this.reservationStore = reservationStore;
+        this.statutEvenements = statutEvenements;
         this.clock = clock;
         this.dureeReservation = dureeReservation;
     }
@@ -77,7 +81,8 @@ public class ReserveSeatsUseCase {
      * @return la réservation enregistrée, avec son expiration effective
      * @throws IllegalArgumentException     si un paramètre est absent ou si la quantité n'est pas
      *                                      comprise entre 1 et {@link QuantiteParCommande#MAX}
-     * @throws NoSuchElementException       si la catégorie n'existe pas
+     * @throws NoSuchElementException       si la catégorie n'existe pas, ou si son événement n'est pas
+     *                                      ouvert à la vente (même réponse : un brouillon reste indiscernable)
      * @throws PlacesIndisponiblesException si les places disponibles ne suffisent pas
      */
     public ReservationTemporaire execute(UUID categoryId, UUID orderId, int quantite) {
@@ -87,6 +92,10 @@ public class ReserveSeatsUseCase {
         QuantiteParCommande.verifier(quantite);
 
         TicketCategory category = categoryRepository.findById(categoryId)
+            .filter(c -> statutEvenements.estOuvertALaVente(c.getEventId()))
+            // Même réponse qu'une catégorie inconnue quand l'événement est un brouillon,
+            // annulé ou terminé : la règle de visibilité du module events (un brouillon
+            // est indiscernable d'un identifiant inconnu) s'applique aussi ici (ADR 0005).
             .orElseThrow(() -> new NoSuchElementException("Catégorie de billet introuvable : " + categoryId));
 
         Instant maintenant = Instant.now(clock);

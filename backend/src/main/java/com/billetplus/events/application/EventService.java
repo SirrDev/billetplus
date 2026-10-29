@@ -2,6 +2,8 @@ package com.billetplus.events.application;
 
 import com.billetplus.events.domain.Event;
 import com.billetplus.events.domain.Venue;
+import com.billetplus.shared.evenements.EvenementAnnule;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,10 +18,13 @@ public class EventService {
 
     private final EventRepository eventRepository;
     private final VenueRepository venueRepository;
+    private final ApplicationEventPublisher publisher;
 
-    public EventService(EventRepository eventRepository, VenueRepository venueRepository) {
+    public EventService(EventRepository eventRepository, VenueRepository venueRepository,
+                        ApplicationEventPublisher publisher) {
         this.eventRepository = eventRepository;
         this.venueRepository = venueRepository;
+        this.publisher = publisher;
     }
 
     @Transactional
@@ -75,12 +80,20 @@ public class EventService {
         return eventRepository.save(event);
     }
 
+    /**
+     * Publie {@link EvenementAnnule} dans la même transaction (ADR 0005) : les
+     * modules qui écoutent (tickets annule les billets) agissent avant la
+     * validation. Si l'un d'eux échoue, l'annulation de l'événement est annulée
+     * avec lui.
+     */
     @Transactional
     public Event annuler(UUID eventId, UUID requestingUserId) {
         Event event = get(eventId);
         verifierProprietaire(event, requestingUserId);
         event.annuler();
-        return eventRepository.save(event);
+        Event enregistre = eventRepository.save(event);
+        publisher.publishEvent(new EvenementAnnule(enregistre.getId()));
+        return enregistre;
     }
 
     /**
