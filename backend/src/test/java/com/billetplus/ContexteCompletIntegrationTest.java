@@ -18,11 +18,17 @@ import com.billetplus.tickets.domain.exception.VenteFermeeException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.ApplicationContext;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -35,6 +41,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
@@ -43,6 +50,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * Premier test du contexte COMPLET de l'application (@SpringBootTest), sur un
@@ -58,6 +70,7 @@ import static org.mockito.Mockito.when;
  * l'étape « Refuser les tests ignorés » ferait alors échouer le run.
  */
 @SpringBootTest
+@AutoConfigureMockMvc
 @Testcontainers(disabledWithoutDocker = true)
 class ContexteCompletIntegrationTest {
 
@@ -86,6 +99,8 @@ class ContexteCompletIntegrationTest {
 
     @Autowired
     private ApplicationContext contexte;
+    @Autowired
+    private MockMvc mvc;
     @Autowired
     private VenueService venueService;
     @Autowired
@@ -198,5 +213,119 @@ class ContexteCompletIntegrationTest {
         assertThat(eventService.get(event.getId()).getStatus()).isEqualTo(EventStatus.PUBLIE);
         assertThat(billetsAuStatut(event.getId(), "EMIS")).isEqualTo(2);
         assertThat(statutEvenements.estOuvertALaVente(event.getId())).isTrue();
+    }
+
+    // ---- HTTP : catégories de billets (premiers tests MockMvc du projet) ----
+
+    /** Même authentification que JwtAuthenticationFilter : principal = UUID, autorité ROLE_<rôle>. */
+    private static RequestPostProcessor connecte(UUID userId, String role) {
+        return authentication(new UsernamePasswordAuthenticationToken(
+            userId, null, List.of(new SimpleGrantedAuthority("ROLE_" + role))));
+    }
+
+    private static final String VIP = "{\"nom\":\"VIP\",\"prixFcfa\":15000,\"quotaTotal\":100}";
+
+    @Test
+    void l_organisateur_cree_une_categorie_de_son_evenement() throws Exception {
+        Event event = evenement();
+
+        mvc.perform(post("/api/events/{id}/categories", event.getId())
+                .with(connecte(organisateur, "ORGANISATEUR"))
+                .contentType(MediaType.APPLICATION_JSON).content(VIP))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.nom").value("VIP"))
+            .andExpect(jsonPath("$.prixFcfa").value(15000))
+            .andExpect(jsonPath("$.quotaTotal").value(100))
+            .andExpect(jsonPath("$.disponible").value(true));
+    }
+
+    /** Un autre organisateur reçoit exactement la réponse d'un événement inconnu : rien n'est révélé. */
+    @Test
+    void un_autre_organisateur_recoit_la_meme_reponse_qu_un_evenement_inconnu() throws Exception {
+        Event event = evenement();
+
+        mvc.perform(post("/api/events/{id}/categories", event.getId())
+                .with(connecte(UUID.randomUUID(), "ORGANISATEUR"))
+                .contentType(MediaType.APPLICATION_JSON).content(VIP))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.message").value("Événement introuvable : " + event.getId()));
+        UUID inconnu = UUID.randomUUID();
+        mvc.perform(post("/api/events/{id}/categories", inconnu)
+                .with(connecte(UUID.randomUUID(), "ORGANISATEUR"))
+                .contentType(MediaType.APPLICATION_JSON).content(VIP))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.message").value("Événement introuvable : " + inconnu));
+    }
+
+    @Test
+    void creer_une_categorie_exige_d_etre_connecte_et_organisateur() throws Exception {
+        Event event = evenement();
+
+        mvc.perform(post("/api/events/{id}/categories", event.getId())
+                .contentType(MediaType.APPLICATION_JSON).content(VIP))
+            .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/events/{id}/categories", event.getId())
+                .with(connecte(organisateur, "AGENT"))
+                .contentType(MediaType.APPLICATION_JSON).content(VIP))
+            .andExpect(status().isForbidden());
+    }
+
+    /** Bornes du DTO alignées sur V4 : 400 et non 500 (piège 15). */
+    @Test
+    void refuse_en_400_un_nom_trop_long_un_prix_negatif_ou_un_quota_nul() throws Exception {
+        Event event = evenement();
+        String nomTropLong = "x".repeat(256);
+
+        for (String corps : new String[]{
+                "{\"nom\":\"" + nomTropLong + "\",\"prixFcfa\":1,\"quotaTotal\":1}",
+                "{\"nom\":\"VIP\",\"prixFcfa\":-1,\"quotaTotal\":1}",
+                "{\"nom\":\"VIP\",\"prixFcfa\":1,\"quotaTotal\":0}",
+                "{\"nom\":\"\",\"prixFcfa\":1,\"quotaTotal\":1}"}) {
+            mvc.perform(post("/api/events/{id}/categories", event.getId())
+                    .with(connecte(organisateur, "ORGANISATEUR"))
+                    .contentType(MediaType.APPLICATION_JSON).content(corps))
+                .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Test
+    void refuse_en_409_une_categorie_pour_un_evenement_annule() throws Exception {
+        Event event = evenement();
+        eventService.annuler(event.getId(), organisateur);
+
+        mvc.perform(post("/api/events/{id}/categories", event.getId())
+                .with(connecte(organisateur, "ORGANISATEUR"))
+                .contentType(MediaType.APPLICATION_JSON).content(VIP))
+            .andExpect(status().isConflict());
+    }
+
+    /** Un acheteur voit le prix et la disponibilité, jamais le stock. */
+    @Test
+    void un_visiteur_anonyme_voit_les_categories_d_un_evenement_publie_sans_le_stock() throws Exception {
+        Event event = evenement();
+        eventService.publier(event.getId(), organisateur);
+        categoriePour(event);
+
+        mvc.perform(get("/api/events/{id}/categories", event.getId()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].nom").value("VIP"))
+            .andExpect(jsonPath("$[0].disponible").value(true))
+            .andExpect(jsonPath("$[0].quotaTotal").doesNotExist())
+            .andExpect(jsonPath("$[0].quotaVendu").doesNotExist());
+    }
+
+    /** Brouillon : 404 pour un visiteur (même message qu'un inconnu), quotas visibles pour l'organisateur. */
+    @Test
+    void les_categories_d_un_brouillon_ne_sont_visibles_que_de_son_organisateur() throws Exception {
+        Event event = evenement();
+        categoriePour(event);
+
+        mvc.perform(get("/api/events/{id}/categories", event.getId()))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.message").value("Événement introuvable : " + event.getId()));
+        mvc.perform(get("/api/events/{id}/categories", event.getId()).with(connecte(organisateur, "ORGANISATEUR")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].quotaTotal").value(100))
+            .andExpect(jsonPath("$[0].quotaVendu").value(0));
     }
 }
