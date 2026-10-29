@@ -44,6 +44,11 @@ billetplus:
     qr-signing:
       private-key-path: ${QR_PRIVATE_KEY_PATH:classpath:keys/ed25519_private_dev.pem}
       public-key-path: classpath:keys/ed25519_public.pem
+  # Réservation temporaire des places pendant le paiement Wave (ADR 0003).
+  # Plus longue que le tunnel de paiement (1 à 2 minutes) : trop courte, elle
+  # expirerait pendant un paiement en cours.
+  reservation:
+    duree: 5m
 
 springdoc:
   api-docs:

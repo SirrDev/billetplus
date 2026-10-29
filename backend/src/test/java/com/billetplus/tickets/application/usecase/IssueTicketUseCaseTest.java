@@ -3,19 +3,25 @@ package com.billetplus.tickets.application.usecase;
 import com.billetplus.shared.Money;
 import com.billetplus.shared.exception.BusinessConflictException;
 import com.billetplus.tickets.application.port.QRSigner;
+import com.billetplus.tickets.application.port.SeatReservationStore;
 import com.billetplus.tickets.application.port.TicketCategoryRepository;
 import com.billetplus.tickets.application.port.TicketIssuanceRepository;
 import com.billetplus.tickets.application.port.TicketRepository;
 import com.billetplus.tickets.domain.Ticket;
+import com.billetplus.tickets.domain.QuantiteParCommande;
 import com.billetplus.tickets.domain.TicketCategory;
 import com.billetplus.tickets.domain.TicketStatus;
 import com.billetplus.tickets.domain.exception.BilletsDejaEmisException;
 import com.billetplus.tickets.domain.exception.QuotaDepasseException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
 import java.util.List;
@@ -24,6 +30,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -39,9 +46,30 @@ class IssueTicketUseCaseTest {
     private TicketRepository ticketRepository;
     @Mock
     private QRSigner qrSigner;
+    @Mock
+    private SeatReservationStore reservationStore;
 
     private IssueTicketUseCase useCase() {
-        return new IssueTicketUseCase(categoryRepository, issuanceRepository, ticketRepository, qrSigner);
+        return new IssueTicketUseCase(categoryRepository, issuanceRepository, ticketRepository, qrSigner, reservationStore);
+    }
+
+    /**
+     * execute() est @Transactional : en production, une transaction est toujours
+     * active. Ici, sans Spring, la synchronisation est activée à la main ; les
+     * tests déclenchent eux-mêmes la « validation » avec {@link #validerLaTransaction()}.
+     */
+    @BeforeEach
+    void activerLaSynchronisationDesTransactions() {
+        TransactionSynchronizationManager.initSynchronization();
+    }
+
+    @AfterEach
+    void nettoyerLaSynchronisationDesTransactions() {
+        TransactionSynchronizationManager.clearSynchronization();
+    }
+
+    private static void validerLaTransaction() {
+        TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
     }
 
     private TicketCategory categorie(int quotaTotal) {
@@ -106,6 +134,48 @@ class IssueTicketUseCaseTest {
         ordre.verify(issuanceRepository).enregistrer(orderId, category.getId(), 2);
         ordre.verify(categoryRepository).save(category);
         ordre.verify(ticketRepository, times(2)).save(any(Ticket.class));
+    }
+
+    /** Les places sont vendues : la réservation temporaire est libérée, mais seulement une fois la vente validée. */
+    @Test
+    void libere_la_reservation_temporaire_seulement_apres_la_validation_de_la_transaction() {
+        TicketCategory category = categorie(10);
+        UUID orderId = UUID.randomUUID();
+        when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));
+        when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        useCase().execute(category.getId(), orderId, 2);
+
+        verifyNoInteractions(reservationStore);   // pas avant la validation
+        validerLaTransaction();
+        verify(reservationStore).liberer(category.getId(), orderId);
+    }
+
+    /** Une panne Redis après la validation n'annule pas une vente déjà validée : la réservation expirera d'elle-même. */
+    @Test
+    void une_panne_a_la_liberation_n_echoue_pas_l_emission_deja_validee() {
+        TicketCategory category = categorie(10);
+        UUID orderId = UUID.randomUUID();
+        when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));
+        when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
+        doThrow(new IllegalStateException("Redis indisponible")).when(reservationStore).liberer(category.getId(), orderId);
+
+        List<IssuedTicket> emis = useCase().execute(category.getId(), orderId, 2);
+
+        assertThatCode(IssueTicketUseCaseTest::validerLaTransaction).doesNotThrowAnyException();
+        assertThat(emis).hasSize(2);
+    }
+
+    @Test
+    void ne_libere_aucune_reservation_quand_l_emission_echoue() {
+        TicketCategory category = categorie(2);
+        when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));
+
+        assertThatThrownBy(() -> useCase().execute(category.getId(), UUID.randomUUID(), 3))
+            .isInstanceOf(QuotaDepasseException.class);
+
+        assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
+        verifyNoInteractions(reservationStore);
     }
 
     @Test
@@ -178,9 +248,9 @@ class IssueTicketUseCaseTest {
         when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
 
         List<IssuedTicket> emis = useCase().execute(
-            category.getId(), UUID.randomUUID(), IssueTicketUseCase.QUANTITE_MAX_PAR_EMISSION);
+            category.getId(), UUID.randomUUID(), QuantiteParCommande.MAX);
 
-        assertThat(emis).hasSize(IssueTicketUseCase.QUANTITE_MAX_PAR_EMISSION);
+        assertThat(emis).hasSize(QuantiteParCommande.MAX);
     }
 
     @Test
@@ -188,7 +258,7 @@ class IssueTicketUseCaseTest {
         UUID categoryId = UUID.randomUUID();
 
         assertThatThrownBy(() -> useCase().execute(
-            categoryId, UUID.randomUUID(), IssueTicketUseCase.QUANTITE_MAX_PAR_EMISSION + 1))
+            categoryId, UUID.randomUUID(), QuantiteParCommande.MAX + 1))
             .isInstanceOf(IllegalArgumentException.class);
 
         verifyNoInteractions(categoryRepository, issuanceRepository, ticketRepository, qrSigner);
