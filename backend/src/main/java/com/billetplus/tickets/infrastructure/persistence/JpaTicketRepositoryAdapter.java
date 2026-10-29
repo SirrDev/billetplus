@@ -1,0 +1,40 @@
+package com.billetplus.tickets.infrastructure.persistence;
+
+import com.billetplus.tickets.application.port.TicketRepository;
+import com.billetplus.tickets.domain.Ticket;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
+
+/**
+ * Adaptateur du port TicketRepository. Même stratégie de sauvegarde que
+ * {@link JpaTicketCategoryRepositoryAdapter} : recharger l'entité gérée et y
+ * recopier l'état du domaine, pour conserver la colonne version.
+ */
+@Repository
+class JpaTicketRepositoryAdapter implements TicketRepository {
+
+    private final SpringDataTicketRepository springRepo;
+
+    JpaTicketRepositoryAdapter(SpringDataTicketRepository springRepo) {
+        this.springRepo = springRepo;
+    }
+
+    @Override
+    @Transactional
+    public Ticket save(Ticket ticket) {
+        TicketJpaEntity entity = springRepo.findById(ticket.getId())
+            .map(existante -> {
+                TicketMapper.copierDans(ticket, existante);
+                return existante;
+            })
+            .orElseGet(() -> TicketMapper.versNouvelleEntite(ticket));
+        return TicketMapper.versDomaine(springRepo.save(entity));
+    }
+
+    @Override
+    public boolean existsByOrderIdAndCategoryId(UUID orderId, UUID categoryId) {
+        return springRepo.existsByOrderIdAndCategoryId(orderId, categoryId);
+    }
+}
