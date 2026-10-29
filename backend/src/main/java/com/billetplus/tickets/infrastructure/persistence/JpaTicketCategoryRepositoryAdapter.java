@@ -3,6 +3,7 @@ package com.billetplus.tickets.infrastructure.persistence;
 import com.billetplus.tickets.application.port.TicketCategoryRepository;
 import com.billetplus.tickets.domain.TicketCategory;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
@@ -33,11 +34,15 @@ class JpaTicketCategoryRepositoryAdapter implements TicketCategoryRepository {
     }
 
     /**
-     * Rejoint la transaction de l'appelant ; à défaut, en ouvre une pour que
-     * la relecture et l'écriture restent atomiques.
+     * MANDATORY : exige la transaction de l'appelant, celle dans laquelle la
+     * catégorie a été lue. Ouvrir ici une transaction neuve relirait la version
+     * la plus récente en base : une réservation calculée sur un état périmé
+     * écraserait alors le quota sans aucune erreur (survente silencieuse).
+     *
+     * @throws org.springframework.transaction.IllegalTransactionStateException hors transaction
      */
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.MANDATORY)
     public TicketCategory save(TicketCategory category) {
         TicketCategoryJpaEntity entity = springRepo.findById(category.getId())
             .map(existante -> {

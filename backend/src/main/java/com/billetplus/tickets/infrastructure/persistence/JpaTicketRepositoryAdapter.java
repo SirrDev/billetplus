@@ -3,6 +3,7 @@ package com.billetplus.tickets.infrastructure.persistence;
 import com.billetplus.tickets.application.port.TicketRepository;
 import com.billetplus.tickets.domain.Ticket;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
@@ -21,8 +22,15 @@ class JpaTicketRepositoryAdapter implements TicketRepository {
         this.springRepo = springRepo;
     }
 
+    /**
+     * MANDATORY, pour la même raison que {@link JpaTicketCategoryRepositoryAdapter#save} :
+     * hors transaction de l'appelant, deux scans concurrents du même billet
+     * seraient tous deux acceptés sans erreur.
+     *
+     * @throws org.springframework.transaction.IllegalTransactionStateException hors transaction
+     */
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.MANDATORY)
     public Ticket save(Ticket ticket) {
         TicketJpaEntity entity = springRepo.findById(ticket.getId())
             .map(existante -> {

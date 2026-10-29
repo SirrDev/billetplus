@@ -14,7 +14,8 @@ import java.util.UUID;
  * absente du domaine. La protection contre la survente n'est effective que si
  * {@link #findById(UUID)}, la modification du domaine et {@link #save(TicketCategory)}
  * s'exécutent dans la MÊME transaction : c'est à l'appelant (cas d'usage
- * annoté @Transactional) de la garantir.
+ * annoté @Transactional) de la garantir. L'adaptateur JPA refuse un save()
+ * appelé hors transaction (propagation MANDATORY).
  */
 public interface TicketCategoryRepository {
 
