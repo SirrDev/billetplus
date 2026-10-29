@@ -1,6 +1,6 @@
 # Document de passation — Billet+
 
-Dernière mise à jour : 20 octobre 2026 (fin de la conversation « correctif /register » : PR `fix/auth-register-role-restriction` mergée dans `main`, après la PR `feature/backend-events-crud-api` du 19/10). Ce document complète le contexte du projet (ADR, dépôt GitHub synchronisé) pour reprendre le travail sans rien réexpliquer. En cas de doute entre ce document et le code, **le code du dépôt fait foi** — mais attention : la synchronisation GitHub ne voit que les fichiers **commités, poussés et mergés**, et elle n'est rafraîchie qu'après un clic sur « Sync now » dans le projet.
+Dernière mise à jour : 29 octobre 2026 (PR #16 `feature/backend-tickets-jpa-mapper` mergée dans `main` : persistance JPA niveau 3 du module `tickets`, migration V4 et cas d'usage `IssueTicketUseCase` ; le même jour, PR #14 (alignement du dépôt) et PR #15 (configuration Claude Code) mergées). Ce document complète le contexte du projet (ADR, dépôt GitHub synchronisé) pour reprendre le travail sans rien réexpliquer. En cas de doute entre ce document et le code, **le code du dépôt fait foi** — mais attention : la synchronisation GitHub ne voit que les fichiers **commités, poussés et mergés**, et elle n'est rafraîchie qu'après un clic sur « Sync now » dans le projet.
 
 ---
 
@@ -45,7 +45,7 @@ Jamais de relation JPA cross-module : UUID brut uniquement, sans `FOREIGN KEY` e
 
 ## 3. État du dépôt
 
-**Avancement estimé** (ordre de grandeur, pas une mesure) : backend ≈ 35 % (6 branches planifiées mergées sur 17, plus un correctif de sécurité) ; MVP complet ≈ 20 % (le frontend n'a aucune branche commencée). Les 11 branches restantes sont plus lourdes que celles déjà faites (module `orders`, paiement Wave, verrou de quota).
+**Avancement estimé** (ordre de grandeur, pas une mesure) : backend ≈ 45 % (7 branches planifiées mergées sur 17, plus le cœur de la branche 8 livré avec la 7, et un correctif de sécurité) ; MVP complet ≈ 25 % (le frontend n'a aucune branche commencée). Les branches restantes sont plus lourdes que celles déjà faites (module `orders`, paiement Wave, verrou de quota).
 
 ### Phase 0 — Socle technique : ✅ mergée
 
@@ -59,26 +59,21 @@ Docker (PostGIS + Redis), squelette Spring Boot, squelette PWA, CI GitHub Action
 | 2 | `backend-auth-tokens` | ✅ Mergée | JWT, refresh, login/register/me, BCrypt |
 | 3 | `backend-tickets-domain-model` | ✅ Mergée | `TicketCategory`, `Ticket` (POJO purs) |
 | 4 | `backend-tickets-ed25519-signer` | ✅ Mergée | Port `QRSigner`, impl Ed25519 |
-| 5 | `backend-events-entity-migration` | ✅ Mergée (commit `93426d0` ; sinon incluse via la PR de la branche 6 — à vérifier avec `git log main`) | `Event`, `Venue`, migration V3 |
+| 5 | `backend-events-entity-migration` | ✅ Mergée le 05/10/2026 (PR #11, merge `8e1676a`) | `Event`, `Venue`, migration V3 |
 | 6 | `backend-events-crud-api` | ✅ **Mergée le 19/10/2026** (4 commits : `428baad`, `a14d67e`, `66ba9ce`, `4731c90`) | API REST événements/lieux, sécurité par méthode, 409, visibilité des brouillons (section 4) |
 | — | `fix/auth-register-role-restriction` | ✅ **Mergée le 20/10/2026** (hors plan initial) | Inscription publique limitée au rôle `ORGANISATEUR` (section 4.5) |
-| 7 | `backend-tickets-jpa-mapper` | ⬜ **Suivante** (section 11) | |
-| 8–17 | `tickets-issue-usecase`, `tickets-quota-lock`, `tickets-redis-seat-lock`, `tickets-validate-scan-usecase`, `tickets-pdf-export`, `orders-domain-model`, `orders-create-usecase`, `orders-wave-gateway`, `orders-confirm-payment-usecase`, `rate-limiting` | ⬜ | |
+| 7 | `backend-tickets-jpa-mapper` | ✅ **Mergée le 29/10/2026** (PR #16, merge `22845ba` ; 10 commits de `9b75555` à `5c601ec`) | Migration V4, ports, entités JPA + mappers + adaptateurs, verrou `@Version`, `IssueTicketUseCase`, 5ᵉ règle ArchUnit, premiers tests d'intégration (section 4.6) |
+| 8 | `tickets-issue-usecase` | 🟡 **Cœur livré dans la branche 7** (`c17e5e6`, `996c87e`) | Reste : vérifier que l'événement est `PUBLIE` avant d'émettre (section 7). Ne pas recréer la branche pour le reste : l'intégrer à `tickets-quota-lock` ou à `orders-confirm-payment-usecase` |
+| — | `infra-claude-code-setup` | ✅ Mergée le 29/10/2026 (PR #15, merge `c3affef`) | `CLAUDE.md`, agents, skills, règles de `.claude/` |
+| 9–17 | `tickets-quota-lock`, `tickets-redis-seat-lock`, `tickets-validate-scan-usecase`, `tickets-pdf-export`, `orders-domain-model`, `orders-create-usecase`, `orders-wave-gateway`, `orders-confirm-payment-usecase`, `rate-limiting` | ⬜ | |
 
 Branches volontairement supprimées (ne pas recréer) : `backend-auth-rbac-roles` (absorbée dans auth-tokens), `backend-events-categories-quotas` (redondante : `TicketCategory` vit dans `tickets/domain`).
 
-### Branche d'alignement : `fix/infra-align-repo-with-handoff` — ⬜ à appliquer (statut à confirmer)
+### Branche d'alignement : `fix/infra-align-repo-with-handoff` — ✅ Mergée le 29/10/2026 (PR #14, merge `c688b50`)
 
-Des versions corrigées ont été produites le 11–12 octobre (à confirmer si copiées dans le dépôt) :
-- `infra/docker-compose.yml` : image `postgis/postgis:16-3.4`, `version: "3.9"` supprimée, `SPRING_DATA_REDIS_HOST` dans le bloc backend commenté, **mappage de port `5432:5432`**.
-- `CONTRIBUTING.md` : PowerShell, plus de Dev A/B, 4 règles ArchUnit sans `allowEmptyShould`, section niveau 3.
-- `.gitattributes` : commentaire nettoyé, binaires `*.docx`, `*.ico`, `*.woff2`.
-- `qodana.yaml` : `projectJDK: "21"`.
-- Cahier des charges `.docx` régénéré (vrai Word) : Ed25519, PWA, section 5.8.
+Commits : `2ce6a53` (`infra/docker-compose.yml` : image `postgis/postgis:16-3.4`, propriété Redis de Spring Boot 3, port `5432:5432`), `55daf4a` (`.gitattributes` normalisé, `qodana.yaml` en `projectJDK: "21"`), `c1e48c4` (ADR 0001 à 0004 versionnés dans `docs/architecture/adr/`), `37e272c` (`CONTRIBUTING.md` PowerShell + ArchUnit), `8e17bd5` (cahier des charges aligné sur les ADR).
 
-Commits proposés : `fix(infra): ...`, `docs(contributing): ...`, `chore(repo): ...`. **Mettre ce statut à ✅ une fois mergée.**
-
-⚠️ Le `docker-compose.yml` **local** de SirrDev est modifié (image PostGIS correcte) et **n'est pas commité** : il apparaît dans `git status` sous `../infra/docker-compose.yml`. Il appartient à la branche d'alignement — ne **jamais** le commiter dans une autre branche (donc jamais de `git add .`).
+Le `docker-compose.yml` local n'est plus modifié hors Git : `git status` est propre sur `main`. ⚠️ `CONTRIBUTING.md:88` dit encore « Quatre règles sont actives » : il y en a 5 depuis la PR #16, à corriger (la liste qui suit n'a pas la 5ᵉ). La règle « jamais de `git add .` » reste en vigueur.
 
 ### Frontend (PWA) : Phase 0 seulement
 
@@ -120,7 +115,9 @@ Pourquoi `/error` : sans cette règle, Spring Security 6 soumet à l'authentific
 
 ### 4.4 Tests
 
-**55 tests unitaires, tous verts le 20/10/2026** (53 + 2 nouveaux dans `AuthServiceTest`, qui en compte maintenant 4) ; 4 règles ArchUnit actives. **Aucun test d'intégration** ne démarre le contexte Spring (voir section 7).
+**92 tests, 0 échec, 0 ignoré, remesurés le 29/10/2026 sur `main` (`22845ba`, `.\mvnw clean test`, Docker démarré)**, dont 13 tests d'intégration Testcontainers (`TicketPersistenceIntegrationTest`) et 5 règles ArchUnit. *(Historique : 55 tests le 20/10/2026.)* Les tests d'intégration ne démarrent que la couche JPA (`@DataJpaTest`) : aucun test ne démarre encore le contexte complet ni les règles HTTP/sécurité (section 7).
+
+⚠️ Sans Docker, les 13 tests d'intégration sont **ignorés** (`disabledWithoutDocker`) et la suite reste verte : toujours lire la ligne `Skipped` avant d'annoncer un résultat.
 
 ### 4.5 Correctif `fix/auth-register-role-restriction` (mergé le 20/10/2026)
 
@@ -133,6 +130,24 @@ Pourquoi `/error` : sans cette règle, Spring Security 6 soumet à l'authentific
 - **Conséquence** : aucune route ne peut plus créer un `AGENT` ni un `ADMIN`. Aucune fonctionnalité actuelle n'en a besoin, mais c'est un chantier à prévoir (section 7).
 
 **Vérifié en HTTP le 20/10/2026** (script de la section 6.2) : inscription avec `role = "ADMIN"` → 201, puis `GET /api/auth/me` → `"role":"ORGANISATEUR"` ; email de 300 caractères → 400 avec le message de validation.
+
+### 4.6 Branche `feature/backend-tickets-jpa-mapper` (PR #16, mergée le 29/10/2026)
+
+Aucune route HTTP ajoutée. **Décisions (à respecter)** :
+
+- **Persistance niveau 3** : `tickets/infrastructure/persistence/` contient `TicketCategoryJpaEntity` et `TicketJpaEntity` (package-private, distinctes du domaine), `TicketCategoryMapper` et `TicketMapper` (trois opérations : `versDomaine`, `versNouvelleEntite`, `copierDans`), les deux interfaces Spring Data et les deux adaptateurs. Ports : `tickets/application/port/TicketCategoryRepository` (`findById`, `save`) et `TicketRepository` (`save`, `existsByOrderIdAndCategoryId`). `categoryId` est un `UUID` simple dans l'entité, pas un `@ManyToOne`.
+- **Verrouillage optimiste** : colonne `version` sur `ticket_categories` **et** sur `tickets` (double scan concurrent). `@Version Long` (wrapper, `null` à la création ⇒ Spring Data fait un `persist`, pas un `merge`). Le domaine n'a **pas** de champ version.
+- **`save()` recharge l'entité gérée puis y copie l'état du domaine** (jamais une entité neuve pour un objet existant), pour conserver la version lue. Les deux `save()` sont en **`@Transactional(propagation = MANDATORY)`** : tout cas d'usage qui lit puis modifie une catégorie ou un billet **doit** être `@Transactional`, sinon l'appel échoue exprès (`IllegalTransactionStateException`). Hors transaction englobante, le verrou ne protégerait rien.
+- **Conflit de version → 409** : `GlobalExceptionHandler` traduit `OptimisticLockingFailureException` en 409 avec un message générique (ni entité, ni identifiant). Il n'y a ni nouvelle tentative automatique ni retry côté serveur.
+- **`QuotaDepasseException` et `BilletsDejaEmisException` étendent `BusinessConflictException`** (409).
+- **`IssueTicketUseCase.execute(categoryId, orderId, quantite)`** : `@Service @Transactional`. Il lit la catégorie (404 si inconnue), refuse une seconde émission pour le même couple (commande, catégorie) (409), réserve le quota dans le domaine, enregistre la catégorie, crée et enregistre N billets, puis signe chaque QR (`QRSigner.sign(ticketId, eventId, emisLe)`). Il renvoie des `IssuedTicket(ticket, qrContent)`. Une panne de signature annule toute l'émission (test d'intégration).
+- **Plafond : 20 billets par émission** (`IssueTicketUseCase.QUANTITE_MAX_PAR_EMISSION`), sinon 400. La même limite est à appliquer à la création de commande (module `orders`).
+- **Domaine** : `TicketCategory` refuse un `prix` nul (`Money.ofFcfa(0)` pour une catégorie gratuite) ; `Ticket` tronque `emisLe` et `scanneLe` à la **microseconde** (précision de `TIMESTAMPTZ`), pour qu'un billet relu en base soit strictement égal au billet émis. **Le QR, lui, signe `emisLe` à la milliseconde** (`Ed25519QRSigner`, champ `iat`).
+- **Migration V4** (appliquée sur la base de dev de SirrDev) : `prix_fcfa BIGINT >= 0`, `quota_total > 0`, contrainte `0 <= quota_vendu <= quota_total` (dernier rempart contre la survente), `CHECK` des 4 statuts, `SCANNE ⇒ scanne_le NOT NULL`, FK intra-module `tickets.category_id`, aucune FK vers `events` ni `orders`. `nom VARCHAR(255)` : le futur DTO de création de catégorie devra porter `@Size(max = 255)`, `@NotBlank`, prix `>= 0`, quota `>= 1`.
+- **5ᵉ règle ArchUnit** `domaines_niveau_3_sans_jpa_ni_spring` : interdit `jakarta.persistence`, `org.hibernate` et `org.springframework` dans `tickets.domain` et `orders.domain` (pas `auth` ni `events`, niveau 2). Elle a été testée à l'envers : une classe `@Entity` placée dans `tickets/domain` la fait échouer.
+- **Testcontainers 1.21.4** (propriété `testcontainers.version` du `pom.xml`, qui aligne aussi la version gérée par le parent Spring Boot).
+
+**Vérifié** : 92 tests verts, dont, sur PostGIS réel : survente concurrente rejetée (seule la réservation validée en premier subsiste), double scan concurrent rejeté, `save()` hors transaction refusé, émission puis rejeu refusé, annulation complète sur panne de signature. Démarrage réel sur le port 8081 le 29/10/2026 : Flyway applique V4 et `ddl-auto: validate` passe. Ce démarrage a été fait **avant** les correctifs `MANDATORY`, 409 et plafond, et n'a pas été relancé depuis. Relecture `archi-guardian`, `db-schema-reviewer` et `security-reviewer` faite, avec ses points traités ou reportés en section 7.
 
 ---
 
@@ -148,7 +163,7 @@ Chaque bloc est **autonome** : chemins complets, **aucune variable définie dans
 # 2. Repartir d'un index propre (ne touche pas aux fichiers)
 git restore --staged .
 
-# 3. Un « git add » par chemin explicite — JAMAIS « git add . » (docker-compose.yml est modifié localement)
+# 3. Un « git add » par chemin explicite — JAMAIS « git add . » (un fichier local étranger à la branche partirait avec)
 git add src/main/java/com/billetplus/.../Fichier.java
 git diff --cached --stat        # vérifier la liste exacte avant de commiter
 
@@ -157,8 +172,10 @@ git commit -m "feat(contexte): description"
 git log --oneline -3
 
 # 5. Push, PR, attente des workflows verts, merge
-git push -u origin feature/<contexte>-<description>
+git push -u origin HEAD
 ```
+
+`git push -u origin HEAD` pousse la branche courante sans retaper son nom : le 29/10/2026, un nom de branche coupé au collage (`feature/backend-tickets-jpa-`) a donné `src refspec ... does not match any`. ⚠️ Tant que la CI backend n'est pas restaurée (section 7), aucun workflow ne vérifie les tests backend sur une PR.
 
 Créer la branche depuis un `main` à jour : `git switch main`, `git pull`, puis `git switch -c <branche>`.
 
@@ -325,7 +342,7 @@ Test-Inscription
 - **Lieux** : tout organisateur peut créer des lieux globaux, sans propriétaire ni détection de doublon (acceptable au MVP). `VenueDto.seatingPlan` est une `String` sérialisée telle quelle (aucun endpoint ne la définit encore) : à revoir quand le plan de salle sera construit.
 - **`EventDto.organizerId`** est exposé publiquement par `GET /api/events/{id}` : identifiant interne du module `auth`, non secret mais à retirer si le front n'en a pas besoin.
 - **Énumération d'emails** : `POST /api/auth/register` répond 400 « Un compte existe déjà avec cet email », ce qui permet de tester l'existence d'un compte. Risque faible au MVP ; à revoir avec l'ouverture de l'inscription aux acheteurs (V2) et le rate limiting (branche 17).
-- **Tests d'intégration absents** : aucun test ne démarre le contexte Spring, d'où le fait que des défauts de configuration (port DB, sécurité, chargement paresseux) n'étaient visibles qu'au lancement réel. Envisager `@SpringBootTest` + Testcontainers + `MockMvc` pour verrouiller les règles d'autorisation, de visibilité et d'inscription (« un champ `role` envoyé est ignoré »). Attention : `V1__enable_extensions.sql` active PostGIS, donc le conteneur de test doit utiliser une image PostGIS (`DockerImageName.parse("postgis/postgis:16-3.4").asCompatibleSubstituteFor("postgres")`), pas `postgres` standard.
+- **Tests d'intégration partiels** : depuis la PR #16, `TicketPersistenceIntegrationTest` (`@DataJpaTest` + Testcontainers PostGIS) couvre la persistance `tickets`. Mais **aucun test ne démarre le contexte complet** : un bean manquant (comme `IssueTicketUseCase` sans adaptateur, rencontré le 29/10) ou une règle de `SecurityConfig` cassée ne se voient qu'au lancement réel. Envisager `@SpringBootTest` + `MockMvc` sur le même conteneur pour verrouiller autorisation, visibilité et inscription (« un champ `role` envoyé est ignoré »). Modèle de conteneur : `DockerImageName.parse("postgis/postgis:16-3.4").asCompatibleSubstituteFor("postgres")`.
 - `EventTest.refuse_de_publier_un_evenement_deja_publie` attend `IllegalStateException` : il passe (sous-classe) mais gagnerait à attendre `BusinessConflictException`.
 - `Event` n'a aucun moyen d'atteindre `TERMINE` (pas de transition automatique ; job planifié prévu en V2). `annuler()` sur un événement déjà `ANNULE` repasse silencieusement à `ANNULE` : à décider (no-op explicite ou 409).
 - `EventService` (niveau 2) lève `AccessDeniedException` de Spring Security : acceptable (comme `AuthService`), mais pour les modules niveau 3 prévoir une exception de domaine.
@@ -333,10 +350,15 @@ Test-Inscription
 - Le refresh token n'est pas révocable (limite assumée au MVP, documentée dans `AuthService`).
 - `QuotaDepasseException` étend `BusinessConflictException` (409) depuis `feature/backend-tickets-jpa-mapper`. `TicketAlreadyScannedException` reste à traiter (branche 11).
 - **CI backend absente de `main`** : le commit `32b0ba4` (« fix(web): ajoute la configuration Vitest... », 19/08) a supprimé par erreur `.github/workflows/backend-ci.yml` et `architecture-check.yml`. Depuis, aucune PR backend ne passe les tests ni ArchUnit en CI. À restaurer depuis `0e38483` dans `fix/ci-restore-backend-workflows`.
-- **Garde anti double émission non atomique** (`IssueTicketUseCase`) : deux appels simultanés pour la même (commande, catégorie) passent tous deux `existsByOrderIdAndCategoryId` ; seul l'échec de version sur `ticket_categories` fait tomber le second. Si `tickets-quota-lock` remplace le `@Version` par un `UPDATE` SQL atomique, cette protection disparaît. À faire dans cette branche : table d'idempotence `ticket_issuances(order_id, category_id)` avec clé primaire (migration V5), insérée en premier dans la transaction, et test à deux threads.
+- **Garde anti double émission non atomique** (`IssueTicketUseCase`) : deux appels simultanés pour la même (commande, catégorie) passent tous deux `existsByOrderIdAndCategoryId` ; seul l'échec de version sur `ticket_categories` fait tomber le second. Si `tickets-quota-lock` remplace le `@Version` par un `UPDATE` SQL atomique, cette protection disparaît. À faire dans `tickets-quota-lock` : table d'idempotence `ticket_issuances(order_id, category_id)` avec clé primaire (migration V5), insérée en premier dans la transaction, et test à deux threads (`CountDownLatch`) qui exige exactement N billets et un quota consommé une seule fois.
 - **Précision des dates du QR** : le QR signe `emisLe` à la **milliseconde** (`Ed25519QRSigner`, champ `iat`), alors que `Ticket` le garde à la microseconde. Toute comparaison entre un QR vérifié et la base doit se faire après `truncatedTo(ChronoUnit.MILLIS)` (branche 11).
 - **Contrat de `orders-confirm-payment` envers `IssueTicketUseCase`** : catégorie, commande et quantité lues en base, jamais dans la notification Wave ; signature et anti-rejeu Wave vérifiés avant l'appel ; montant recalculé côté serveur ; passage à PAYE dans la même transaction ; un 409 `BilletsDejaEmisException` traité comme un succès idempotent (200 à Wave). Plafond : 20 billets par émission (`QUANTITE_MAX_PAR_EMISSION`), à appliquer aussi à la création de commande.
 - Messages 409/404 du module tickets : contiennent des UUID et le quota restant. À rendre génériques si un contrôleur acheteur les relaie.
+- **`IssueTicketUseCase` ne vérifie pas que l'événement est `PUBLIE`** (ni qu'il n'est pas `ANNULE`) : cela demande un port vers le module `events`, ou que le contrôle soit porté par `orders` à la création de la commande. À trancher avant `orders-confirm-payment-usecase`.
+- **Coût d'une émission** : chaque `save()` d'un billet neuf fait un `SELECT` puis un `INSERT` (relecture de l'entité gérée), soit 40 requêtes pour 20 billets. Acceptable au MVP ; piste si besoin : une méthode de port dédiée à la création, ou un `saveAll`.
+- **Démarrage réel non relancé** depuis les derniers correctifs de la PR #16 (`MANDATORY`, 409, plafond) : relancer `spring-boot:run` sur 8081 à la prochaine branche pour le confirmer.
+- `TicketCategory.libererQuota` plafonne silencieusement `quotaVendu` à 0 au lieu de signaler une sur-libération : à décider avec le cas d'usage d'annulation.
+- Plusieurs Javadoc du module `tickets` citent des noms de branches (`feature/backend-tickets-quota-lock`…), qui vieilliront : préférer un renvoi vers un ADR lors des prochaines retouches.
 
 ---
 
@@ -347,7 +369,7 @@ Test-Inscription
 - **Conflit de port 8080** : le conteneur `footbooking-api` (autre projet de SirrDev) publie `0.0.0.0:8080->8080` et occupe donc le port 8080 de Windows (visible via `Get-NetTCPConnection -LocalPort 8080 -State Listen` : processus `com.docker.backend` et `wslrelay`, pas `java`). Ne pas l'arrêter : lancer Billet+ sur 8081 avec `$env:SERVER_PORT = "8081"` (variable valable pour le terminal courant, `application.yml` n'est pas modifié), puis `.\mvnw spring-boot:run`. `footbooking-db` utilise le port 5433 et ne gêne pas Billet+ (5432).
 - Lancer le backend depuis `backend/` : `.\mvnw spring-boot:run`. Démarrage OK : PostgreSQL 16.4, Flyway applique V1–V3, `ddl-auto: validate` passe, Tomcat démarré. **Sans Docker démarré, l'application échoue avec `Connection to localhost:5432 refused`** (erreur sur `flywayInitializer`) — ce n'est pas un défaut du code ; les tests unitaires, eux, restent verts sans base.
 - Arrêter l'infra sans perdre les données : `docker compose -f infra/docker-compose.yml stop`.
-- Tests : `.\mvnw test` puis `.\mvnw test "-Dtest=ArchitectureTest"` (guillemets obligatoires). Résultat de référence au 20/10/2026 : 55 tests, 0 échec.
+- Tests : `.\mvnw test` puis `.\mvnw test "-Dtest=ArchitectureTest"` (guillemets obligatoires). Résultat de référence au 29/10/2026 : 92 tests, 0 échec, 0 ignoré (Docker démarré ; sans Docker, 13 tests d'intégration sont ignorés). Après la suppression d'une classe, utiliser `.\mvnw clean test` : ArchUnit lit les `.class` de `target/`, et un `.class` orphelin fausserait le résultat.
 - Clé Ed25519 de dev : `src/main/resources/keys/ed25519_private_dev.pem` (gitignorée, déjà générée sur la machine de SirrDev) ; régénération : `bash ..\infra\scripts\generate-ed25519-keys.sh`.
 - Surcharger l'URL de la base pour une session sans toucher à `application.yml` : `$env:SPRING_DATASOURCE_URL = "jdbc:postgresql://localhost:5433/billetplus"` — **attention : le port 5433 est celui de `footbooking-db`, pas de Billet+** ; à n'utiliser que si le port 5432 de Billet+ a été remappé. Activer les logs de sécurité : `$env:LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY = "DEBUG"` (puis `Remove-Item Env:...`).
 - Le `git status` doit être lu depuis `backend/` ; les chemins de `docker-compose.yml` apparaissent en `../infra/`.
@@ -389,46 +411,49 @@ Test-Inscription
 15. **Dépassement de taille → 500** : une colonne `VARCHAR(255)` sans `@Size` côté DTO fait échouer l'insertion en base ; toujours aligner la validation sur le schéma (appliqué aux lieux, aux événements et à l'inscription).
 16. **Port 8080 occupé par `footbooking-api`** : un test HTTP lancé sur 8080 interrogeait FootBooking et renvoyait des 400/404 incohérents (corps d'erreur avec `"error":"Bad Request"` et `"path"`, que le `GlobalExceptionHandler` de Billet+ ne produit jamais). Diagnostic : `Get-NetTCPConnection -LocalPort 8080 -State Listen` + `docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Ports}}"`. Solution : Billet+ sur 8081 (section 8) et contrôle d'identité dans les scripts.
 17. **PSReadLine plante au collage de longs blocs** (`ArgumentOutOfRangeException ... SetCursorPosition`) : affichage de la console, sans effet sur l'exécution. Contournement : fonction enveloppante ou fichier `.ps1`.
+18. **Testcontainers 1.20.1 incompatible avec Docker Engine 29** (29.8.1, API minimale 1.40) : `Could not find a valid Docker environment ... BadRequestException (Status 400)`, alors que Docker tourne. Avec `disabledWithoutDocker = true`, les tests sont alors **ignorés** et la suite reste verte. Solution : Testcontainers **1.21.4** (propriété `testcontainers.version`). Toujours vérifier `Skipped: 0`.
+19. **Surefire ne lance pas les classes `*IT.java`** (il ne prend que `*Test`, `*Tests`, `*TestCase`, et Failsafe n'est pas configuré) : un test d'intégration nommé `...IT` ne s'exécute jamais. Nommer les tests d'intégration `...IntegrationTest`.
+20. **`Instant.now()` à 100 ns sous Windows, `TIMESTAMPTZ` à la microseconde** : un billet relu en base différait du billet émis (`...177817400Z` contre `...177817Z`). Trouvé par le test d'intégration. Solution : `Ticket` tronque ses horodatages à la microseconde (domaine). Le QR, lui, signe à la milliseconde.
+21. **`@Service` sans implémentation de ses ports** : `IssueTicketUseCase` a été écrit avant les adaptateurs. Les tests unitaires restaient verts, mais le contexte Spring ne pouvait pas démarrer faute de bean. Les commits ont été ordonnés pour que chaque commit démarre (adaptateurs avant cas d'usage).
+22. **CI backend supprimée par un commit du frontend** : `32b0ba4` (19/08, « fix(web): ... ») a effacé `backend-ci.yml` et `architecture-check.yml` sans que personne le remarque. Diagnostic : `git log --diff-filter=D -- .github/workflows/`. Leçon : relire `git diff --cached --stat` aussi pour les suppressions.
+23. **Vérifier qu'une règle ArchUnit contrôle vraiment quelque chose** : la tester à l'envers avec une classe sonde qui la viole, puis supprimer la sonde et relancer en `clean` (voir section 8).
 
 ---
 
 ## 11. Prochaine étape précise
 
-**Avant de commencer** : `git switch main` puis `git pull` (le `main` local doit contenir les PR des branches 6 et du correctif `/register`), puis « Sync now » dans le projet. Idéalement, solder d'abord la branche d'alignement `fix/infra-align-repo-with-handoff` (section 3), qui supprime le `docker-compose.yml` modifié de ton `git status`.
+**Avant de commencer** : `git switch main` puis `git pull` (le `main` local doit être sur `22845ba` ou plus récent), puis « Sync now » dans le projet. Docker démarré, sinon les 13 tests d'intégration sont ignorés.
 
-**Branche** : `feature/backend-tickets-jpa-mapper`.
+### 11.1 D'abord : `fix/ci-restore-backend-workflows` (priorité, hors plan)
 
-**Objectif** : persister `TicketCategory` et `Ticket` (POJO purs) en niveau 3 strict : entités JPA séparées + mappers + adaptateurs, **sans aucune annotation JPA dans `domain/`**.
+**Objectif** : rétablir la vérification automatique des PR backend, absente de `main` depuis le commit `32b0ba4` du 19/08 (section 7). Sans elle, aucune des branches suivantes n'est vérifiée par la CI.
 
-**Fichiers à créer** :
-```
-tickets/infrastructure/persistence/
-├── TicketCategoryJpaEntity.java
-├── TicketJpaEntity.java
-├── TicketCategoryMapper.java
-├── TicketMapper.java
-├── JpaTicketCategoryRepositoryAdapter.java
-└── JpaTicketRepositoryAdapter.java
-tickets/application/port/
-├── TicketCategoryRepository.java
-└── TicketRepository.java
-db/migration/
-└── V4__create_ticket_categories_and_tickets.sql
-```
+**Fichiers** : récupérer `.github/workflows/backend-ci.yml` et `.github/workflows/architecture-check.yml` depuis le commit `0e38483` (`git show 0e38483:<chemin>` ou `git restore --source=0e38483 -- <chemin>`), puis les adapter.
 
-**Faits du code existant utiles au mapper** :
-- `TicketCategory.reconstituer(id, eventId, nom, prix, quotaTotal, quotaVendu)` et `Ticket.reconstituer(id, eventId, categoryId, orderId, status, emisLe, scanneLe)` existent pour reconstruire sans revalider.
-- `Money` (`shared`) est un `BigInteger` en FCFA (`Money.ofFcfa(long)`, `valeur()`) : colonne `BIGINT`/`NUMERIC` et conversion explicite dans le mapper.
-- `TicketStatus` : `EMIS`, `SCANNE`, `ANNULE`, `REMBOURSE` → `CHECK` en SQL comme pour `events.status` en V3.
-- Style de la migration V3 : `UUID PRIMARY KEY DEFAULT gen_random_uuid()`, `TIMESTAMPTZ`, `CHECK (status IN (...))`, commentaire « référence par UUID uniquement, pas de FK cross-module ». **Pas de `FOREIGN KEY` vers `events`**.
-- Limites de taille : aligner toute validation future sur le schéma (leçon 15).
+**Pièges connus (lus dans `0e38483`)** :
+- Le service `postgres` de `backend-ci.yml` utilise l'image **`postgres:16`, sans PostGIS** (leçon 3). Les tests n'utilisent pas ce service : les tests d'intégration démarrent leur propre conteneur PostGIS par Testcontainers. Le plus simple est de supprimer ce service (et celui de Redis, aucun test ne s'en sert), ou sinon de passer à `postgis/postgis:16-3.4`.
+- `ubuntu-latest` fournit Docker : les tests Testcontainers doivent y **s'exécuter, et non être ignorés**. Le premier run doit afficher 92 tests et `Skipped: 0` dans les rapports Surefire (artefact `backend-surefire-reports`).
+- `./mvnw clean verify` lance aussi les 5 règles ArchUnit. Le job séparé `architecture-check.yml` les relance pour avoir un statut distinct sur la PR.
+- Aucune clé Ed25519 n'est requise : `Ed25519QRSignerTest` génère sa propre paire de clés, et aucun test ne démarre le contexte complet (vérifié le 29/10/2026).
+- Profiter de la branche pour corriger `CONTRIBUTING.md:88` (« Quatre règles » → 5, ajouter la 5ᵉ à la liste).
 
-**Point d'attention** : colonne `version` (`@Version`, `BIGINT NOT NULL DEFAULT 0`) sur `ticket_categories` pour le verrouillage optimiste de `tickets-quota-lock`.
+**Vérification** : ouvrir la PR et constater les deux workflows verts sur GitHub, avec le nombre de tests dans les logs. Un workflow qui ne se déclenche pas (filtre `paths`) ne prouve rien : la PR doit toucher `.github/workflows/` (inclus dans les filtres) ou `backend/`.
 
-**Point de conception à trancher** *(proposition, non actée)* : le domaine `TicketCategory` n'a volontairement pas de champ `version`. Si l'adaptateur recrée une entité JPA neuve depuis le domaine à chaque `save`, la version est perdue et le verrouillage ne protège plus rien. Piste : l'adaptateur **recharge l'entité JPA gérée**, y copie les champs du domaine, puis la sauvegarde (Hibernate conserve et contrôle la version), sans rien ajouter au domaine. Attention à l'identifiant assigné en mémoire : avec un `@Id` non généré, `save()` de Spring Data fait un `merge` (SELECT avant INSERT) sauf si l'entité implémente `Persistable` ou porte un `@Version` null à la création (`Long` wrapper).
+### 11.2 Ensuite : branche 9, `feature/backend-tickets-quota-lock`
+
+**Objectif** : rendre l'anti-survente et l'anti double émission robustes sous forte concurrence.
+
+**Contenu prévu** :
+- Migration **V5** : table d'idempotence `ticket_issuances(order_id, category_id)` avec clé primaire, insérée en premier dans la transaction d'`IssueTicketUseCase` (section 7, « garde anti double émission »).
+- Test d'intégration **à deux threads** (`CountDownLatch`) sur la même commande : exactement N billets et un quota consommé une seule fois.
+- Décider de la stratégie en cas de conflit de version : 409 tel quel (comportement actuel), ou nouvelle tentative bornée dans le cas d'usage.
+- Si le verrou passe à un `UPDATE ... SET quota_vendu = quota_vendu + :q WHERE quota_vendu + :q <= quota_total` atomique : garder `TicketCategory.reserver()` comme source de vérité métier, et ne pas perdre la garde d'idempotence.
+- Reprendre le reste de la branche 8 si tranché : contrôle que l'événement est `PUBLIE` (section 7).
+
+**Pièges** : la propagation `MANDATORY` des `save()` impose un `@Transactional` sur tout nouveau cas d'usage ; un test de concurrence doit utiliser de vraies transactions séparées (`TransactionTemplate`, `PROPAGATION_REQUIRES_NEW` ou des threads), pas la transaction annulée par défaut d'un `@DataJpaTest` (voir `TicketPersistenceIntegrationTest`). Ne pas modifier V4, déjà appliquée : ajouter V5.
 
 ---
 
 ## 12. Premier message suggéré pour la nouvelle conversation
 
-> Je reprends Billet+ (voir HANDOFF.md du projet). Les PR `feature/backend-events-crud-api` et `fix/auth-register-role-restriction` sont mergées et le projet est resynchronisé. Je veux attaquer [`feature/backend-tickets-jpa-mapper` | `fix/infra-align-repo-with-handoff`]. Dis-moi de quels fichiers tu as besoin avant de produire quoi que ce soit.
+> Je reprends Billet+ (voir HANDOFF.md du projet). La PR #16 `feature/backend-tickets-jpa-mapper` est mergée et le projet est resynchronisé. Je veux attaquer [`fix/ci-restore-backend-workflows` | `feature/backend-tickets-quota-lock`]. Lis la section 11 et propose un plan avant de coder.
