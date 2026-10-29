@@ -28,6 +28,12 @@ spring:
     redis:
       host: localhost
       port: 6379
+      # Redis est utilisé par scripts (StringRedisTemplate), jamais par
+      # repositories Spring Data : sans cela, Spring cherche des repositories
+      # Redis, trouve nos interfaces JPA et affiche « Could not safely identify
+      # store assignment » à chaque démarrage.
+      repositories:
+        enabled: false
 
 server:
   port: 8080
