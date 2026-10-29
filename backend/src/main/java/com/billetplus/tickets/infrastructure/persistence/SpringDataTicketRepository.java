@@ -9,6 +9,4 @@ import java.util.UUID;
  * Le reste de l'application passe par le port TicketRepository.
  */
 interface SpringDataTicketRepository extends JpaRepository<TicketJpaEntity, UUID> {
-
-    boolean existsByOrderIdAndCategoryId(UUID orderId, UUID categoryId);
 }

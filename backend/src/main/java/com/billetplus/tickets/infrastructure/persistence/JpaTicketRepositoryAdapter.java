@@ -6,8 +6,6 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
-
 /**
  * Adaptateur du port TicketRepository. Même stratégie de sauvegarde que
  * {@link JpaTicketCategoryRepositoryAdapter} : recharger l'entité gérée et y
@@ -39,10 +37,5 @@ class JpaTicketRepositoryAdapter implements TicketRepository {
             })
             .orElseGet(() -> TicketMapper.versNouvelleEntite(ticket));
         return TicketMapper.versDomaine(springRepo.save(entity));
-    }
-
-    @Override
-    public boolean existsByOrderIdAndCategoryId(UUID orderId, UUID categoryId) {
-        return springRepo.existsByOrderIdAndCategoryId(orderId, categoryId);
     }
 }

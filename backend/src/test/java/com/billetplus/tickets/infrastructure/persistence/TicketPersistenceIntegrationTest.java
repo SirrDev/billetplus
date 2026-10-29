@@ -7,10 +7,13 @@ import com.billetplus.tickets.domain.Ticket;
 import com.billetplus.tickets.domain.TicketCategory;
 import com.billetplus.tickets.domain.TicketStatus;
 import com.billetplus.tickets.domain.exception.BilletsDejaEmisException;
+import com.billetplus.tickets.domain.exception.QuotaDepasseException;
 import com.billetplus.tickets.domain.exception.TicketAlreadyScannedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.autoconfigure.dao.PersistenceExceptionTranslationAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -32,7 +35,16 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.function.IntFunction;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -56,7 +68,12 @@ import static org.mockito.Mockito.when;
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({JpaTicketCategoryRepositoryAdapter.class, JpaTicketRepositoryAdapter.class, IssueTicketUseCase.class})
+@Import({JpaTicketCategoryRepositoryAdapter.class, JpaTicketRepositoryAdapter.class,
+         JpaTicketIssuanceRepositoryAdapter.class, IssueTicketUseCase.class})
+// Absente de @DataJpaTest mais active dans l'application : sans elle, le test
+// ne verrait pas la traduction d'exceptions que Spring applique aux beans
+// @Repository (qui transformerait une BusinessConflictException en 500).
+@ImportAutoConfiguration(PersistenceExceptionTranslationAutoConfiguration.class)
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Testcontainers(disabledWithoutDocker = true)
 class TicketPersistenceIntegrationTest {
@@ -76,6 +93,8 @@ class TicketPersistenceIntegrationTest {
     private JpaTicketCategoryRepositoryAdapter categories;
     @Autowired
     private JpaTicketRepositoryAdapter tickets;
+    @Autowired
+    private JpaTicketIssuanceRepositoryAdapter emissions;
     /** Lecture directe des billets : le port TicketRepository n'expose pas encore de findById. */
     @Autowired
     private SpringDataTicketRepository ticketsSpringData;
@@ -95,6 +114,7 @@ class TicketPersistenceIntegrationTest {
     @BeforeEach
     void setUp() {
         jdbc.execute("DELETE FROM tickets");
+        jdbc.execute("DELETE FROM ticket_issuances");
         jdbc.execute("DELETE FROM ticket_categories");
         tx = new TransactionTemplate(transactionManager);
         nouvelleTx = new TransactionTemplate(transactionManager);
@@ -127,6 +147,10 @@ class TicketPersistenceIntegrationTest {
 
     private int nombreDeBillets() {
         return jdbc.queryForObject("SELECT count(*) FROM tickets", Integer.class);
+    }
+
+    private int nombreDEmissions() {
+        return jdbc.queryForObject("SELECT count(*) FROM ticket_issuances", Integer.class);
     }
 
     // ---- Catégories ----
@@ -273,16 +297,85 @@ class TicketPersistenceIntegrationTest {
         assertThat(nombreDeBillets()).isZero();
     }
 
+    // ---- Registre d'émission (V5) ----
+
     @Test
-    void detecte_les_billets_deja_emis_pour_une_commande_et_une_categorie() {
+    void enregistre_une_emission_par_couple_commande_categorie() {
         TicketCategory category = categorieEnregistree(10);
         TicketCategory autreCategorie = categorieEnregistree(10);
         UUID orderId = UUID.randomUUID();
-        enregistrer(new Ticket(category.getEventId(), category.getId(), orderId));
 
-        assertThat(tickets.existsByOrderIdAndCategoryId(orderId, category.getId())).isTrue();
-        assertThat(tickets.existsByOrderIdAndCategoryId(orderId, autreCategorie.getId())).isFalse();
-        assertThat(tickets.existsByOrderIdAndCategoryId(UUID.randomUUID(), category.getId())).isFalse();
+        tx.executeWithoutResult(s -> {
+            emissions.enregistrer(orderId, category.getId(), 3);
+            emissions.enregistrer(orderId, autreCategorie.getId(), 1);       // même commande, autre catégorie
+            emissions.enregistrer(UUID.randomUUID(), category.getId(), 2);   // autre commande, même catégorie
+        });
+
+        assertThat(nombreDEmissions()).isEqualTo(3);
+    }
+
+    /**
+     * Le cas du webhook rejoué : une émission déjà validée par une transaction
+     * précédente. Avec save() de Spring Data (merge), ce doublon serait devenu
+     * un UPDATE silencieux ; l'INSERT ... ON CONFLICT DO NOTHING n'insère rien
+     * et l'adaptateur le signale. La quantité d'origine n'est pas écrasée.
+     */
+    @Test
+    void refuse_une_seconde_emission_deja_validee_pour_le_meme_couple() {
+        TicketCategory category = categorieEnregistree(10);
+        UUID orderId = UUID.randomUUID();
+        tx.executeWithoutResult(s -> emissions.enregistrer(orderId, category.getId(), 3));
+
+        assertThatThrownBy(() -> tx.executeWithoutResult(s -> emissions.enregistrer(orderId, category.getId(), 5)))
+            .isInstanceOf(BilletsDejaEmisException.class);
+
+        assertThat(nombreDEmissions()).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT quantite FROM ticket_issuances", Integer.class)).isEqualTo(3);
+    }
+
+    /**
+     * Deux appels pour le même couple dans UNE transaction (une commande dont
+     * deux lignes portent la même catégorie) : 409 et non 500. Avec persist,
+     * Hibernate levait EntityExistsException. La transaction PostgreSQL reste
+     * de plus utilisable après le refus : aucune erreur SQL ne l'a interrompue.
+     */
+    @Test
+    void refuse_un_doublon_dans_la_meme_transaction_sans_interrompre_la_transaction() {
+        TicketCategory category = categorieEnregistree(10);
+        UUID orderId = UUID.randomUUID();
+
+        Integer lignesVuesApresRefus = tx.execute(s -> {
+            emissions.enregistrer(orderId, category.getId(), 2);
+            assertThatThrownBy(() -> emissions.enregistrer(orderId, category.getId(), 2))
+                .isInstanceOf(BilletsDejaEmisException.class);
+            // Une transaction PostgreSQL interrompue refuserait cette requête (25P02).
+            Integer lignes = jdbc.queryForObject("SELECT count(*) FROM ticket_issuances", Integer.class);
+            s.setRollbackOnly();
+            return lignes;
+        });
+
+        assertThat(lignesVuesApresRefus).isEqualTo(1);
+        assertThat(nombreDEmissions()).isZero();  // annulée par setRollbackOnly
+    }
+
+    @Test
+    void refuse_d_enregistrer_une_emission_hors_transaction() {
+        TicketCategory category = categorieEnregistree(10);
+
+        assertThatThrownBy(() -> emissions.enregistrer(UUID.randomUUID(), category.getId(), 1))
+            .isInstanceOf(IllegalTransactionStateException.class);
+
+        assertThat(nombreDEmissions()).isZero();
+    }
+
+    /** Une autre violation de contrainte (ici la FK) n'est PAS déguisée en doublon. */
+    @Test
+    void ne_traduit_en_doublon_que_la_violation_de_cle_primaire() {
+        assertThatThrownBy(() -> tx.executeWithoutResult(s ->
+                emissions.enregistrer(UUID.randomUUID(), UUID.randomUUID(), 1)))
+            .isNotInstanceOf(BilletsDejaEmisException.class);
+
+        assertThat(nombreDEmissions()).isZero();
     }
 
     @Test
@@ -305,10 +398,30 @@ class TicketPersistenceIntegrationTest {
 
         assertThat(nombreDeBillets()).isEqualTo(3);
         assertThat(quotaVenduEnBase(category.getId())).isEqualTo(3);
+        assertThat(nombreDEmissions()).isEqualTo(1);
         assertThatThrownBy(() -> issueTicket.execute(category.getId(), orderId, 3))
             .isInstanceOf(BilletsDejaEmisException.class);
         assertThat(nombreDeBillets()).isEqualTo(3);
         assertThat(quotaVenduEnBase(category.getId())).isEqualTo(3);
+        assertThat(nombreDEmissions()).isEqualTo(1);
+    }
+
+    /**
+     * L'émission est enregistrée avant la réservation : un quota insuffisant
+     * doit annuler aussi la ligne du registre, sinon la commande ne pourrait
+     * plus jamais être émise (même après une libération de places).
+     */
+    @Test
+    void un_quota_insuffisant_annule_aussi_l_enregistrement_de_l_emission() {
+        TicketCategory category = categorieEnregistree(2);
+        UUID orderId = UUID.randomUUID();
+
+        assertThatThrownBy(() -> issueTicket.execute(category.getId(), orderId, 3))
+            .isInstanceOf(QuotaDepasseException.class);
+
+        assertThat(nombreDEmissions()).isZero();
+        assertThat(nombreDeBillets()).isZero();
+        assertThat(quotaVenduEnBase(category.getId())).isZero();
     }
 
     /**
@@ -326,5 +439,116 @@ class TicketPersistenceIntegrationTest {
 
         assertThat(nombreDeBillets()).isZero();
         assertThat(quotaVenduEnBase(category.getId())).isZero();
+        assertThat(nombreDEmissions()).isZero();
+    }
+
+    // ---- Concurrence réelle : N threads, N transactions, départ simultané ----
+
+    private static final int THREADS = 8;
+
+    /**
+     * Lance {@code n} appels en parallèle, libérés au même instant par une
+     * barrière, et renvoie le résultat de chacun : la valeur rendue, ou
+     * l'exception levée. Chaque appel à issueTicket passe par le proxy
+     * transactionnel : une transaction réelle et une connexion par thread.
+     */
+    private List<Object> enParallele(int n, IntFunction<Callable<?>> tache) throws Exception {
+        ExecutorService pool = Executors.newFixedThreadPool(n);
+        CountDownLatch prets = new CountDownLatch(n);
+        CountDownLatch depart = new CountDownLatch(1);
+        try {
+            List<Future<Object>> futurs = new ArrayList<>();
+            for (int i = 0; i < n; i++) {
+                Callable<?> appel = tache.apply(i);
+                futurs.add(pool.submit(() -> {
+                    prets.countDown();
+                    depart.await();
+                    try {
+                        return appel.call();
+                    } catch (Exception e) {
+                        return e;
+                    }
+                }));
+            }
+            assertThat(prets.await(10, TimeUnit.SECONDS)).isTrue();
+            depart.countDown();
+            List<Object> resultats = new ArrayList<>();
+            for (Future<Object> futur : futurs) {
+                resultats.add(futur.get(60, TimeUnit.SECONDS));
+            }
+            return resultats;
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    private static long succes(List<Object> resultats) {
+        return resultats.stream().filter(r -> !(r instanceof Throwable)).count();
+    }
+
+    /**
+     * Le webhook Wave reçu plusieurs fois au même instant : une seule émission
+     * passe. Les autres attendent sur la clé primaire de ticket_issuances, puis
+     * échouent en 409 une fois la première validée.
+     */
+    @Test
+    void des_confirmations_simultanees_de_la_meme_commande_n_emettent_qu_une_fois() throws Exception {
+        TicketCategory category = categorieEnregistree(100);
+        UUID orderId = UUID.randomUUID();
+        when(qrSigner.sign(any(UUID.class), any(UUID.class), any(Instant.class))).thenReturn("payload.signature");
+
+        List<Object> resultats = enParallele(THREADS, i -> () -> issueTicket.execute(category.getId(), orderId, 3));
+
+        assertThat(succes(resultats)).isEqualTo(1);
+        assertThat(resultats).filteredOn(r -> r instanceof Throwable)
+            .hasSize(THREADS - 1)
+            .allSatisfy(r -> assertThat(r).isInstanceOf(BilletsDejaEmisException.class));
+        assertThat(nombreDeBillets()).isEqualTo(3);
+        assertThat(quotaVenduEnBase(category.getId())).isEqualTo(3);
+        assertThat(nombreDEmissions()).isEqualTo(1);
+    }
+
+    /**
+     * Des commandes différentes sur la même catégorie, quota suffisant pour
+     * toutes : chaque perdant d'une course reçoit un conflit de version (409,
+     * à relancer par l'appelant), jamais une réservation écrasée. Le quota
+     * vendu est exactement la somme des émissions réussies.
+     */
+    @Test
+    void des_commandes_simultanees_ne_perdent_aucune_reservation() throws Exception {
+        TicketCategory category = categorieEnregistree(100);
+        when(qrSigner.sign(any(UUID.class), any(UUID.class), any(Instant.class))).thenReturn("payload.signature");
+
+        List<Object> resultats = enParallele(THREADS, i -> () -> issueTicket.execute(category.getId(), UUID.randomUUID(), 3));
+
+        long reussies = succes(resultats);
+        assertThat(reussies).isGreaterThanOrEqualTo(1);
+        assertThat(resultats).filteredOn(r -> r instanceof Throwable)
+            .allSatisfy(r -> assertThat(r).isInstanceOf(OptimisticLockingFailureException.class));
+        assertThat(quotaVenduEnBase(category.getId())).isEqualTo(3 * reussies);
+        assertThat(nombreDeBillets()).isEqualTo(3 * reussies);
+        assertThat(nombreDEmissions()).isEqualTo(reussies);  // les perdants n'ont rien laissé
+    }
+
+    /**
+     * Le pic de mise en vente : plus de demandes que de places. Le quota n'est
+     * jamais dépassé ; chaque refus est soit un quota insuffisant (lu après la
+     * validation d'un concurrent), soit un conflit de version (lu avant).
+     */
+    @Test
+    void des_commandes_simultanees_ne_depassent_jamais_le_quota() throws Exception {
+        TicketCategory category = categorieEnregistree(10);  // place pour 3 lots de 3, pas pour 8
+        when(qrSigner.sign(any(UUID.class), any(UUID.class), any(Instant.class))).thenReturn("payload.signature");
+
+        List<Object> resultats = enParallele(THREADS, i -> () -> issueTicket.execute(category.getId(), UUID.randomUUID(), 3));
+
+        long reussies = succes(resultats);
+        assertThat(reussies).isBetween(1L, 3L);
+        assertThat(resultats).filteredOn(r -> r instanceof Throwable)
+            .allSatisfy(r -> assertThat(r).isInstanceOfAny(
+                QuotaDepasseException.class, OptimisticLockingFailureException.class));
+        assertThat(quotaVenduEnBase(category.getId())).isEqualTo(3 * reussies).isLessThanOrEqualTo(10);
+        assertThat(nombreDeBillets()).isEqualTo(3 * reussies);
+        assertThat(nombreDEmissions()).isEqualTo(reussies);
     }
 }
