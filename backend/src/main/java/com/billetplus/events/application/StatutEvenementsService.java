@@ -17,9 +17,11 @@ import java.util.UUID;
 class StatutEvenementsService implements StatutEvenements {
 
     private final EventRepository eventRepository;
+    private final AffectationAgentRepository affectationRepository;
 
-    StatutEvenementsService(EventRepository eventRepository) {
+    StatutEvenementsService(EventRepository eventRepository, AffectationAgentRepository affectationRepository) {
         this.eventRepository = eventRepository;
+        this.affectationRepository = affectationRepository;
     }
 
     @Override
@@ -44,6 +46,12 @@ class StatutEvenementsService implements StatutEvenements {
         return lire(eventId)
             .map(event -> event.getStatus() == EventStatus.BROUILLON || event.getStatus() == EventStatus.PUBLIE)
             .orElse(false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean estAgentAffecte(UUID eventId, UUID agentId) {
+        return eventId != null && agentId != null && affectationRepository.existe(eventId, agentId);
     }
 
     private Optional<Event> lire(UUID eventId) {

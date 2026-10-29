@@ -20,9 +20,11 @@ class StatutEvenementsServiceTest {
 
     @Mock
     private EventRepository eventRepository;
+    @Mock
+    private AffectationAgentRepository affectationRepository;
 
     private StatutEvenementsService service() {
-        return new StatutEvenementsService(eventRepository);
+        return new StatutEvenementsService(eventRepository, affectationRepository);
     }
 
     private Event evenement() {
@@ -96,5 +98,17 @@ class StatutEvenementsServiceTest {
         assertThat(service().accepteDesCategories(brouillon.getId())).isTrue();
         assertThat(service().accepteDesCategories(publie.getId())).isTrue();
         assertThat(service().accepteDesCategories(annule.getId())).isFalse();
+    }
+
+    @Test
+    void sait_si_un_agent_est_affecte_au_controle_d_un_evenement() {
+        UUID eventId = UUID.randomUUID();
+        UUID affecte = UUID.randomUUID();
+        when(affectationRepository.existe(eventId, affecte)).thenReturn(true);
+
+        assertThat(service().estAgentAffecte(eventId, affecte)).isTrue();
+        assertThat(service().estAgentAffecte(eventId, UUID.randomUUID())).isFalse();
+        assertThat(service().estAgentAffecte(null, affecte)).isFalse();
+        assertThat(service().estAgentAffecte(eventId, null)).isFalse();
     }
 }

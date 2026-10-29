@@ -1,5 +1,6 @@
 package com.billetplus;
 
+import com.billetplus.auth.application.AuthService;
 import com.billetplus.events.api.publique.StatutEvenements;
 import com.billetplus.events.application.EventService;
 import com.billetplus.events.application.VenueService;
@@ -51,8 +52,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -103,6 +106,8 @@ class ContexteCompletIntegrationTest {
     private MockMvc mvc;
     @Autowired
     private VenueService venueService;
+    @Autowired
+    private AuthService authService;
     @Autowired
     private EventService eventService;
     @Autowired
@@ -327,5 +332,107 @@ class ContexteCompletIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].quotaTotal").value(100))
             .andExpect(jsonPath("$[0].quotaVendu").value(0));
+    }
+
+    // ---- HTTP : comptes AGENT et affectation (feature/backend-auth-agent-accounts) ----
+
+    /** Organisateur réellement inscrit : la création d'un agent vérifie son rôle en base. */
+    private UUID organisateurInscrit() {
+        return authService.registerOrganisateur(
+            "orga-" + UUID.randomUUID() + "@billetplus.sn", "motdepasse", "Orga").getId();
+    }
+
+    private UUID agentCreePar(UUID organisateurId) throws Exception {
+        String reponse = mvc.perform(post("/api/agents")
+                .with(connecte(organisateurId, "ORGANISATEUR"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"agent-" + UUID.randomUUID() + "@billetplus.sn\",\"motDePasse\":\"motdepasse\",\"nomComplet\":\"Agent\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.motDePasseHash").doesNotExist())
+            .andReturn().getResponse().getContentAsString();
+        return UUID.fromString(com.jayway.jsonpath.JsonPath.read(reponse, "$.id"));
+    }
+
+    @Test
+    void un_organisateur_cree_un_agent_qui_peut_ensuite_se_connecter() throws Exception {
+        UUID orga = organisateurInscrit();
+        String email = "agent-" + UUID.randomUUID() + "@billetplus.sn";
+
+        mvc.perform(post("/api/agents").with(connecte(orga, "ORGANISATEUR"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"motDePasse\":\"motdepasse\",\"nomComplet\":\"Agent\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.email").value(email));
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"motDePasse\":\"motdepasse\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.accessToken").exists());
+        assertThat(jdbc.queryForObject("SELECT role FROM users WHERE email = ?", String.class, email)).isEqualTo("AGENT");
+    }
+
+    /** Un champ « role » envoyé est ignoré : le rôle est fixé par le serveur. */
+    @Test
+    void un_role_envoye_dans_le_corps_est_ignore() throws Exception {
+        UUID orga = organisateurInscrit();
+        String email = "agent-" + UUID.randomUUID() + "@billetplus.sn";
+
+        mvc.perform(post("/api/agents").with(connecte(orga, "ORGANISATEUR"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"motDePasse\":\"motdepasse\",\"nomComplet\":\"X\",\"role\":\"ADMIN\"}"))
+            .andExpect(status().isCreated());
+
+        assertThat(jdbc.queryForObject("SELECT role FROM users WHERE email = ?", String.class, email)).isEqualTo("AGENT");
+    }
+
+    @Test
+    void seul_un_organisateur_cree_des_agents_et_un_mot_de_passe_court_est_refuse() throws Exception {
+        String corps = "{\"email\":\"x-" + UUID.randomUUID() + "@billetplus.sn\",\"motDePasse\":\"motdepasse\",\"nomComplet\":\"X\"}";
+        mvc.perform(post("/api/agents").contentType(MediaType.APPLICATION_JSON).content(corps))
+            .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/agents").with(connecte(UUID.randomUUID(), "AGENT"))
+                .contentType(MediaType.APPLICATION_JSON).content(corps))
+            .andExpect(status().isForbidden());
+        mvc.perform(post("/api/agents").with(connecte(organisateurInscrit(), "ORGANISATEUR"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"y@billetplus.sn\",\"motDePasse\":\"court\",\"nomComplet\":\"Y\"}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    /** Affecter puis retirer, chaque fois idempotent ; le port public suit (route de scan, branche suivante). */
+    @Test
+    void l_organisateur_affecte_et_retire_un_de_ses_agents() throws Exception {
+        UUID orga = organisateurInscrit();
+        UUID agent = agentCreePar(orga);
+        UUID venueId = venueService.create("Grand Theatre", "Dakar", null, null).getId();
+        Event event = eventService.create("Concert", null, Instant.now().plus(30, ChronoUnit.DAYS), null, venueId, orga);
+
+        for (int i = 0; i < 2; i++) {
+            mvc.perform(put("/api/events/{id}/agents/{agentId}", event.getId(), agent).with(connecte(orga, "ORGANISATEUR")))
+                .andExpect(status().isNoContent());
+        }
+        assertThat(statutEvenements.estAgentAffecte(event.getId(), agent)).isTrue();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM event_agents WHERE event_id = ?", Integer.class, event.getId())).isEqualTo(1);
+
+        for (int i = 0; i < 2; i++) {
+            mvc.perform(delete("/api/events/{id}/agents/{agentId}", event.getId(), agent).with(connecte(orga, "ORGANISATEUR")))
+                .andExpect(status().isNoContent());
+        }
+        assertThat(statutEvenements.estAgentAffecte(event.getId(), agent)).isFalse();
+    }
+
+    @Test
+    void on_ne_peut_affecter_ni_l_agent_d_un_autre_ni_a_l_evenement_d_un_autre() throws Exception {
+        UUID orga = organisateurInscrit();
+        UUID autreOrga = organisateurInscrit();
+        UUID agentDeLAutre = agentCreePar(autreOrga);
+        UUID venueId = venueService.create("Grand Theatre", "Dakar", null, null).getId();
+        Event event = eventService.create("Concert", null, Instant.now().plus(30, ChronoUnit.DAYS), null, venueId, orga);
+
+        mvc.perform(put("/api/events/{id}/agents/{agentId}", event.getId(), agentDeLAutre).with(connecte(orga, "ORGANISATEUR")))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.message").value("Agent introuvable : " + agentDeLAutre));
+        mvc.perform(put("/api/events/{id}/agents/{agentId}", event.getId(), agentDeLAutre).with(connecte(autreOrga, "ORGANISATEUR")))
+            .andExpect(status().isForbidden());
+        assertThat(statutEvenements.estAgentAffecte(event.getId(), agentDeLAutre)).isFalse();
     }
 }

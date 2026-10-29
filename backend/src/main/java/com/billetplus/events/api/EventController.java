@@ -2,6 +2,7 @@ package com.billetplus.events.api;
 
 import com.billetplus.events.api.dto.CreateEventRequest;
 import com.billetplus.events.api.dto.EventDto;
+import com.billetplus.events.application.AffectationAgentService;
 import com.billetplus.events.application.EventService;
 import com.billetplus.events.domain.Event;
 import jakarta.validation.Valid;
@@ -20,9 +21,11 @@ import java.util.UUID;
 public class EventController {
 
     private final EventService eventService;
+    private final AffectationAgentService affectationAgentService;
 
-    public EventController(EventService eventService) {
+    public EventController(EventService eventService, AffectationAgentService affectationAgentService) {
         this.eventService = eventService;
+        this.affectationAgentService = affectationAgentService;
     }
 
     @PostMapping
@@ -69,5 +72,24 @@ public class EventController {
     public ResponseEntity<EventDto> annuler(@PathVariable UUID id, Authentication auth) {
         UUID requestingUserId = (UUID) auth.getPrincipal();
         return ResponseEntity.ok(EventDto.from(eventService.annuler(id, requestingUserId)));
+    }
+
+    /**
+     * Affecte un de SES agents au contrôle d'entrée de l'événement. Idempotent
+     * (PUT) : réaffecter ne change rien. Agent d'un autre organisateur ou inconnu → 404.
+     */
+    @PutMapping("/{id}/agents/{agentId}")
+    @PreAuthorize("hasRole('ORGANISATEUR')")
+    public ResponseEntity<Void> affecterAgent(@PathVariable UUID id, @PathVariable UUID agentId, Authentication auth) {
+        affectationAgentService.affecter(id, agentId, (UUID) auth.getPrincipal());
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Retire l'agent du contrôle d'entrée. Idempotent : retirer un agent non affecté ne change rien. */
+    @DeleteMapping("/{id}/agents/{agentId}")
+    @PreAuthorize("hasRole('ORGANISATEUR')")
+    public ResponseEntity<Void> retirerAgent(@PathVariable UUID id, @PathVariable UUID agentId, Authentication auth) {
+        affectationAgentService.retirer(id, agentId, (UUID) auth.getPrincipal());
+        return ResponseEntity.noContent().build();
     }
 }
