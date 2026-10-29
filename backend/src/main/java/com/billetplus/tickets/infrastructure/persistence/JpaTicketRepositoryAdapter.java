@@ -6,6 +6,9 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+import java.util.UUID;
+
 /**
  * Adaptateur du port TicketRepository. Même stratégie de sauvegarde que
  * {@link JpaTicketCategoryRepositoryAdapter} : recharger l'entité gérée et y
@@ -18,6 +21,16 @@ class JpaTicketRepositoryAdapter implements TicketRepository {
 
     JpaTicketRepositoryAdapter(SpringDataTicketRepository springRepo) {
         this.springRepo = springRepo;
+    }
+
+    /**
+     * Lecture seule, sans exigence de transaction. Dans la transaction d'un cas
+     * d'usage, l'entité chargée reste dans la session : le save() qui suit
+     * contrôle la version lue ici, pas la plus récente en base.
+     */
+    @Override
+    public Optional<Ticket> findById(UUID id) {
+        return springRepo.findById(id).map(TicketMapper::versDomaine);
     }
 
     /**
