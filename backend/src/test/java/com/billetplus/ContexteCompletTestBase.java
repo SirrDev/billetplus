@@ -4,9 +4,13 @@ import com.billetplus.tickets.application.port.QRSigner;
 import com.billetplus.tickets.application.usecase.CancelEventTicketsUseCase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.MockMvcBuilderCustomizer;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -21,8 +25,10 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 /**
  * Base commune des tests du contexte COMPLET (@SpringBootTest + MockMvc), sur
@@ -43,8 +49,29 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(ContexteCompletTestBase.AdresseIpAleatoire.class)
 @Testcontainers(disabledWithoutDocker = true)
 public abstract class ContexteCompletTestBase {
+
+    /**
+     * Chaque requête MockMvc reçoit par défaut une adresse IP aléatoire : sinon,
+     * toutes les classes du contexte partagé viendraient de 127.0.0.1 et
+     * épuiseraient ensemble les limites par IP (5 inscriptions par 10 minutes...).
+     * Un test qui veut une IP précise la fixe lui-même (son RequestPostProcessor
+     * s'applique après celui-ci).
+     */
+    @TestConfiguration
+    static class AdresseIpAleatoire {
+        @Bean
+        MockMvcBuilderCustomizer adresseIpAleatoireParRequete() {
+            return builder -> builder.defaultRequest(get("/").with(requete -> {
+                ThreadLocalRandom aleatoire = ThreadLocalRandom.current();
+                requete.setRemoteAddr("10." + aleatoire.nextInt(256) + "." + aleatoire.nextInt(256) + "."
+                    + aleatoire.nextInt(256));
+                return requete;
+            }));
+        }
+    }
 
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
         DockerImageName.parse("postgis/postgis:16-3.4").asCompatibleSubstituteFor("postgres"));

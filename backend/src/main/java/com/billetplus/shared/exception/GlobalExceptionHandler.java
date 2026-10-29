@@ -4,6 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.OptimisticLockingFailureException;
+import com.billetplus.shared.limitation.TropDeRequetesException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -28,7 +30,7 @@ import java.util.NoSuchElementException;
  * Correspondances :
  * BadCredentials → 401, IllegalArgument → 400, NoSuchElement → 404,
  * BusinessConflict → 409, OptimisticLockingFailure → 409,
- * DataAccessResourceFailure → 503,
+ * DataAccessResourceFailure → 503, TropDeRequetes → 429 (avec Retry-After),
  * AccessDenied → 401 (anonyme) ou 403 (connecté), MethodArgumentNotValid → 400.
  *
  * Une IllegalStateException ordinaire n'a volontairement PAS de handler :
@@ -103,6 +105,15 @@ public class GlobalExceptionHandler {
         return anonyme
                 ? buildResponse(HttpStatus.UNAUTHORIZED, "Authentification requise")
                 : buildResponse(HttpStatus.FORBIDDEN, "Accès refusé");
+    }
+
+    /** Limite de débit atteinte (shared.limitation) : Retry-After indique quand réessayer. */
+    @ExceptionHandler(TropDeRequetesException.class)
+    public ResponseEntity<Map<String, Object>> handleTropDeRequetes(TropDeRequetesException e) {
+        ResponseEntity<Map<String, Object>> reponse = buildResponse(HttpStatus.TOO_MANY_REQUESTS, e.getMessage());
+        return ResponseEntity.status(reponse.getStatusCode())
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(e.getReessayerDansSecondes()))
+                .body(reponse.getBody());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
