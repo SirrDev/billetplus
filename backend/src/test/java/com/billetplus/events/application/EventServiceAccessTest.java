@@ -3,11 +3,13 @@ package com.billetplus.events.application;
 import com.billetplus.events.domain.Event;
 import com.billetplus.events.domain.EventStatus;
 import com.billetplus.events.domain.Venue;
+import com.billetplus.shared.evenements.EvenementAnnule;
 import com.billetplus.shared.exception.BusinessConflictException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.time.Instant;
@@ -18,7 +20,10 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -38,9 +43,11 @@ class EventServiceAccessTest {
     private EventRepository eventRepository;
     @Mock
     private VenueRepository venueRepository;
+    @Mock
+    private ApplicationEventPublisher publisher;
 
     private EventService service() {
-        return new EventService(eventRepository, venueRepository);
+        return new EventService(eventRepository, venueRepository, publisher);
     }
 
     private Event brouillonDe(UUID proprietaire) {
@@ -135,6 +142,40 @@ class EventServiceAccessTest {
 
         verify(eventRepository, never()).save(any());
         assertThat(event.getStatus()).isEqualTo(EventStatus.BROUILLON);
+        // Annulation refusée : les modules qui écoutent (tickets) ne sont pas prévenus.
+        verifyNoInteractions(publisher);
+    }
+
+    // ---------------------------------------------------------------- annulation (ADR 0005)
+
+    @Test
+    void annuler_publie_l_evenement_annule_pour_les_autres_modules() {
+        UUID proprietaire = UUID.randomUUID();
+        Event event = brouillonDe(proprietaire);
+        when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+        when(eventRepository.save(event)).thenReturn(event);
+
+        service().annuler(event.getId(), proprietaire);
+
+        assertThat(event.getStatus()).isEqualTo(EventStatus.ANNULE);
+        verify(publisher).publishEvent(new EvenementAnnule(event.getId()));
+    }
+
+    /** Si l'annulation est refusée par le domaine (événement terminé), rien n'est publié. */
+    @Test
+    void une_annulation_refusee_par_le_domaine_ne_publie_rien() {
+        UUID proprietaire = UUID.randomUUID();
+        Event event = mock(Event.class);
+        when(event.getOrganizerId()).thenReturn(proprietaire);
+        doThrow(new BusinessConflictException("Impossible d'annuler un événement déjà terminé")).when(event).annuler();
+        UUID eventId = UUID.randomUUID();
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
+
+        assertThatThrownBy(() -> service().annuler(eventId, proprietaire))
+            .isInstanceOf(BusinessConflictException.class);
+
+        verify(eventRepository, never()).save(any());
+        verifyNoInteractions(publisher);
     }
 
     // ---------------------------------------------------------------- conflit de statut

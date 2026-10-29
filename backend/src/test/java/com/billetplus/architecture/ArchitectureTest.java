@@ -9,6 +9,7 @@ import com.tngtech.archunit.lang.ArchRule;
 
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 /**
@@ -47,8 +48,11 @@ class ArchitectureTest {
      * (ApplicationEventPublisher), jamais par accès direct aux classes internes
      * d'un autre module.
      *
-     * Le package "shared" est exclu : c'est le seul point de partage légitime,
-     * à condition qu'il ne contienne aucune logique métier (voir ADR 0001).
+     * Deux exceptions, et seulement elles (ADR 0005) :
+     * - le package "shared", point de partage légitime à condition qu'il ne
+     *   contienne aucune logique métier (voir ADR 0001) ;
+     * - le port public d'un module, dans "<module>.api.publique" : le seul point
+     *   d'entrée par lequel un module peut lire l'état d'un autre.
      */
     @ArchTest
     static final ArchRule modules_sont_independants =
@@ -57,7 +61,31 @@ class ArchitectureTest {
             .ignoreDependency(
                 DescribedPredicate.<JavaClass>alwaysTrue(),
                 resideInAPackage("..shared..")
+            )
+            .ignoreDependency(
+                DescribedPredicate.<JavaClass>alwaysTrue(),
+                resideInAPackage("..api.publique..")
             );
+
+    /**
+     * Le port public d'un module ne contient que des interfaces : l'implémentation
+     * reste à l'intérieur du module (ADR 0005). Sans cette règle, l'exception
+     * accordée à "api.publique" ouvrirait l'accès à n'importe quelle classe qu'on
+     * y déposerait.
+     */
+    @ArchTest
+    static final ArchRule ports_publics_ne_contiennent_que_des_interfaces =
+        classes().that().resideInAPackage("..api.publique..")
+            .should().beInterfaces();
+
+    /**
+     * Les événements applicatifs échangés entre modules sont de simples données
+     * (records), sans logique métier : discipline de shared (ADR 0001, ADR 0005).
+     */
+    @ArchTest
+    static final ArchRule evenements_applicatifs_sont_des_records =
+        classes().that().resideInAPackage("com.billetplus.shared.evenements..")
+            .should().beAssignableTo(Record.class);
 
     /**
      * Les ports (interfaces définies par la couche application, modules niveau 3

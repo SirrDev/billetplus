@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.time.Instant;
@@ -26,9 +27,11 @@ class EventServiceTest {
     private EventRepository eventRepository;
     @Mock
     private VenueRepository venueRepository;
+    @Mock
+    private ApplicationEventPublisher publisher;
 
     private EventService service() {
-        return new EventService(eventRepository, venueRepository);
+        return new EventService(eventRepository, venueRepository, publisher);
     }
 
     private Venue venue() {
