@@ -13,6 +13,8 @@ import com.billetplus.tickets.application.usecase.CancelEventTicketsUseCase;
 import com.billetplus.tickets.application.usecase.IssueTicketUseCase;
 import com.billetplus.tickets.application.usecase.ReleaseSeatsUseCase;
 import com.billetplus.tickets.application.usecase.ReserveSeatsUseCase;
+import com.billetplus.tickets.application.usecase.ResultatScan;
+import com.billetplus.tickets.application.usecase.ScanTicketUseCase;
 import com.billetplus.tickets.application.usecase.ValidateTicketScanUseCase;
 import com.billetplus.tickets.domain.TicketCategory;
 import com.billetplus.tickets.domain.exception.VenteFermeeException;
@@ -118,6 +120,8 @@ class ContexteCompletIntegrationTest {
     private IssueTicketUseCase issueTicket;
     @Autowired
     private ReserveSeatsUseCase reserveSeats;
+    @Autowired
+    private ScanTicketUseCase scanTicket;
     @Autowired
     private JdbcTemplate jdbc;
     @Autowired
@@ -434,5 +438,161 @@ class ContexteCompletIntegrationTest {
         mvc.perform(put("/api/events/{id}/agents/{agentId}", event.getId(), agentDeLAutre).with(connecte(autreOrga, "ORGANISATEUR")))
             .andExpect(status().isForbidden());
         assertThat(statutEvenements.estAgentAffecte(event.getId(), agentDeLAutre)).isFalse();
+    }
+
+    // ---- HTTP : route de scan (feature/backend-tickets-scan-route) ----
+
+    /** Un événement publié, avec un agent affecté et un billet émis dont le QR « vérifié » est QR_VALIDE. */
+    private record Controle(UUID organisateur, UUID agent, Event event, UUID ticketId) {}
+
+    private static final String QR_VALIDE = "qr-valide";
+
+    private Controle controlePret() throws Exception {
+        UUID orga = organisateurInscrit();
+        UUID agent = agentCreePar(orga);
+        UUID venueId = venueService.create("Grand Theatre", "Dakar", null, null).getId();
+        Event event = eventService.create("Concert", null, Instant.now().plus(30, ChronoUnit.DAYS), null, venueId, orga);
+        eventService.publier(event.getId(), orga);
+        mvc.perform(put("/api/events/{id}/agents/{agentId}", event.getId(), agent).with(connecte(orga, "ORGANISATEUR")))
+            .andExpect(status().isNoContent());
+        TicketCategory category = categoriePour(event);
+        var billet = issueTicket.execute(category.getId(), UUID.randomUUID(), 1).get(0).ticket();
+        when(qrSigner.verify(QR_VALIDE)).thenReturn(com.billetplus.tickets.application.port.QrVerificationResult.valide(
+            billet.getId(), billet.getEventId(), billet.getEmisLe().truncatedTo(ChronoUnit.MILLIS)));
+        return new Controle(orga, agent, event, billet.getId());
+    }
+
+    private static String scan(String qr) {
+        return "{\"qrContent\":\"" + qr + "\"}";
+    }
+
+    @Test
+    void un_agent_affecte_fait_entrer_un_billet_puis_le_signale_deja_scanne() throws Exception {
+        Controle c = controlePret();
+
+        mvc.perform(post("/api/events/{id}/scans", c.event().getId()).with(connecte(c.agent(), "AGENT"))
+                .contentType(MediaType.APPLICATION_JSON).content(scan(QR_VALIDE)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.issue").value("ACCEPTE"))
+            .andExpect(jsonPath("$.ticketId").value(c.ticketId().toString()));
+        mvc.perform(post("/api/events/{id}/scans", c.event().getId()).with(connecte(c.agent(), "AGENT"))
+                .contentType(MediaType.APPLICATION_JSON).content(scan(QR_VALIDE)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.issue").value("DEJA_SCANNE"))
+            .andExpect(jsonPath("$.premierScanLe").exists());
+        assertThat(jdbc.queryForObject("SELECT status FROM tickets WHERE id = ?", String.class, c.ticketId())).isEqualTo("SCANNE");
+    }
+
+    /** INVALIDE ne porte que son nom : aucun identifiant, aucun indice pour un faussaire. */
+    @Test
+    void un_qr_invalide_repond_200_invalide_sans_aucune_donnee() throws Exception {
+        Controle c = controlePret();
+        when(qrSigner.verify("qr-falsifie")).thenReturn(com.billetplus.tickets.application.port.QrVerificationResult.invalide());
+
+        mvc.perform(post("/api/events/{id}/scans", c.event().getId()).with(connecte(c.agent(), "AGENT"))
+                .contentType(MediaType.APPLICATION_JSON).content(scan("qr-falsifie")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.issue").value("INVALIDE"))
+            .andExpect(jsonPath("$.ticketId").doesNotExist())
+            .andExpect(jsonPath("$.premierScanLe").doesNotExist())
+            .andExpect(jsonPath("$.statut").doesNotExist());
+    }
+
+    /** Un agent non affecté (d'un autre organisateur, ou du même mais pas à cet événement) : 403, billet intact. */
+    @Test
+    void un_agent_non_affecte_a_l_evenement_recoit_403_et_le_billet_reste_valide() throws Exception {
+        Controle c = controlePret();
+        UUID agentNonAffecte = agentCreePar(c.organisateur());
+
+        mvc.perform(post("/api/events/{id}/scans", c.event().getId()).with(connecte(agentNonAffecte, "AGENT"))
+                .contentType(MediaType.APPLICATION_JSON).content(scan(QR_VALIDE)))
+            .andExpect(status().isForbidden());
+        assertThat(jdbc.queryForObject("SELECT status FROM tickets WHERE id = ?", String.class, c.ticketId())).isEqualTo("EMIS");
+    }
+
+    /** L'organisateur peut contrôler l'entrée de son propre événement ; un autre organisateur non. */
+    @Test
+    void l_organisateur_scanne_son_evenement_mais_pas_celui_d_un_autre() throws Exception {
+        Controle c = controlePret();
+
+        mvc.perform(post("/api/events/{id}/scans", c.event().getId()).with(connecte(organisateurInscrit(), "ORGANISATEUR"))
+                .contentType(MediaType.APPLICATION_JSON).content(scan(QR_VALIDE)))
+            .andExpect(status().isForbidden());
+        mvc.perform(post("/api/events/{id}/scans", c.event().getId()).with(connecte(c.organisateur(), "ORGANISATEUR"))
+                .contentType(MediaType.APPLICATION_JSON).content(scan(QR_VALIDE)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.issue").value("ACCEPTE"));
+    }
+
+    /** Un agent affecté à l'événement B ne fait pas entrer, à B, un billet de A : AUTRE_EVENEMENT, billet intact. */
+    @Test
+    void un_billet_d_un_autre_evenement_est_signale_sans_etre_consomme() throws Exception {
+        Controle a = controlePret();
+        UUID venueId = venueService.create("Stade", "Dakar", null, null).getId();
+        Event b = eventService.create("Match", null, Instant.now().plus(40, ChronoUnit.DAYS), null, venueId, a.organisateur());
+        eventService.publier(b.getId(), a.organisateur());
+        mvc.perform(put("/api/events/{id}/agents/{agentId}", b.getId(), a.agent()).with(connecte(a.organisateur(), "ORGANISATEUR")))
+            .andExpect(status().isNoContent());
+
+        mvc.perform(post("/api/events/{id}/scans", b.getId()).with(connecte(a.agent(), "AGENT"))
+                .contentType(MediaType.APPLICATION_JSON).content(scan(QR_VALIDE)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.issue").value("AUTRE_EVENEMENT"));
+        assertThat(jdbc.queryForObject("SELECT status FROM tickets WHERE id = ?", String.class, a.ticketId())).isEqualTo("EMIS");
+    }
+
+    @Test
+    void scanner_exige_d_etre_connecte_et_borne_la_taille_du_qr() throws Exception {
+        Controle c = controlePret();
+
+        mvc.perform(post("/api/events/{id}/scans", c.event().getId())
+                .contentType(MediaType.APPLICATION_JSON).content(scan(QR_VALIDE)))
+            .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/events/{id}/scans", c.event().getId()).with(connecte(c.agent(), "AGENT"))
+                .contentType(MediaType.APPLICATION_JSON).content(scan("x".repeat(1025))))
+            .andExpect(status().isBadRequest());
+        assertThat(jdbc.queryForObject("SELECT status FROM tickets WHERE id = ?", String.class, c.ticketId())).isEqualTo("EMIS");
+    }
+
+    /**
+     * 8 agents scannent le même billet au même instant, par le vrai chemin
+     * (ScanTicketUseCase, transactions réelles) : grâce au rejeu d'un conflit de
+     * version, exactement un ACCEPTE, sept DEJA_SCANNE, et AUCUNE erreur. Le
+     * rejeu ne peut pas lui-même entrer en conflit : le chemin DEJA_SCANNE n'écrit rien.
+     */
+    @Test
+    void huit_scans_simultanes_du_meme_billet_donnent_un_accepte_et_sept_deja_scanne_sans_erreur() throws Exception {
+        Controle c = controlePret();
+        int agents = 8;
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(agents);
+        java.util.concurrent.CountDownLatch prets = new java.util.concurrent.CountDownLatch(agents);
+        java.util.concurrent.CountDownLatch depart = new java.util.concurrent.CountDownLatch(1);
+        try {
+            List<java.util.concurrent.Future<Object>> futurs = new java.util.ArrayList<>();
+            for (int i = 0; i < agents; i++) {
+                futurs.add(pool.submit(() -> {
+                    prets.countDown();
+                    depart.await();
+                    try {
+                        return scanTicket.execute(QR_VALIDE, c.event().getId(), c.agent());
+                    } catch (Exception e) {
+                        return e;
+                    }
+                }));
+            }
+            assertThat(prets.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            depart.countDown();
+            List<Object> resultats = new java.util.ArrayList<>();
+            for (java.util.concurrent.Future<Object> futur : futurs) {
+                resultats.add(futur.get(60, java.util.concurrent.TimeUnit.SECONDS));
+            }
+
+            assertThat(resultats).allSatisfy(r -> assertThat(r).isInstanceOf(ResultatScan.class));
+            assertThat(resultats).filteredOn(r -> ((ResultatScan) r).issue() == ResultatScan.Issue.ACCEPTE).hasSize(1);
+            assertThat(resultats).filteredOn(r -> ((ResultatScan) r).issue() == ResultatScan.Issue.DEJA_SCANNE).hasSize(agents - 1);
+            assertThat(jdbc.queryForObject("SELECT version FROM tickets WHERE id = ?", Long.class, c.ticketId())).isEqualTo(1L);
+        } finally {
+            pool.shutdownNow();
+        }
     }
 }
