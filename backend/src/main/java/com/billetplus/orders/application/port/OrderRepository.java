@@ -1,7 +1,9 @@
 package com.billetplus.orders.application.port;
 
+import com.billetplus.orders.domain.NumeroTelephone;
 import com.billetplus.orders.domain.Order;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,4 +22,10 @@ public interface OrderRepository {
 
     /** Exige une transaction ouverte par l'appelant (voir la Javadoc de l'interface). */
     Order save(Order order);
+
+    /**
+     * Commandes de ce numéro pour cet événement encore en attente de paiement et
+     * dans leur délai à {@code maintenant} (limite par téléphone, ADR 0006).
+     */
+    long compterEnAttente(NumeroTelephone telephone, UUID eventId, Instant maintenant);
 }
