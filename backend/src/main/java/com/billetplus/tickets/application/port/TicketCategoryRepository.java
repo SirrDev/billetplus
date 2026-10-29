@@ -2,6 +2,7 @@ package com.billetplus.tickets.application.port;
 
 import com.billetplus.tickets.domain.TicketCategory;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,6 +21,9 @@ import java.util.UUID;
 public interface TicketCategoryRepository {
 
     Optional<TicketCategory> findById(UUID id);
+
+    /** Catégories d'un événement, de la moins chère à la plus chère. */
+    List<TicketCategory> findByEventId(UUID eventId);
 
     TicketCategory save(TicketCategory category);
 }

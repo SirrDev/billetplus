@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,6 +32,13 @@ class JpaTicketCategoryRepositoryAdapter implements TicketCategoryRepository {
     @Override
     public Optional<TicketCategory> findById(UUID id) {
         return springRepo.findById(id).map(TicketCategoryMapper::versDomaine);
+    }
+
+    @Override
+    public List<TicketCategory> findByEventId(UUID eventId) {
+        return springRepo.findByEventIdOrderByPrixFcfaAsc(eventId).stream()
+            .map(TicketCategoryMapper::versDomaine)
+            .toList();
     }
 
     /**
