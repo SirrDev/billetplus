@@ -1,10 +1,12 @@
 package com.billetplus.events.application;
 
 import com.billetplus.events.api.publique.StatutEvenements;
+import com.billetplus.events.domain.Event;
 import com.billetplus.events.domain.EventStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -23,8 +25,28 @@ class StatutEvenementsService implements StatutEvenements {
     @Override
     @Transactional(readOnly = true)
     public boolean estOuvertALaVente(UUID eventId) {
-        return eventId != null && eventRepository.findById(eventId)
+        return lire(eventId)
             .map(event -> event.getStatus() == EventStatus.PUBLIE)
             .orElse(false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean estOrganisateur(UUID eventId, UUID userId) {
+        return userId != null && lire(eventId)
+            .map(event -> event.getOrganizerId().equals(userId))
+            .orElse(false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean accepteDesCategories(UUID eventId) {
+        return lire(eventId)
+            .map(event -> event.getStatus() == EventStatus.BROUILLON || event.getStatus() == EventStatus.PUBLIE)
+            .orElse(false);
+    }
+
+    private Optional<Event> lire(UUID eventId) {
+        return eventId == null ? Optional.empty() : eventRepository.findById(eventId);
     }
 }
