@@ -1,6 +1,6 @@
 # Document de passation — Billet+
 
-Dernière mise à jour : 29 octobre 2026, nuit, après deux merges faits en local par Claude Code (sans PR, faute de `gh`) : `feature/backend-inter-module-event-status` (**ADR 0005** : un événement annulé annule ses billets et ferme la vente, une réservation sur un brouillon répond 404) et `feature/backend-tests-contexte-complet` (premier test du contexte complet). Avant eux, la PR #26 `feature/backend-tickets-validate-scan-usecase` (contrôle d'un billet à l'entrée : signature Ed25519, cinq issues, double scan simultané rejeté). Avant elle, la PR #24 `fix/infra-localhost-only` (PostgreSQL et Redis de dev publiés sur `127.0.0.1` seulement, bruit des repositories Redis coupé), et la PR #22 `feature/backend-tickets-redis-seat-lock` (réservation temporaire des places dans Redis pendant le paiement, ADR 0003), suivie d'un démarrage réel confirmé (base en V5). Plus tôt le même jour : PR #20 `feature/backend-tickets-quota-lock` (garde d'idempotence atomique des émissions, migration V5, 101 tests sur le runner, 0 ignoré), PR #18 `fix/ci-restore-backend-workflows` (**la CI backend et le job ArchUnit tournent de nouveau** sur les PR), PR #16 `feature/backend-tickets-jpa-mapper` (persistance JPA niveau 3 du module `tickets`, migration V4, `IssueTicketUseCase`), PR #17 (HANDOFF), PR #14 (alignement du dépôt) et PR #15 (configuration Claude Code)). Ce document complète le contexte du projet (ADR, dépôt GitHub synchronisé) pour reprendre le travail sans rien réexpliquer. En cas de doute entre ce document et le code, **le code du dépôt fait foi** — mais attention : la synchronisation GitHub ne voit que les fichiers **commités, poussés et mergés**, et elle n'est rafraîchie qu'après un clic sur « Sync now » dans le projet.
+Dernière mise à jour : 30 octobre 2026, après trois nouveaux merges locaux de Claude Code : **catégories de billets** (`232d58e`), **comptes `AGENT` et affectation** (`24dc753`, migrations V6 et V7), **route de scan** (`fa562bc`) ; CI verte sur `main` pour les deux premiers selon SirrDev. Avant eux, deux merges faits en local par Claude Code (sans PR, faute de `gh`) : `feature/backend-inter-module-event-status` (**ADR 0005** : un événement annulé annule ses billets et ferme la vente, une réservation sur un brouillon répond 404) et `feature/backend-tests-contexte-complet` (premier test du contexte complet). Avant eux, la PR #26 `feature/backend-tickets-validate-scan-usecase` (contrôle d'un billet à l'entrée : signature Ed25519, cinq issues, double scan simultané rejeté). Avant elle, la PR #24 `fix/infra-localhost-only` (PostgreSQL et Redis de dev publiés sur `127.0.0.1` seulement, bruit des repositories Redis coupé), et la PR #22 `feature/backend-tickets-redis-seat-lock` (réservation temporaire des places dans Redis pendant le paiement, ADR 0003), suivie d'un démarrage réel confirmé (base en V5). Plus tôt le même jour : PR #20 `feature/backend-tickets-quota-lock` (garde d'idempotence atomique des émissions, migration V5, 101 tests sur le runner, 0 ignoré), PR #18 `fix/ci-restore-backend-workflows` (**la CI backend et le job ArchUnit tournent de nouveau** sur les PR), PR #16 `feature/backend-tickets-jpa-mapper` (persistance JPA niveau 3 du module `tickets`, migration V4, `IssueTicketUseCase`), PR #17 (HANDOFF), PR #14 (alignement du dépôt) et PR #15 (configuration Claude Code)). Ce document complète le contexte du projet (ADR, dépôt GitHub synchronisé) pour reprendre le travail sans rien réexpliquer. En cas de doute entre ce document et le code, **le code du dépôt fait foi** — mais attention : la synchronisation GitHub ne voit que les fichiers **commités, poussés et mergés**, et elle n'est rafraîchie qu'après un clic sur « Sync now » dans le projet.
 
 ---
 
@@ -45,7 +45,7 @@ Jamais de relation JPA cross-module : UUID brut uniquement, sans `FOREIGN KEY` e
 
 ## 3. État du dépôt
 
-**Avancement estimé** (ordre de grandeur, pas une mesure) : **backend ≈ 40 %** du MVP. Les branches 1 à 11 du plan sont livrées, plus l'ADR 0005 et le premier test du contexte complet. *Le chiffre de ≈ 60 % donné auparavant ne comptait que les 17 branches du plan ; un inventaire du code (29/10/2026) a montré environ 10 à 13 branches nécessaires hors plan (section 11), soit **16 à 19 branches restantes** au total.* MVP complet ≈ 25 % (le frontend n'a aucune branche commencée).
+**Avancement estimé** (ordre de grandeur, pas une mesure) : **backend ≈ 45 %** du MVP. Les branches 1 à 11 du plan sont livrées, plus l'ADR 0005, le test du contexte complet, et les trois premières branches de l'inventaire (catégories, comptes `AGENT`, route de scan). **13 branches restent** (section 11.1), dont la moitié dépend de deux décisions de SirrDev. MVP complet ≈ 25 % (le frontend n'a aucune branche commencée).
 
 ### Phase 0 — Socle technique : ✅ mergée
 
@@ -78,6 +78,10 @@ Docker (PostGIS + Redis), squelette Spring Boot, squelette PWA, CI GitHub Action
 | — | `fix/docs-handoff-pr26` | ✅ Mergée le 29/10/2026 (PR #27, merge `84ff531` ; commit `fcd179b`) | Mise à jour du HANDOFF après la PR #26 |
 | — | `feature/backend-inter-module-event-status` | ✅ **Mergée le 29/10/2026, en local, sans PR** (merge `1c73296` ; commits `a3fd1a6`, `a635345`, `5672ab3`) | **ADR 0005**, port public `StatutEvenements`, événement `EvenementAnnule`, billets annulés avec l'événement, vente fermée (section 4.11). CI verte sur `main` selon SirrDev |
 | — | `feature/backend-tests-contexte-complet` | ✅ Mergée le 29/10/2026, en local, sans PR (merge `2f126a9` ; commit `3d880e1`) | Premier `@SpringBootTest` sur PostGIS et Redis réels (section 4.11) |
+| — | `fix/docs-handoff-adr-0005` | ✅ Mergée le 29/10/2026, en local (merge `7b0e7f9` ; commits `69c61c7`, `665e9e1`) | HANDOFF (inventaire des branches), passage à 7 règles ArchUnit dans `CLAUDE.md`, `CONTRIBUTING.md` et `.claude/` |
+| — | `feature/backend-tickets-category-management` | ✅ Mergée le 29/10/2026, en local (merge `232d58e` ; commits `c5e8a17`, `ce0e9ac`, `7a7c14e`) | Création et liste des catégories de billets, premiers tests HTTP (section 4.12). CI verte selon SirrDev |
+| — | `feature/backend-auth-agent-accounts` | ✅ Mergée le 30/10/2026, en local (merge `24dc753` ; commits `2c0b082`, `70944cd`, `9e10ff9`) | Comptes `AGENT`, affectation aux événements, premier `ADMIN` hors API, **V6** et **V7** (section 4.12). CI verte selon SirrDev |
+| — | `feature/backend-tickets-scan-route` | ✅ Mergée le 30/10/2026, en local (merge `fa562bc` ; commits `2ca151f`, `b64368e`) | Route de contrôle d'entrée, rejeu d'un scan simultané (section 4.12). *CI à confirmer* |
 | 12–17 | `tickets-pdf-export`, `orders-domain-model`, `orders-create-usecase`, `orders-wave-gateway`, `orders-confirm-payment-usecase`, `rate-limiting` | ⬜ | |
 
 Branches volontairement supprimées (ne pas recréer) : `backend-auth-rbac-roles` (absorbée dans auth-tokens), `backend-events-categories-quotas` (redondante : `TicketCategory` vit dans `tickets/domain`).
@@ -128,7 +132,7 @@ Pourquoi `/error` : sans cette règle, Spring Security 6 soumet à l'authentific
 
 ### 4.4 Tests
 
-**177 tests, 0 échec, 0 ignoré, mesurés le 29/10/2026 sur la branche mergée en `2f126a9` (`./mvnw clean verify`, la commande exacte de la CI, Docker démarré)**, dont 47 tests d'intégration Testcontainers : 29 PostGIS (`TicketPersistenceIntegrationTest`, dont 4 à 8 threads), 13 Redis (`RedisSeatReservationStoreIntegrationTest`), et **5 sur le contexte complet** (`ContexteCompletIntegrationTest`, PostGIS et Redis). **7 règles ArchUnit.** *(Historique : 55 tests le 20/10 ; le 29/10, 92, 101, 134, 156 puis 177.)* Aucun test ne vérifie encore les règles HTTP et de sécurité (`MockMvc`, section 7).
+**234 tests, 0 échec, 0 ignoré, mesurés le 30/10/2026 sur la branche mergée en `fa562bc` (`./mvnw clean verify`, Docker démarré)**, dont 66 tests d'intégration Testcontainers : 29 PostGIS (`TicketPersistenceIntegrationTest`), 13 Redis (`RedisSeatReservationStoreIntegrationTest`), et **24 sur le contexte complet** (`ContexteCompletIntegrationTest`, dont 19 par HTTP avec `MockMvc` et 1 à 8 scans simultanés). **7 règles ArchUnit.** *(Historique : 55 tests le 20/10 ; le 29/10, de 92 à 196 ; 222 puis 234 le 30/10.)*
 
 ⚠️ Sans Docker, les 13 tests d'intégration sont **ignorés** (`disabledWithoutDocker`) et la suite reste verte : toujours lire la ligne `Skipped` avant d'annoncer un résultat.
 
@@ -334,6 +338,54 @@ Sa sortie a aussi confirmé la disparition des lignes `Could not safely identify
 
 **Non vérifié** : la CI après le merge du test du contexte complet ; une annulation portant sur un très grand nombre de billets (durée de la transaction).
 
+### 4.12 Catégories, comptes `AGENT`, route de scan (merges locaux `232d58e`, `24dc753`, `fa562bc`)
+
+**Catégories de billets** (`feature/backend-tickets-category-management`). Sans elles, rien ne pouvait être vendu.
+- `POST /api/events/{id}/categories` (`ORGANISATEUR`), corps `{nom, prixFcfa, quotaTotal}`. Bornes du DTO alignées sur V4 : `@Size(max = 255)`, prix de 0 à 1 000 000 000, quota de 1 à 1 000 000.
+  - Un non-propriétaire et un événement inconnu reçoivent **le même 404** (« Événement introuvable »).
+  - Un événement annulé ou terminé répond 409 (`VenteFermeeException`).
+- `GET /api/events/{id}/categories` (public, sensible à l'identité). **Un acheteur voit le nom, le prix et `disponible`, jamais le stock** (`quotaTotal` et `quotaVendu` sont absents du JSON). L'organisateur les voit. Un brouillon n'est visible que de son organisateur, tous les autres reçoivent 404.
+  - Limite : `disponible` ignore les réservations Redis en cours. Une catégorie peut s'afficher disponible puis refuser la réservation (409), jamais l'inverse.
+- Cas d'usage `CreateTicketCategoryUseCase` et `ListTicketCategoriesUseCase`, contrôleur `tickets.api.TicketCategoryController` (premier package `api` du module `tickets`).
+- Le port public `StatutEvenements` gagne `estOrganisateur(eventId, userId)` et `accepteDesCategories(eventId)` (brouillon ou publié). Que des booléens, puisque la règle 6 interdit tout type non-interface dans `api.publique`.
+
+**Comptes `AGENT` et affectation** (`feature/backend-auth-agent-accounts`).
+- **V6** : `users.cree_par` (FK vers `users`, même module), contrainte `chk_users_agent_a_un_createur` (un `AGENT` a toujours un créateur).
+- **V7** : `event_agents(event_id, agent_id, affecte_le)`, avec une FK vers `events` (même module) et **aucune FK vers `users`** (module `auth`).
+- `POST /api/agents` et `GET /api/agents` (`ORGANISATEUR`) :
+  - service `AgentAccountService`, séparé d'`AuthService` : **aucune méthode publique d'`AuthService` n'accepte un `Role`**, règle conservée ;
+  - le rôle est fixé par `User.agentCreePar(...)`, et un `"role"` envoyé dans le corps est ignoré (vérifié en base par un test HTTP) ;
+  - le rôle d'organisateur est vérifié **en base**, en plus du `@PreAuthorize` ;
+  - le hash du mot de passe n'est jamais renvoyé ;
+  - l'agent se connecte ensuite par `/api/auth/login`.
+- `PUT` et `DELETE /api/events/{id}/agents/{agentId}` (`ORGANISATEUR`), idempotents :
+  - seulement **ses propres** agents : l'agent d'un autre organisateur, ou un identifiant inconnu, répond 404 ;
+  - un non-propriétaire de l'événement reçoit 403, comme pour `publier` et `annuler` ;
+  - un événement annulé ou terminé répond 409.
+- Ports publics : `auth.api.publique.Comptes.estAgentCreePar(agentId, organisateurId)` (lu par `events`), et `StatutEvenements.estAgentAffecte(eventId, agentId)` (lu par la route de scan).
+- **Premier `ADMIN`, hors API** (`auth.infrastructure.PremierAdminInitializer`, un `ApplicationRunner`) :
+  - variables `BILLETPLUS_ADMIN_EMAIL` et `BILLETPLUS_ADMIN_MOT_DE_PASSE`, déclarées sans valeur dans `application.yml` ;
+  - sans elles, rien n'est fait (dev, CI). Dès qu'un `ADMIN` existe, rien n'est fait non plus ;
+  - configuration invalide (une seule variable, mot de passe hors 8–72, email déjà pris par un compte non `ADMIN`) : **le démarrage échoue** ;
+  - le mot de passe n'est jamais journalisé.
+
+**Route de scan** (`feature/backend-tickets-scan-route`).
+- `POST /api/events/{eventId}/scans` (`AGENT` ou `ORGANISATEUR`), corps `{qrContent}` borné à 1 024 caractères (400 au-delà).
+  - **Toutes les issues sont des 200** avec le `ResultatScan` (`issue`, et selon l'issue `ticketId`, `premierScanLe`, `statut`), sans aucune donnée de commande ni d'acheteur. `INVALIDE` ne porte que son nom.
+- `ScanTicketUseCase`, volontairement **sans** `@Transactional` :
+  - **autorisation d'abord** : l'utilisateur du jeton doit être affecté à l'événement de l'URL, ou en être l'organisateur. Sinon 403 **avant toute lecture du QR** : aucun billet consommé, aucune information. Le contrat de `ValidateTicketScanUseCase` est mis à jour en ce sens : l'événement de l'URL est permis (un agent peut contrôler plusieurs événements), mais seulement s'il y est affecté ;
+  - **un conflit de version est rejoué une fois**, dans une nouvelle transaction. Le second essai lit le billet `SCANNE` et renvoie `DEJA_SCANNE`. L'agent ne voit jamais « erreur technique ». Il n'y a qu'un seul rejeu, donc jamais de boucle.
+
+**Vérifié** :
+- `./mvnw clean verify` : 234 tests, 0 ignoré ;
+- tests HTTP : 401, 403 (rôle, non-propriétaire, agent non affecté), 400 (bornes), 404 (même message qu'un inconnu), 409 ;
+- **8 scans simultanés du même billet par le vrai chemin** : 1 `ACCEPTE`, 7 `DEJA_SCANNE`, **aucune erreur**, une seule écriture. La sonde (retirée) a observé 7 puis 5 rejeux réels sur deux passes ;
+- relecture faite par Claude Code, **sans agents relecteurs**.
+
+**Non vérifié** :
+- la CI après le merge de la route de scan ;
+- un `spring-boot:run` sur la base de dev, qui passera en **V7** au prochain démarrage.
+
 ---
 
 ## 5. Workflow de livraison d'une branche (procédure rodée)
@@ -521,13 +573,16 @@ Test-Inscription
 
 ## 7. Points ouverts et risques connus
 
-- **Aucune route ne peut créer un `AGENT` ni un `ADMIN`** (conséquence du correctif `/register`). À prévoir : (a) un cas d'usage « un organisateur crée un compte agent » (module `auth`, avec son propre contrôle d'accès) avant la branche de validation de scan ; (b) un premier `ADMIN` créé hors API (par exemple un `ApplicationRunner` lisant des variables d'environnement, jamais un hash ou un mot de passe commité). Aucune fonctionnalité actuelle n'en dépend.
+- ~~Aucune route ne peut créer un `AGENT` ni un `ADMIN`~~ : **résolu** (merge `24dc753`). Les agents sont créés par un organisateur (`POST /api/agents`), et le premier `ADMIN` hors API par variables d'environnement. Restent :
+  - **le mot de passe d'un agent est choisi par son organisateur**, et aucune route ne permet encore de le changer (acceptable pour du personnel au MVP ; à prévoir) ;
+  - l'incohérence `ADMIN` (exclu des opérations sur les événements, accepté pour les lieux), toujours à trancher avec le back-office (WON'T V1).
 - **Incohérence ADMIN** : `@PreAuthorize("hasRole('ORGANISATEUR')")` **exclut ADMIN** des opérations sur les événements, alors que `POST /api/venues` accepte `ORGANISATEUR` **ou** `ADMIN`. Devenue théorique (personne ne peut devenir ADMIN) ; à trancher avec le back-office (WON'T V1).
 - **Pas de liste publique d'événements ni de recherche** (voir section 4.1).
 - **Lieux** : tout organisateur peut créer des lieux globaux, sans propriétaire ni détection de doublon (acceptable au MVP). `VenueDto.seatingPlan` est une `String` sérialisée telle quelle (aucun endpoint ne la définit encore) : à revoir quand le plan de salle sera construit.
 - **`EventDto.organizerId`** est exposé publiquement par `GET /api/events/{id}` : identifiant interne du module `auth`, non secret mais à retirer si le front n'en a pas besoin.
 - **Énumération d'emails** : `POST /api/auth/register` répond 400 « Un compte existe déjà avec cet email », ce qui permet de tester l'existence d'un compte. Risque faible au MVP ; à revoir avec l'ouverture de l'inscription aux acheteurs (V2) et le rate limiting (branche 17).
-- **Tests HTTP absents** : depuis le merge `2f126a9`, `ContexteCompletIntegrationTest` démarre le contexte complet (beans, transactions, collaboration entre modules). Mais **aucun test ne passe par HTTP** : les règles de `SecurityConfig`, `@PreAuthorize`, la visibilité des brouillons par l'API et les codes 401/403/404 ne sont vérifiés que par les scénarios manuels de la section 6. Ajouter `MockMvc` à ce test (ou un test dédié) avec les mêmes conteneurs.
+- **Tests HTTP partiels** : depuis la PR des catégories, `ContexteCompletIntegrationTest` contient 19 tests `MockMvc` (catégories, agents, affectation, scan). **Les routes plus anciennes** (`/api/auth/*`, `/api/events`, `/api/venues`) ne sont encore vérifiées que par les scénarios manuels de la section 6 : à couvrir (branche 4 de l'inventaire).
+- **Un autre organisateur reçoit 403, et non 404, sur l'événement brouillon de quelqu'un d'autre** (`publier`, `annuler`, et depuis le 30/10 l'affectation d'agents). Ce 403 révèle l'existence du brouillon, alors que `GET /api/events/{id}` et les catégories répondent 404. Comportement antérieur (branche 6), à trancher avec la branche 4 : 404 partout pour un non-propriétaire serait cohérent.
 - `EventTest.refuse_de_publier_un_evenement_deja_publie` attend `IllegalStateException` : il passe (sous-classe) mais gagnerait à attendre `BusinessConflictException`.
 - `Event` n'a aucun moyen d'atteindre `TERMINE` (pas de transition automatique ; job planifié prévu en V2). `annuler()` sur un événement déjà `ANNULE` repasse silencieusement à `ANNULE` : à décider (no-op explicite ou 409).
 - `EventService` (niveau 2) lève `AccessDeniedException` de Spring Security : acceptable (comme `AuthService`), mais pour les modules niveau 3 prévoir une exception de domaine.
@@ -535,12 +590,7 @@ Test-Inscription
 - Le refresh token n'est pas révocable (limite assumée au MVP, documentée dans `AuthService`).
 - `QuotaDepasseException` étend `BusinessConflictException` (409) depuis `feature/backend-tickets-jpa-mapper`, et `TicketAlreadyScannedException` depuis la PR #26.
 - ~~Un événement annulé n'annule pas ses billets~~ : **résolu par l'ADR 0005** (merge `1c73296`). L'annulation passe les billets `EMIS` à `ANNULE` dans la même transaction, et le contrôle d'entrée les refuse. Limite restante : la durée de cette transaction croît avec le nombre de billets (à surveiller pour un très grand événement).
-- **Contrat de la future route de scan** (Javadoc de `ValidateTicketScanUseCase`) :
-  - `eventIdDuControle` n'est **jamais** lu dans le corps ni dans l'URL. Il vient de l'affectation, lue en base, de l'agent identifié par le jeton, ou d'un événement dont l'organisateur du jeton est propriétaire (vérifié par le module `events`). Sinon, 403 **avant** tout appel au cas d'usage ;
-  - un conflit de version (409) n'est **jamais** présenté comme « problème technique, réessayez » : la route rejoue l'appel une fois (sans risque, il renvoie alors `DEJA_SCANNE`). L'écran du scanner traite **toute issue autre qu'`ACCEPTE` comme un refus d'entrée**. Sans ça, un agent sous pression pourrait laisser entrer ;
-  - la réponse est le `ResultatScan`, sans les messages des exceptions, et sans donnée de la commande ni de l'acheteur (`orderId`, `categoryId`…) ;
-  - le DTO porte `@Size(max = 1024)`, et la route limite le débit par compte agent ;
-  - tests HTTP à prévoir : agent non affecté → 403 ; anonyme → 401 ; `eventId` injecté dans le corps → ignoré.
+- **Route de scan livrée** (merge `fa562bc`) : le contrat de `ValidateTicketScanUseCase` est respecté par `ScanTicketUseCase` (section 4.12). Reste du contrat d'origine, à faire : **limitation de débit par compte agent** (branche `rate-limiting`).
 - **Le QR est un jeton porteur, statique et permanent** (limite de conception, PR #26) : une copie (photo, capture d'écran, e-mail transféré) présentée **avant** le titulaire est acceptée, et le vrai titulaire reçoit `DEJA_SCANNE`. Le « premier arrivé gagne » protège la jauge, pas l'acheteur. Pistes pour plus tard :
   - un code tournant de courte durée, ajouté au QR signé, dans l'application de l'acheteur ;
   - un contrôle d'identité nominatif pour les billets chers ;
@@ -586,7 +636,7 @@ Test-Inscription
 - **Conflit de port 8080** : le conteneur `footbooking-api` (autre projet de SirrDev) publie `0.0.0.0:8080->8080` et occupe donc le port 8080 de Windows (visible via `Get-NetTCPConnection -LocalPort 8080 -State Listen` : processus `com.docker.backend` et `wslrelay`, pas `java`). Ne pas l'arrêter : lancer Billet+ sur 8081 avec `$env:SERVER_PORT = "8081"` (variable valable pour le terminal courant, `application.yml` n'est pas modifié), puis `.\mvnw spring-boot:run`. `footbooking-db` utilise le port 5433 et ne gêne pas Billet+ (5432).
 - Lancer le backend depuis `backend/` : `.\mvnw spring-boot:run`. Démarrage OK : PostgreSQL 16.4, Flyway applique V1–V3, `ddl-auto: validate` passe, Tomcat démarré. **Sans Docker démarré, l'application échoue avec `Connection to localhost:5432 refused`** (erreur sur `flywayInitializer`) — ce n'est pas un défaut du code ; les tests unitaires, eux, restent verts sans base.
 - Arrêter l'infra sans perdre les données : `docker compose -f infra/docker-compose.yml stop`.
-- Tests : `.\mvnw test` puis `.\mvnw test "-Dtest=ArchitectureTest"` (guillemets obligatoires). Résultat de référence au 29/10/2026 : 177 tests, 0 échec, 0 ignoré (Docker démarré ; sans Docker, les 47 tests d'intégration sont ignorés). Le test du contexte complet prend environ 45 s. Les tests d'intégration prennent environ 25 s (PostGIS) et 7 s (Redis). **Démarrage réel confirmé le 29/10/2026 au soir** après la PR #22 : `Started BilletPlusApplication` sur 8081, Flyway « 5 migrations validées, schéma à jour », `ddl-auto: validate` sans erreur. Ce démarrage n'ouvre pas de connexion Redis : elle est ouverte au premier appel. Après la suppression d'une classe, utiliser `.\mvnw clean test` : ArchUnit lit les `.class` de `target/`, et un `.class` orphelin fausserait le résultat.
+- Tests : `.\mvnw test` puis `.\mvnw test "-Dtest=ArchitectureTest"` (guillemets obligatoires). Résultat de référence au 30/10/2026 : 234 tests, 0 échec, 0 ignoré (Docker démarré ; sans Docker, les 66 tests d'intégration sont ignorés). Le test du contexte complet prend environ 40 s, dont 25 s de démarrage des conteneurs et du contexte. Les tests d'intégration prennent environ 25 s (PostGIS) et 7 s (Redis). **Démarrage réel confirmé le 29/10/2026 au soir** après la PR #22 : `Started BilletPlusApplication` sur 8081, Flyway « 5 migrations validées, schéma à jour », `ddl-auto: validate` sans erreur. Ce démarrage n'ouvre pas de connexion Redis : elle est ouverte au premier appel. Après la suppression d'une classe, utiliser `.\mvnw clean test` : ArchUnit lit les `.class` de `target/`, et un `.class` orphelin fausserait le résultat.
 - Clé Ed25519 de dev : `src/main/resources/keys/ed25519_private_dev.pem` (gitignorée, déjà générée sur la machine de SirrDev) ; régénération : `bash ..\infra\scripts\generate-ed25519-keys.sh`.
 - Surcharger l'URL de la base pour une session sans toucher à `application.yml` : `$env:SPRING_DATASOURCE_URL = "jdbc:postgresql://localhost:5433/billetplus"` — **attention : le port 5433 est celui de `footbooking-db`, pas de Billet+** ; à n'utiliser que si le port 5432 de Billet+ a été remappé. Activer les logs de sécurité : `$env:LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY = "DEBUG"` (puis `Remove-Item Env:...`).
 - Le `git status` doit être lu depuis `backend/` ; les chemins de `docker-compose.yml` apparaissent en `../infra/`.
@@ -650,6 +700,8 @@ Test-Inscription
 37. **Un `@SpyBean` sur un cas d'usage permet de tester l'atomicité entre modules** : `doThrow(...).when(espion).execute(id)` simule une panne au milieu d'une transaction qui traverse deux modules. Spring réinitialise l'espion entre les tests (merge `2f126a9`).
 38. **Un `@SpringBootTest` sans clé privée en CI** : la clé Ed25519 de dev est gitignorée. Il faut un `@MockBean QRSigner`, qui remplace la définition du bean, pour que `Ed25519Config` ne cherche pas à charger la clé.
 39. **`assertThat(tx.execute(...))` peut être ambigu à la compilation** (`reference to assertThat is ambiguous`, entre `Predicate` et `IntPredicate`) : passer par une variable typée (`Integer resultat = tx.execute(...)`).
+40. **Un script Python en ligne (`python - <<'EOF'`) qui contient du français échoue** quand l'outil Bash de Claude Code prépare la commande : `unexpected EOF while looking for matching `''`, à cause des apostrophes (`d'un`). Solution : écrire le script et les blocs de texte dans des fichiers du dossier temporaire, puis lancer `python -I script.py fichier`.
+41. **Rejouer un conflit de version exige une nouvelle transaction** : le rejeu se fait dans un cas d'usage **sans** `@Transactional` (`ScanTicketUseCase`), qui appelle deux fois un cas d'usage `@Transactional`. Un rejeu à l'intérieur d'une transaction déjà marquée à annuler échouerait.
 
 ---
 
@@ -665,10 +717,10 @@ Ordre proposé, du plus bloquant au moins bloquant. **(P)** = branche du plan in
 
 | # | Branche | Origine | Dépend de | Taille |
 |---|---|---|---|---|
-| 1 | Création et gestion des **catégories de billets** (cas d'usage + route organisateur, propriétaire vérifié par `events`) | H | ADR 0005 ✅ | courte |
-| 2 | **Comptes `AGENT`** créés par un organisateur, **affectation** à un événement, premier `ADMIN` hors API | H | — | moyenne |
-| 3 | **Route de scan** (contrat en section 7, tests HTTP 401/403) | H | 2 | courte |
-| 4 | **Tests HTTP** (`MockMvc`) sur le contexte complet : sécurité, visibilité, inscription | H | — | moyenne |
+| 1 | ~~Création et gestion des **catégories de billets**~~ ✅ merge `232d58e` | H | ADR 0005 ✅ | courte |
+| 2 | ~~**Comptes `AGENT`**, affectation, premier `ADMIN`~~ ✅ merge `24dc753` | H | — | moyenne |
+| 3 | ~~**Route de scan**~~ ✅ merge `fa562bc` | H | 2 | courte |
+| 4 | **Tests HTTP** des routes plus anciennes (`/api/auth/*`, `/api/events`, `/api/venues`), et décision 403 ou 404 pour un non-propriétaire | H | — | moyenne |
 | 5 | **Liste publique et recherche** d'événements (`pg_trgm` déjà activé) | H | — | moyenne |
 | 6 | **Identité de l'acheteur** (compte acheteur, ou achat sans compte avec téléphone) | H | **décision de SirrDev** | moyenne |
 | 7 | `orders-domain-model` | P | 6 | moyenne |
@@ -688,17 +740,16 @@ Soit **16 branches**, plus la mise à jour du HANDOFF après chaque lot. Selon l
 - **(A) Identité de l'acheteur** au MVP : un compte acheteur (nouveau rôle, inscription ouverte, ce que le HANDOFF classait en V2), ou un achat sans compte (numéro de téléphone Wave, avec billets envoyés par lien) ?
 - **(B) Remboursement** : dans le MVP (au moins pour « payé sans billet » et l'annulation d'un événement), ou en V2 avec une procédure manuelle pour l'événement pilote ?
 
-### 11.2 Prochaine branche : `feature/backend-tickets-category-management`
+### 11.2 Prochaine branche : `feature/backend-tests-http-routes-existantes` (n° 4)
 
-**Objectif** : un organisateur crée les catégories de billets de **son** événement. Sans cette branche, **rien ne peut être vendu** : aucun cas d'usage ne crée de `TicketCategory`, seuls les tests en créent.
+**Objectif** : couvrir par `MockMvc` (dans `ContexteCompletIntegrationTest`, qui démarre déjà tout le contexte) les routes qui ne sont vérifiées que par les scénarios manuels de la section 6 :
+- `/api/auth/register` (rôle toujours `ORGANISATEUR`, champ `role` ignoré, bornes 400), `login`, `refresh`, `me` (401 sans jeton) ;
+- `/api/events` (création, visibilité d'un brouillon, `mine`, `publier`, `annuler`, 409) ;
+- `/api/venues`.
 
-**Pistes** *(non actées)* :
-- cas d'usage `CreateTicketCategoryUseCase(eventId, nom, prix, quota, organisateurDuJeton)` ;
-- le contrôle de propriété passe par un **nouveau port public d'`events`** (ADR 0005), par exemple `StatutEvenements.estOrganisateur(eventId, userId)` ou un port dédié ;
-- autoriser la création seulement pour un événement `BROUILLON` ou `PUBLIE`, à trancher ;
-- une route `POST /api/events/{id}/categories` (`ORGANISATEUR`), dans un nouveau package `tickets/api` ;
-- un DTO avec `@Size(max = 255)` (V4), `@NotBlank`, prix ≥ 0, quota ≥ 1 ;
-- un test HTTP de la règle de propriété.
+**Décision à prendre dans la branche** : un non-propriétaire reçoit aujourd'hui 403 (et non 404) sur l'événement brouillon d'un autre (`publier`, `annuler`, affectation d'agents). Je recommande 404 partout pour un non-propriétaire, comme `GET`, pour qu'un brouillon reste indiscernable.
+
+Ensuite : n° 5 (liste publique et recherche), puis la décision (A) sur l'identité de l'acheteur, qui débloque `orders`.
 
 ---
 
