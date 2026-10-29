@@ -67,6 +67,21 @@ billetplus:
   commande:
     delai-paiement: 4m
     max-en-attente-par-telephone: 3
+  # Limitation de débit (shared.limitation). Fenêtres fixes ; clé IP ou COMPTE
+  # (compte authentifié, à défaut l'IP). Au-delà : 429 avec Retry-After.
+  # Attention au NAT des opérateurs mobiles : beaucoup d'acheteurs peuvent partager
+  # une même IP publique. Les limites par IP restent donc larges, et freinent un
+  # script plutôt qu'un acheteur.
+  limitation:
+    active: true
+    regles:
+      - { nom: creation-commande,  methode: POST, chemin: /api/orders,             cle: IP,     limite: 20,  fenetre: 1m }
+      - { nom: lecture-commande,   methode: GET,  chemin: /api/orders/*,           cle: IP,     limite: 120, fenetre: 1m }
+      - { nom: connexion,          methode: POST, chemin: /api/auth/login,         cle: IP,     limite: 10,  fenetre: 1m }
+      - { nom: inscription,        methode: POST, chemin: /api/auth/register,      cle: IP,     limite: 5,   fenetre: 10m }
+      - { nom: rafraichissement,   methode: POST, chemin: /api/auth/refresh,       cle: IP,     limite: 30,  fenetre: 1m }
+      - { nom: scan,               methode: POST, chemin: /api/events/*/scans,     cle: COMPTE, limite: 120, fenetre: 1m }
+      - { nom: creation-agent,     methode: POST, chemin: /api/agents,             cle: COMPTE, limite: 30,  fenetre: 1h }
 
 springdoc:
   api-docs:
