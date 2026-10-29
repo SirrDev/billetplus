@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(./mvnw *)",
+      "Bash(.\\mvnw *)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(git clean *)",
+      "Bash(docker volume rm *)"
+    ],
+    "deny": [
+      "Bash(git add .)",
+      "Bash(git add -A*)",
+      "Bash(git add --all*)",
+      "Bash(git commit -a*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Read(./.env)",
+      "Read(./backend/src/main/resources/keys/*private*)"
+    ]
+  }
+}
