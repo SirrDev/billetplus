@@ -20,8 +20,12 @@ services:
       POSTGRES_USER: billetplus
       POSTGRES_PASSWORD: billetplus_dev
     ports:
-      # Format "HÔTE:CONTENEUR" : PostgreSQL écoute toujours sur 5432 dans le conteneur.
-      - "5432:5432"
+      # Format "IP:HÔTE:CONTENEUR" : PostgreSQL écoute toujours sur 5432 dans le conteneur.
+      # Publié sur 127.0.0.1 seulement : le mot de passe de dev ci-dessus est
+      # public (commité). Exposé sur toutes les interfaces, n'importe qui sur le
+      # réseau local (Wi-Fi public, réseau partagé) pourrait lire ou modifier la
+      # base. Le backend lancé sur le poste s'y connecte par localhost.
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -35,7 +39,12 @@ services:
     container_name: billetplus-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      # Publié sur 127.0.0.1 seulement : Redis n'a pas de mot de passe, et il
+      # porte les réservations temporaires de places (état critique pour la
+      # vente). Exposé sur toutes les interfaces, n'importe qui sur le réseau
+      # local pourrait tout libérer (FLUSHALL) ou tout bloquer. Le backend lancé
+      # sur le poste s'y connecte par localhost, sans changement.
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
