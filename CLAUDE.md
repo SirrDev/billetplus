@@ -73,8 +73,9 @@ $env:SERVER_PORT = "8081"
 - `@PreAuthorize` s'évalue **après** la validation `@Valid` : pour tester l'autorisation, utiliser une route sans corps.
 - **Aucune méthode publique d'`AuthService` n'accepte un `Role`** : le client ne choisit jamais son rôle (`registerOrganisateur` fixe `ORGANISATEUR`). Idem : l'organisateur d'un événement vient du jeton, jamais du corps de la requête.
 - **Un brouillon non visible répond 404** avec le même message qu'un identifiant inconnu. Toute lecture exposée passe par `getVisible`, jamais par `get`.
-- **409** = `BusinessConflictException` (étend `IllegalStateException`). Une `IllegalStateException` ordinaire reste un 500.
-- **ArchUnit** : 4 règles actives, **jamais de `allowEmptyShould(true)`**. Après tout nouveau package, vérifier que les règles s'appliquent à au moins une classe (une règle sur un ensemble vide passe au vert sans rien contrôler).
+- **409** = `BusinessConflictException` (étend `IllegalStateException`) ou `OptimisticLockingFailureException` (conflit de `@Version`, message générique). Une `IllegalStateException` ordinaire reste un 500.
+- **Adaptateurs niveau 3** : `save()` est en `@Transactional(propagation = MANDATORY)`. Tout cas d'usage qui lit puis modifie une catégorie ou un billet doit être `@Transactional`, sinon le verrou de version ne protège rien (l'appel échoue exprès).
+- **ArchUnit** : 5 règles actives (la 5e interdit JPA, Hibernate et Spring dans les domaines de niveau 3), **jamais de `allowEmptyShould(true)`**. Après tout nouveau package, vérifier que les règles s'appliquent à au moins une classe (une règle sur un ensemble vide passe au vert sans rien contrôler).
 - **Flyway** : ne jamais modifier une migration déjà appliquée ; ajouter la suivante. `.gitattributes` force le LF, sauf `mvnw.cmd`.
 
 ## Agents et skills du projet (`.claude/`)

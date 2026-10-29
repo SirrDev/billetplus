@@ -71,4 +71,26 @@ class ArchitectureTest {
     static final ArchRule ports_ne_dependent_pas_de_spring_data =
         noClasses().that().resideInAPackage("..application.port..")
             .should().dependOnClassesThat().resideInAPackage("org.springframework.data..");
+
+    /**
+     * Les domaines de niveau 3 (tickets, orders) sont des POJO purs : aucune
+     * dépendance à JPA, Hibernate ou Spring (voir ADR 0002). Les règles
+     * précédentes n'interdisent que les packages ..infrastructure.. et ..api..
+     * du projet : un import jakarta.persistence dans tickets/domain passerait
+     * sans celle-ci.
+     *
+     * Ne vise PAS auth ni events : niveau 2, JPA-as-domain par décision.
+     * Vérifiée réellement depuis feature/backend-tickets-jpa-mapper
+     * (tickets/domain/ contient Ticket, TicketCategory et leurs exceptions) ;
+     * orders/domain/ sera couvert dès sa création.
+     */
+    @ArchTest
+    static final ArchRule domaines_niveau_3_sans_jpa_ni_spring =
+        noClasses().that().resideInAnyPackage(
+                "com.billetplus.tickets.domain..",
+                "com.billetplus.orders.domain..")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                "jakarta.persistence..",
+                "org.hibernate..",
+                "org.springframework..");
 }
