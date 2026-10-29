@@ -1,6 +1,6 @@
 # Document de passation — Billet+
 
-Dernière mise à jour : 29 octobre 2026, soir, après la PR #22 `feature/backend-tickets-redis-seat-lock` (réservation temporaire des places dans Redis pendant le paiement, ADR 0003). Démarrage réel de l'application confirmé le même soir (base en V5). Plus tôt le même jour : PR #20 `feature/backend-tickets-quota-lock` (garde d'idempotence atomique des émissions, migration V5, 101 tests sur le runner, 0 ignoré), PR #18 `fix/ci-restore-backend-workflows` (**la CI backend et le job ArchUnit tournent de nouveau** sur les PR), PR #16 `feature/backend-tickets-jpa-mapper` (persistance JPA niveau 3 du module `tickets`, migration V4, `IssueTicketUseCase`), PR #17 (HANDOFF), PR #14 (alignement du dépôt) et PR #15 (configuration Claude Code)). Ce document complète le contexte du projet (ADR, dépôt GitHub synchronisé) pour reprendre le travail sans rien réexpliquer. En cas de doute entre ce document et le code, **le code du dépôt fait foi** — mais attention : la synchronisation GitHub ne voit que les fichiers **commités, poussés et mergés**, et elle n'est rafraîchie qu'après un clic sur « Sync now » dans le projet.
+Dernière mise à jour : 29 octobre 2026, soir, après la PR #24 `fix/infra-localhost-only` (PostgreSQL et Redis de dev publiés sur `127.0.0.1` seulement, bruit des repositories Redis coupé). Avant elle, la PR #22 `feature/backend-tickets-redis-seat-lock` (réservation temporaire des places dans Redis pendant le paiement, ADR 0003), suivie d'un démarrage réel confirmé (base en V5). Plus tôt le même jour : PR #20 `feature/backend-tickets-quota-lock` (garde d'idempotence atomique des émissions, migration V5, 101 tests sur le runner, 0 ignoré), PR #18 `fix/ci-restore-backend-workflows` (**la CI backend et le job ArchUnit tournent de nouveau** sur les PR), PR #16 `feature/backend-tickets-jpa-mapper` (persistance JPA niveau 3 du module `tickets`, migration V4, `IssueTicketUseCase`), PR #17 (HANDOFF), PR #14 (alignement du dépôt) et PR #15 (configuration Claude Code)). Ce document complète le contexte du projet (ADR, dépôt GitHub synchronisé) pour reprendre le travail sans rien réexpliquer. En cas de doute entre ce document et le code, **le code du dépôt fait foi** — mais attention : la synchronisation GitHub ne voit que les fichiers **commités, poussés et mergés**, et elle n'est rafraîchie qu'après un clic sur « Sync now » dans le projet.
 
 ---
 
@@ -71,6 +71,8 @@ Docker (PostGIS + Redis), squelette Spring Boot, squelette PWA, CI GitHub Action
 | — | `fix/docs-handoff-pr18` | ✅ Mergée le 29/10/2026 (PR #19, merge `33a163c` ; commit `ae2bac3`) | Mise à jour du HANDOFF après la PR #18 |
 | — | `fix/docs-handoff-pr20` | ✅ Mergée le 29/10/2026 (PR #21, merge `632766f` ; commit `c2468de`) | Mise à jour du HANDOFF après la PR #20 |
 | 10 | `tickets-redis-seat-lock` | ✅ **Mergée le 29/10/2026** (PR #22, merge `06ec5bd` ; commits `04b52d9`, `93a0ffa`, `77a555a`) | Réservation temporaire des places dans Redis, script Lua atomique, `ReserveSeatsUseCase` / `ReleaseSeatsUseCase`, 503 si Redis indisponible (section 4.9) |
+| — | `fix/docs-handoff-pr22` | ✅ Mergée le 29/10/2026 (PR #23, merge `d07fbf2` ; commit `70ebb10`) | Mise à jour du HANDOFF après la PR #22 |
+| — | `fix/infra-localhost-only` | ✅ Mergée le 29/10/2026 (PR #24, merge `4cc23a3` ; commits `ec0dd27`, `6449a50`) | PostgreSQL et Redis de dev sur `127.0.0.1` seulement (relecture sécurité de la PR #22) ; `spring.data.redis.repositories.enabled: false`. Branche créée sous le nom `fix/infra-redis-localhost-only`, renommée avant le premier push quand PostgreSQL a été ajouté au périmètre |
 | 11–17 | `tickets-validate-scan-usecase`, `tickets-pdf-export`, `orders-domain-model`, `orders-create-usecase`, `orders-wave-gateway`, `orders-confirm-payment-usecase`, `rate-limiting` | ⬜ | |
 
 Branches volontairement supprimées (ne pas recréer) : `backend-auth-rbac-roles` (absorbée dans auth-tokens), `backend-events-categories-quotas` (redondante : `TicketCategory` vit dans `tickets/domain`).
@@ -121,7 +123,7 @@ Pourquoi `/error` : sans cette règle, Spring Security 6 soumet à l'authentific
 
 ### 4.4 Tests
 
-**134 tests, 0 échec, 0 ignoré, remesurés le 29/10/2026 sur `main` (`06ec5bd`, `.\mvnw clean test`, Docker démarré)**, dont 34 tests d'intégration Testcontainers (21 PostGIS dans `TicketPersistenceIntegrationTest`, dont 3 à 8 threads ; 13 Redis dans `RedisSeatReservationStoreIntegrationTest`, dont 1 à 8 threads) et 5 règles ArchUnit. Runner GitHub de la PR #22 : CI verte, donc 0 ignoré et au moins un test exécuté. *Le nombre exact n'a pas été relevé (à confirmer dans le log de « Refuser les tests ignorés »).* *(Historique : 55 tests le 20/10 ; 92 puis 101 le 29/10, avant puis après la PR #20 ; 101 confirmé sur le runner de la PR #20.)* Les tests d'intégration ne démarrent que des tranches du contexte (`@DataJpaTest`, `@DataRedisTest`) : aucun test ne démarre le contexte complet ni les règles HTTP/sécurité (section 7).
+**134 tests, 0 échec, 0 ignoré, remesurés le 29/10/2026 sur `main` (`4cc23a3`, `.\mvnw clean test`, Docker démarré)**, dont 34 tests d'intégration Testcontainers (21 PostGIS dans `TicketPersistenceIntegrationTest`, dont 3 à 8 threads ; 13 Redis dans `RedisSeatReservationStoreIntegrationTest`, dont 1 à 8 threads) et 5 règles ArchUnit. Runner GitHub de la PR #22 : CI verte, donc 0 ignoré et au moins un test exécuté. *Le nombre exact n'a pas été relevé (à confirmer dans le log de « Refuser les tests ignorés »).* *(Historique : 55 tests le 20/10 ; 92 puis 101 le 29/10, avant puis après la PR #20 ; 101 confirmé sur le runner de la PR #20.)* Les tests d'intégration ne démarrent que des tranches du contexte (`@DataJpaTest`, `@DataRedisTest`) : aucun test ne démarre le contexte complet ni les règles HTTP/sécurité (section 7).
 
 ⚠️ Sans Docker, les 13 tests d'intégration sont **ignorés** (`disabledWithoutDocker`) et la suite reste verte : toujours lire la ligne `Skipped` avant d'annoncer un résultat.
 
@@ -475,10 +477,9 @@ Test-Inscription
 - **`IssueTicketUseCase` ne vérifie pas que l'événement est `PUBLIE`** (ni qu'il n'est pas `ANNULE`) : dépend de la décision d'architecture ci-dessus (ADR 0001 contre ArchUnit). À trancher avant `orders-confirm-payment-usecase`.
 - Une seconde émission refusée avec une **quantité différente** de la première mériterait d'être journalisée comme anomalie : elle signale un appelant défaillant.
 - **Coût d'une émission** : chaque `save()` d'un billet neuf fait un `SELECT` puis un `INSERT` (relecture de l'entité gérée), soit 40 requêtes pour 20 billets. Acceptable au MVP ; piste si besoin : une méthode de port dédiée à la création, ou un `saveAll`.
-- **Redis à durcir** (relecture sécurité de la PR #22) : Redis porte désormais un état critique pour la vente (les réservations).
-  - **En dev** : `infra/docker-compose.yml` publie `6379:6379` sur toutes les interfaces, sans mot de passe. N'importe qui sur le réseau local peut tout libérer (`FLUSHALL`) ou tout bloquer. Correction : `127.0.0.1:6379:6379`, dans une petite branche `fix/infra-...`.
-  - **En production** : mot de passe ou ACL, réseau privé, et **`maxmemory-policy noeviction`**. Une politique LRU supprimerait des réservations sans prévenir, ce qui mènerait au « payé sans billet ».
-- **Bruit au démarrage** : 5 lignes `Spring Data Redis - Could not safely identify store assignment…`. Le starter Redis fait chercher des *repositories* Redis, et Spring trouve nos interfaces JPA. Inoffensif ; à couper avec `spring.data.redis.repositories.enabled: false`, puisque Redis est utilisé par script et non par *repository*.
+- **Redis à durcir en production** (relecture sécurité de la PR #22) : Redis porte désormais un état critique pour la vente (les réservations). Il faudra un mot de passe ou des ACL, un réseau privé, et **`maxmemory-policy noeviction`** : une politique LRU supprimerait des réservations sans prévenir, ce qui mènerait au « payé sans billet ». *(Le volet dev est fait : PR #24 publie Redis et PostgreSQL sur `127.0.0.1` seulement.)*
+- **Mot de passe PostgreSQL de dev commité** (`billetplus_dev`, dans `infra/docker-compose.yml` et `application.yml`) : acceptable en dev depuis que le port n'est publié que sur `127.0.0.1` (PR #24). En production, il devra venir d'une variable d'environnement, comme `JWT_SECRET`.
+- **Démarrage réel après la PR #24 à confirmer** : la connexion du backend par `localhost` aux ports publiés sur `127.0.0.1` est vérifiée en local (connexion TCP sur les deux ports, Redis répond `PONG`, la base garde ses données en V5). Mais la disparition des 5 lignes `Could not safely identify store assignment` (effet de `spring.data.redis.repositories.enabled: false`) n'a pas été observée sur un `spring-boot:run`.
 - Une `RedisSystemException` (erreur de script, mémoire pleine) n'est pas une `DataAccessResourceFailureException` : elle finit en 500, pas en 503.
 - En multi-instances, les horloges doivent être synchronisées (NTP) : une instance en avance retire trop tôt des réservations encore valides.
 - `TicketCategory.libererQuota` plafonne silencieusement `quotaVendu` à 0 au lieu de signaler une sur-libération : à décider avec le cas d'usage d'annulation.
@@ -522,7 +523,7 @@ Test-Inscription
 2. **ArchUnit** : `ignoreDependency(...)` après `.should().notDependOnEachOther()` ; pas de `allowEmptyShould`.
 3. **Image Docker** : `postgres:16` n'a pas PostGIS → `postgis/postgis:16-3.4` ; après changement d'image, `docker compose -f infra/docker-compose.yml down -v`.
 4. **`docker compose` depuis la racine**, pas depuis `backend/`.
-5. **Mappage de port Docker** : `"HÔTE:CONTENEUR"` — PostgreSQL écoute toujours sur 5432 *dans* le conteneur. `5433:5433` est faux ; si 5432 était pris : `5433:5432`.
+5. **Mappage de port Docker** : `"HÔTE:CONTENEUR"` — PostgreSQL écoute toujours sur 5432 *dans* le conteneur. `5433:5433` est faux ; si 5432 était pris : `5433:5432`. Depuis la PR #24, la forme est `"127.0.0.1:HÔTE:CONTENEUR"` (par exemple `127.0.0.1:5432:5432`), pour ne publier le port que sur le poste.
 6. **Échec de démarrage `Connection refused` sur Flyway** = base non démarrée (Docker éteint) : rencontré les 12/10 et 19/10, même cause. Les tests unitaires restent verts quand même.
 7. **IDs générés en mémoire** (`UUID.randomUUID()`), jamais `@GeneratedValue` (`User`, `Ticket`, `TicketCategory`, `Event`, `Venue`).
 8. **Spring Security 6 masque les erreurs en 403** si `/error` n'est pas `permitAll` ; et un anonyme reçoit 403 (pas 401) sans `AuthenticationEntryPoint`. Corrigé dans `SecurityConfig`.
@@ -549,24 +550,18 @@ Test-Inscription
 29. **Un invariant tenu par un script se vérifie après chaque test** : le total courant des réservations est comparé à la somme réelle dans un `@AfterEach`. Toute dérive du script (oubli d'un `DECRBY` à l'expiration, par exemple) ferait échouer tous les tests, pas seulement celui qui la provoque (PR #22).
 30. **Passer l'heure en paramètre plutôt que la lire dans le serveur** (`Clock` injecté, `maintenant` transmis au script) : l'expiration se teste en simulant « 2 secondes plus tard », sans `Thread.sleep` ni test lent ou instable (PR #22).
 31. **`registerSynchronization` exige une transaction active** : les tests unitaires d'un cas d'usage qui l'utilise activent la synchronisation à la main (`TransactionSynchronizationManager.initSynchronization()` dans `@BeforeEach`, `clearSynchronization()` dans `@AfterEach`) et déclenchent eux-mêmes `afterCommit`. Cela permet de vérifier que l'action n'a lieu **qu'après** la validation (PR #22).
+32. **`ports are not available ... bind: Une seule utilisation de chaque adresse de socket` à la recréation d'un conteneur** : après une modification de `ports:` dans `docker-compose.yml`, `up -d` recrée le conteneur, mais l'ancien n'a pas encore libéré le port quand le nouveau démarre. Le nouveau conteneur reste à l'état `Created`, donc le service est arrêté. Diagnostic : `netstat -ano | findstr :6379` ne montre aucun `LISTENING`, seulement un `TIME_WAIT`. Solution : relancer `docker compose -f infra/docker-compose.yml up -d`. Rencontré deux fois le 29/10/2026 (Redis, puis PostgreSQL), sans perte de données, puisqu'il n'y a pas eu de `down -v` (PR #24).
+33. **Élargir le périmètre d'une branche avant le premier push : la renommer** (`git branch -m ancien nouveau`), pour que le nom reflète le contenu. C'est sans risque tant que la branche n'existe pas sur le dépôt distant, ce qui se vérifie avec `git ls-remote --heads origin <ancien>`. Après un push, on ne renomme plus (PR #24).
 
 ---
 
 ## 11. Prochaine étape précise
 
-**Avant de commencer** : `git switch main` puis `git pull` (le `main` local doit être sur `06ec5bd` ou plus récent), puis « Sync now » dans le projet. Docker démarré, sinon les 34 tests d'intégration sont ignorés en local (en CI, l'étape « Refuser les tests ignorés » ferait échouer le run). Supprimer les branches locales déjà mergées : `git branch -d feature/backend-tickets-jpa-mapper fix/docs-handoff-pr16 fix/ci-restore-backend-workflows fix/docs-handoff-pr18 feature/backend-tickets-quota-lock fix/docs-handoff-pr20 feature/backend-tickets-redis-seat-lock` (`-d` refuse toute branche non mergée ; une branche déjà supprimée est signalée puis ignorée).
+**Avant de commencer** : `git switch main` puis `git pull` (le `main` local doit être sur `4cc23a3` ou plus récent), puis « Sync now » dans le projet. Docker démarré, sinon les 34 tests d'intégration sont ignorés en local (en CI, l'étape « Refuser les tests ignorés » ferait échouer le run). Sur un poste qui n'a pas encore recréé ses conteneurs depuis la PR #24 : `docker compose -f infra/docker-compose.yml up -d` depuis la racine (voir le piège 32 si le port n'est pas libéré à temps). Supprimer les branches locales déjà mergées : `git branch -d feature/backend-tickets-jpa-mapper fix/docs-handoff-pr16 fix/ci-restore-backend-workflows fix/docs-handoff-pr18 feature/backend-tickets-quota-lock fix/docs-handoff-pr20 feature/backend-tickets-redis-seat-lock fix/docs-handoff-pr22 fix/infra-localhost-only` (`-d` refuse toute branche non mergée ; une branche déjà supprimée est signalée puis ignorée).
 
-*(Branche 9 `tickets-quota-lock` faite : PR #20, section 4.8. Branche 10 `tickets-redis-seat-lock` faite : PR #22, section 4.9.)*
+*(Branche 9 `tickets-quota-lock` faite : PR #20, section 4.8. Branche 10 `tickets-redis-seat-lock` faite : PR #22, section 4.9. Durcissement infra de dev fait : PR #24.)*
 
-### 11.1 D'abord : une petite branche infra, `fix/infra-redis-localhost-only` (hors plan)
-
-Relecture sécurité de la PR #22 (section 7, « Redis à durcir ») :
-- `infra/docker-compose.yml` : publier Redis sur `127.0.0.1:6379:6379` au lieu de `6379:6379`. Le vérifier ensuite avec `docker ps --format "table {{.Names}}\t{{.Ports}}"`, qui doit afficher `127.0.0.1:6379->6379/tcp` ;
-- optionnel, dans la même branche ou une autre : `spring.data.redis.repositories.enabled: false` dans `application.yml`, pour couper le bruit `Could not safely identify store assignment` au démarrage. Le vérifier par un démarrage réel.
-
-Piège : après le changement de `docker-compose.yml`, il faut recréer le conteneur Redis (`docker compose -f infra/docker-compose.yml up -d`, depuis la racine du dépôt). Il n'est pas nécessaire de faire `down -v` : seul le mappage de port change, et le volume de PostgreSQL n'est pas concerné.
-
-### 11.2 Ensuite : branche 11, `feature/backend-tickets-validate-scan-usecase`
+### Branche 11 : `feature/backend-tickets-validate-scan-usecase`
 
 **Objectif** : le cas d'usage de validation d'un billet à l'entrée (scan d'un QR code par un agent), dernier rempart contre le double passage (ADR 0004 : la vérification hors ligne côté scanner ne garantit pas l'unicité).
 
@@ -598,4 +593,4 @@ Piège : après le changement de `docker-compose.yml`, il faut recréer le conte
 
 ## 12. Premier message suggéré pour la nouvelle conversation
 
-> Je reprends Billet+ (voir HANDOFF.md du projet). La PR #22 (réservation temporaire des places dans Redis) est mergée et le projet est resynchronisé. Je veux attaquer [`fix/infra-redis-localhost-only` | `feature/backend-tickets-validate-scan-usecase`]. Lis les sections 7 et 11 et propose un plan avant de coder.
+> Je reprends Billet+ (voir HANDOFF.md du projet). Les PR #22 (réservation temporaire dans Redis) et #24 (infra de dev sur localhost) sont mergées et le projet est resynchronisé. Je veux attaquer `feature/backend-tickets-validate-scan-usecase`. Lis les sections 7 et 11 et propose un plan avant de coder.
