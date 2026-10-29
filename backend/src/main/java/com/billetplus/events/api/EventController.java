@@ -2,8 +2,10 @@ package com.billetplus.events.api;
 
 import com.billetplus.events.api.dto.CreateEventRequest;
 import com.billetplus.events.api.dto.EventDto;
+import com.billetplus.events.api.dto.PageEvenementsPublicsDto;
 import com.billetplus.events.application.AffectationAgentService;
 import com.billetplus.events.application.EventService;
+import com.billetplus.events.application.RechercheEvenementsService;
 import com.billetplus.events.domain.Event;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -22,10 +24,26 @@ public class EventController {
 
     private final EventService eventService;
     private final AffectationAgentService affectationAgentService;
+    private final RechercheEvenementsService rechercheEvenementsService;
 
-    public EventController(EventService eventService, AffectationAgentService affectationAgentService) {
+    public EventController(EventService eventService, AffectationAgentService affectationAgentService,
+                           RechercheEvenementsService rechercheEvenementsService) {
         this.eventService = eventService;
         this.affectationAgentService = affectationAgentService;
+        this.rechercheEvenementsService = rechercheEvenementsService;
+    }
+
+    /**
+     * Liste publique (voir SecurityConfig : GET /api/events/** est permitAll) :
+     * événements publiés, à venir ou en cours, du plus proche au plus lointain.
+     * {@code q} filtre sur le titre. Pagination bornée (taille 1 à 50, sinon 400).
+     */
+    @GetMapping
+    public ResponseEntity<PageEvenementsPublicsDto> lister(
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "" + RechercheEvenementsService.TAILLE_PAR_DEFAUT) int taille) {
+        return ResponseEntity.ok(PageEvenementsPublicsDto.from(rechercheEvenementsService.rechercher(q, page, taille)));
     }
 
     @PostMapping
