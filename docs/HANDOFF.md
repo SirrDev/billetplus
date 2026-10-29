@@ -1,6 +1,6 @@
 # Document de passation — Billet+
 
-Dernière mise à jour : 29 octobre 2026, soir, après la PR #26 `feature/backend-tickets-validate-scan-usecase` (contrôle d'un billet à l'entrée : signature Ed25519, cinq issues, double scan simultané rejeté). Avant elle, la PR #24 `fix/infra-localhost-only` (PostgreSQL et Redis de dev publiés sur `127.0.0.1` seulement, bruit des repositories Redis coupé), et la PR #22 `feature/backend-tickets-redis-seat-lock` (réservation temporaire des places dans Redis pendant le paiement, ADR 0003), suivie d'un démarrage réel confirmé (base en V5). Plus tôt le même jour : PR #20 `feature/backend-tickets-quota-lock` (garde d'idempotence atomique des émissions, migration V5, 101 tests sur le runner, 0 ignoré), PR #18 `fix/ci-restore-backend-workflows` (**la CI backend et le job ArchUnit tournent de nouveau** sur les PR), PR #16 `feature/backend-tickets-jpa-mapper` (persistance JPA niveau 3 du module `tickets`, migration V4, `IssueTicketUseCase`), PR #17 (HANDOFF), PR #14 (alignement du dépôt) et PR #15 (configuration Claude Code)). Ce document complète le contexte du projet (ADR, dépôt GitHub synchronisé) pour reprendre le travail sans rien réexpliquer. En cas de doute entre ce document et le code, **le code du dépôt fait foi** — mais attention : la synchronisation GitHub ne voit que les fichiers **commités, poussés et mergés**, et elle n'est rafraîchie qu'après un clic sur « Sync now » dans le projet.
+Dernière mise à jour : 29 octobre 2026, nuit, après deux merges faits en local par Claude Code (sans PR, faute de `gh`) : `feature/backend-inter-module-event-status` (**ADR 0005** : un événement annulé annule ses billets et ferme la vente, une réservation sur un brouillon répond 404) et `feature/backend-tests-contexte-complet` (premier test du contexte complet). Avant eux, la PR #26 `feature/backend-tickets-validate-scan-usecase` (contrôle d'un billet à l'entrée : signature Ed25519, cinq issues, double scan simultané rejeté). Avant elle, la PR #24 `fix/infra-localhost-only` (PostgreSQL et Redis de dev publiés sur `127.0.0.1` seulement, bruit des repositories Redis coupé), et la PR #22 `feature/backend-tickets-redis-seat-lock` (réservation temporaire des places dans Redis pendant le paiement, ADR 0003), suivie d'un démarrage réel confirmé (base en V5). Plus tôt le même jour : PR #20 `feature/backend-tickets-quota-lock` (garde d'idempotence atomique des émissions, migration V5, 101 tests sur le runner, 0 ignoré), PR #18 `fix/ci-restore-backend-workflows` (**la CI backend et le job ArchUnit tournent de nouveau** sur les PR), PR #16 `feature/backend-tickets-jpa-mapper` (persistance JPA niveau 3 du module `tickets`, migration V4, `IssueTicketUseCase`), PR #17 (HANDOFF), PR #14 (alignement du dépôt) et PR #15 (configuration Claude Code)). Ce document complète le contexte du projet (ADR, dépôt GitHub synchronisé) pour reprendre le travail sans rien réexpliquer. En cas de doute entre ce document et le code, **le code du dépôt fait foi** — mais attention : la synchronisation GitHub ne voit que les fichiers **commités, poussés et mergés**, et elle n'est rafraîchie qu'après un clic sur « Sync now » dans le projet.
 
 ---
 
@@ -45,7 +45,7 @@ Jamais de relation JPA cross-module : UUID brut uniquement, sans `FOREIGN KEY` e
 
 ## 3. État du dépôt
 
-**Avancement estimé** (ordre de grandeur, pas une mesure) : backend ≈ 60 % (10 branches planifiées mergées sur 17, plus le cœur de la branche 8 livré avec la 7, et un correctif de sécurité) ; MVP complet ≈ 25 % (le frontend n'a aucune branche commencée). Les branches restantes sont plus lourdes que celles déjà faites (module `orders`, paiement Wave, verrou de quota).
+**Avancement estimé** (ordre de grandeur, pas une mesure) : **backend ≈ 40 %** du MVP. Les branches 1 à 11 du plan sont livrées, plus l'ADR 0005 et le premier test du contexte complet. *Le chiffre de ≈ 60 % donné auparavant ne comptait que les 17 branches du plan ; un inventaire du code (29/10/2026) a montré environ 10 à 13 branches nécessaires hors plan (section 11), soit **16 à 19 branches restantes** au total.* MVP complet ≈ 25 % (le frontend n'a aucune branche commencée).
 
 ### Phase 0 — Socle technique : ✅ mergée
 
@@ -75,6 +75,9 @@ Docker (PostGIS + Redis), squelette Spring Boot, squelette PWA, CI GitHub Action
 | — | `fix/infra-localhost-only` | ✅ Mergée le 29/10/2026 (PR #24, merge `4cc23a3` ; commits `ec0dd27`, `6449a50`) | PostgreSQL et Redis de dev sur `127.0.0.1` seulement (relecture sécurité de la PR #22) ; `spring.data.redis.repositories.enabled: false`. Branche créée sous le nom `fix/infra-redis-localhost-only`, renommée avant le premier push quand PostgreSQL a été ajouté au périmètre |
 | — | `fix/docs-handoff-pr24` | ✅ Mergée le 29/10/2026 (PR #25, merge `42acb36` ; commit `6c00595`) | Mise à jour du HANDOFF après la PR #24 |
 | 11 | `tickets-validate-scan-usecase` | ✅ **Mergée le 29/10/2026** (PR #26, merge `f637c4d` ; commits `d67445d`, `f136753`) | `ValidateTicketScanUseCase`, `ResultatScan`, `TicketRepository.findById`, refus de scan du domaine en 409 (section 4.10). **Aucune route** : elle attend les comptes `AGENT` |
+| — | `fix/docs-handoff-pr26` | ✅ Mergée le 29/10/2026 (PR #27, merge `84ff531` ; commit `fcd179b`) | Mise à jour du HANDOFF après la PR #26 |
+| — | `feature/backend-inter-module-event-status` | ✅ **Mergée le 29/10/2026, en local, sans PR** (merge `1c73296` ; commits `a3fd1a6`, `a635345`, `5672ab3`) | **ADR 0005**, port public `StatutEvenements`, événement `EvenementAnnule`, billets annulés avec l'événement, vente fermée (section 4.11). CI verte sur `main` selon SirrDev |
+| — | `feature/backend-tests-contexte-complet` | ✅ Mergée le 29/10/2026, en local, sans PR (merge `2f126a9` ; commit `3d880e1`) | Premier `@SpringBootTest` sur PostGIS et Redis réels (section 4.11) |
 | 12–17 | `tickets-pdf-export`, `orders-domain-model`, `orders-create-usecase`, `orders-wave-gateway`, `orders-confirm-payment-usecase`, `rate-limiting` | ⬜ | |
 
 Branches volontairement supprimées (ne pas recréer) : `backend-auth-rbac-roles` (absorbée dans auth-tokens), `backend-events-categories-quotas` (redondante : `TicketCategory` vit dans `tickets/domain`).
@@ -83,7 +86,7 @@ Branches volontairement supprimées (ne pas recréer) : `backend-auth-rbac-roles
 
 Commits : `2ce6a53` (`infra/docker-compose.yml` : image `postgis/postgis:16-3.4`, propriété Redis de Spring Boot 3, port `5432:5432`), `55daf4a` (`.gitattributes` normalisé, `qodana.yaml` en `projectJDK: "21"`), `c1e48c4` (ADR 0001 à 0004 versionnés dans `docs/architecture/adr/`), `37e272c` (`CONTRIBUTING.md` PowerShell + ArchUnit), `8e17bd5` (cahier des charges aligné sur les ADR).
 
-Le `docker-compose.yml` local n'est plus modifié hors Git : `git status` est propre sur `main`. `CONTRIBUTING.md` liste les 5 règles ArchUnit depuis `b331130` (PR #18). La règle « jamais de `git add .` » reste en vigueur.
+Le `docker-compose.yml` local n'est plus modifié hors Git : `git status` est propre sur `main`. `CONTRIBUTING.md` liste les règles ArchUnit (7 depuis l'ADR 0005). La règle « jamais de `git add .` » reste en vigueur.
 
 ### Frontend (PWA) : Phase 0 seulement
 
@@ -125,7 +128,7 @@ Pourquoi `/error` : sans cette règle, Spring Security 6 soumet à l'authentific
 
 ### 4.4 Tests
 
-**156 tests, 0 échec, 0 ignoré, remesurés le 29/10/2026 sur `main` (`f637c4d`, `.\mvnw clean test`, Docker démarré)**, dont 38 tests d'intégration Testcontainers (25 PostGIS dans `TicketPersistenceIntegrationTest`, dont 4 à 8 threads ; 13 Redis dans `RedisSeatReservationStoreIntegrationTest`, dont 1 à 8 threads) et 5 règles ArchUnit. Runners GitHub des PR #22, #24 et #26 : CI verte, donc 0 ignoré et au moins un test exécuté. *Le nombre exact n'a pas été relevé depuis la PR #20 (à confirmer dans le log de « Refuser les tests ignorés »).* *(Historique : 55 tests le 20/10 ; le 29/10, 92, puis 101 (confirmé sur le runner de la PR #20), 134 et 156.)* Les tests d'intégration ne démarrent que des tranches du contexte (`@DataJpaTest`, `@DataRedisTest`) : aucun test ne démarre le contexte complet ni les règles HTTP/sécurité (section 7).
+**177 tests, 0 échec, 0 ignoré, mesurés le 29/10/2026 sur la branche mergée en `2f126a9` (`./mvnw clean verify`, la commande exacte de la CI, Docker démarré)**, dont 47 tests d'intégration Testcontainers : 29 PostGIS (`TicketPersistenceIntegrationTest`, dont 4 à 8 threads), 13 Redis (`RedisSeatReservationStoreIntegrationTest`), et **5 sur le contexte complet** (`ContexteCompletIntegrationTest`, PostGIS et Redis). **7 règles ArchUnit.** *(Historique : 55 tests le 20/10 ; le 29/10, 92, 101, 134, 156 puis 177.)* Aucun test ne vérifie encore les règles HTTP et de sécurité (`MockMvc`, section 7).
 
 ⚠️ Sans Docker, les 13 tests d'intégration sont **ignorés** (`disabledWithoutDocker`) et la suite reste verte : toujours lire la ligne `Skipped` avant d'annoncer un résultat.
 
@@ -295,6 +298,41 @@ Aucune route HTTP ajoutée : la route de scan attend les comptes `AGENT` (sectio
 - relecture `archi-guardian` (conforme) et `security-reviewer` (aucune faille exploitable ; deux corrections de contrat appliquées).
 
 **Non vérifié** : la route HTTP, le démarrage réel avec ce nouveau bean, l'intégration avec la PWA scanner hors ligne.
+
+### 4.11 ADR 0005 et test du contexte complet (merges locaux `1c73296` et `2f126a9`, 29/10/2026)
+
+**ADR 0005** (`docs/architecture/adr/0005-communication-entre-modules.md`) : **un port public pour lire, un événement applicatif dans la même transaction pour réagir.** Il met fin au désaccord entre le texte de l'ADR 0001 et la règle ArchUnit `modules_sont_independants`. **Décisions (à respecter)** :
+
+- **Lire l'état d'un autre module** : uniquement par une **interface** placée dans `com.billetplus.<module>.api.publique`, implémentée à l'intérieur du module. Premier port : `events.api.publique.StatutEvenements.estOuvertALaVente(eventId)` (vrai seulement si l'événement existe et est `PUBLIE`), implémenté par `events.application.StatutEvenementsService`.
+- **Réagir à un changement** : un *record* dans `shared.evenements`, publié par `ApplicationEventPublisher` et écouté par `@EventListener` **synchrone**, donc **dans la transaction de l'émetteur**. Premier événement : `EvenementAnnule(eventId)`, publié par `EventService.annuler` après l'enregistrement. Si un écouteur échoue, l'action de l'émetteur est annulée avec lui. Pas de `@TransactionalEventListener(AFTER_COMMIT)` ni d'*outbox* au MVP (raison et limite dans l'ADR).
+- **ArchUnit, 7 règles** :
+  - `modules_sont_independants` ignore désormais `..shared..` **et** `..api.publique..`, rien d'autre ;
+  - nouvelle règle `ports_publics_ne_contiennent_que_des_interfaces` ;
+  - nouvelle règle `evenements_applicatifs_sont_des_records` (`shared.evenements`).
+
+  Les trois ont été testées à l'envers par des classes sondes : une classe concrète dans `api.publique`, une classe avec logique dans `shared.evenements`, et **un accès de `tickets` à `events.domain.Event`**. Chacune a bien échoué.
+- **Module `tickets`** :
+  - `CancelEventTicketsUseCase` passe à `ANNULE` tous les billets `EMIS` d'un événement. Il ne touche pas aux billets `SCANNE` (porteur déjà entré), ni aux `ANNULE` et `REMBOURSE`, ce qui le rend idempotent. Il est déclenché par `tickets.infrastructure.evenements.EvenementAnnuleListener` ;
+  - nouveau `TicketRepository.findByEventIdAndStatus`, servi par l'index V4 `idx_tickets_event_id` ;
+  - **`ReserveSeatsUseCase`** : un événement non ouvert à la vente (brouillon, annulé, terminé) donne **exactement** la même réponse qu'une catégorie inconnue (même `NoSuchElementException`, même message). Un brouillon reste indiscernable ;
+  - **`IssueTicketUseCase`** : un événement fermé à la vente lève **`VenteFermeeException`** (409, message générique), avant toute écriture. Pour `orders`, c'est un cas « payé sans billet », donc à rembourser ;
+  - au scan, un billet d'un événement annulé est désormais `ANNULE`, donc refusé avec l'issue `NON_VALIDE`.
+
+**Premier test du contexte complet** : `com.billetplus.ContexteCompletIntegrationTest` (`@SpringBootTest`, PostGIS et Redis lancés par Testcontainers). Seul `QRSigner` est simulé (`@MockBean`), parce que la clé privée est absente en CI. Il vérifie :
+- que tous les cas d'usage se câblent dans le contexte complet ;
+- que le port public suit le statut d'un événement, du brouillon à l'annulation ;
+- qu'une réservation sur un brouillon répond 404, sur un vrai Redis ;
+- qu'annuler un événement annule ses 3 billets et ferme la vente ;
+- **l'atomicité** : une panne simulée pendant l'annulation des billets (`@SpyBean` sur `CancelEventTicketsUseCase`) laisse l'événement `PUBLIE` et les billets `EMIS`.
+
+Sa sortie a aussi confirmé la disparition des lignes `Could not safely identify store assignment` (effet de la PR #24).
+
+**Vérifié** :
+- `./mvnw clean verify` : 177 tests, 0 ignoré, et le contrôle « Refuser les tests ignorés » passe ;
+- CI de `main` verte après le merge de l'ADR 0005 (selon SirrDev) ;
+- relecture faite par Claude Code, sans agents relecteurs.
+
+**Non vérifié** : la CI après le merge du test du contexte complet ; une annulation portant sur un très grand nombre de billets (durée de la transaction).
 
 ---
 
@@ -489,14 +527,14 @@ Test-Inscription
 - **Lieux** : tout organisateur peut créer des lieux globaux, sans propriétaire ni détection de doublon (acceptable au MVP). `VenueDto.seatingPlan` est une `String` sérialisée telle quelle (aucun endpoint ne la définit encore) : à revoir quand le plan de salle sera construit.
 - **`EventDto.organizerId`** est exposé publiquement par `GET /api/events/{id}` : identifiant interne du module `auth`, non secret mais à retirer si le front n'en a pas besoin.
 - **Énumération d'emails** : `POST /api/auth/register` répond 400 « Un compte existe déjà avec cet email », ce qui permet de tester l'existence d'un compte. Risque faible au MVP ; à revoir avec l'ouverture de l'inscription aux acheteurs (V2) et le rate limiting (branche 17).
-- **Tests d'intégration partiels** : depuis la PR #16, `TicketPersistenceIntegrationTest` (`@DataJpaTest` + Testcontainers PostGIS) couvre la persistance `tickets`. Mais **aucun test ne démarre le contexte complet** : un bean manquant (comme `IssueTicketUseCase` sans adaptateur, rencontré le 29/10) ou une règle de `SecurityConfig` cassée ne se voient qu'au lancement réel. Envisager `@SpringBootTest` + `MockMvc` sur le même conteneur pour verrouiller autorisation, visibilité et inscription (« un champ `role` envoyé est ignoré »). Modèle de conteneur : `DockerImageName.parse("postgis/postgis:16-3.4").asCompatibleSubstituteFor("postgres")`.
+- **Tests HTTP absents** : depuis le merge `2f126a9`, `ContexteCompletIntegrationTest` démarre le contexte complet (beans, transactions, collaboration entre modules). Mais **aucun test ne passe par HTTP** : les règles de `SecurityConfig`, `@PreAuthorize`, la visibilité des brouillons par l'API et les codes 401/403/404 ne sont vérifiés que par les scénarios manuels de la section 6. Ajouter `MockMvc` à ce test (ou un test dédié) avec les mêmes conteneurs.
 - `EventTest.refuse_de_publier_un_evenement_deja_publie` attend `IllegalStateException` : il passe (sous-classe) mais gagnerait à attendre `BusinessConflictException`.
 - `Event` n'a aucun moyen d'atteindre `TERMINE` (pas de transition automatique ; job planifié prévu en V2). `annuler()` sur un événement déjà `ANNULE` repasse silencieusement à `ANNULE` : à décider (no-op explicite ou 409).
 - `EventService` (niveau 2) lève `AccessDeniedException` de Spring Security : acceptable (comme `AuthService`), mais pour les modules niveau 3 prévoir une exception de domaine.
 - Warning au démarrage « Using generated security password » : bruit inoffensif (`UserDetailsServiceAutoConfiguration`) ; peut être exclu plus tard.
 - Le refresh token n'est pas révocable (limite assumée au MVP, documentée dans `AuthService`).
 - `QuotaDepasseException` étend `BusinessConflictException` (409) depuis `feature/backend-tickets-jpa-mapper`, et `TicketAlreadyScannedException` depuis la PR #26.
-- **⚠️ Un événement annulé n'annule pas ses billets** (relecture sécurité de la PR #26) : le contrôle d'entrée ne vérifie que le statut du billet. `Event.annuler()` (module `events`) ne touche pas aux billets (module `tickets`), et rien ne les relie. **Un billet d'un événement `ANNULE` serait donc `ACCEPTE` à l'entrée.** Ce point dépend de la même décision d'architecture que le contrôle `PUBLIE` (ci-dessous) : `tickets` ne peut pas savoir qu'un événement a été annulé.
+- ~~Un événement annulé n'annule pas ses billets~~ : **résolu par l'ADR 0005** (merge `1c73296`). L'annulation passe les billets `EMIS` à `ANNULE` dans la même transaction, et le contrôle d'entrée les refuse. Limite restante : la durée de cette transaction croît avec le nombre de billets (à surveiller pour un très grand événement).
 - **Contrat de la future route de scan** (Javadoc de `ValidateTicketScanUseCase`) :
   - `eventIdDuControle` n'est **jamais** lu dans le corps ni dans l'URL. Il vient de l'affectation, lue en base, de l'agent identifié par le jeton, ou d'un événement dont l'organisateur du jeton est propriétaire (vérifié par le module `events`). Sinon, 403 **avant** tout appel au cas d'usage ;
   - un conflit de version (409) n'est **jamais** présenté comme « problème technique, réessayez » : la route rejoue l'appel une fois (sans risque, il renvoie alors `DEJA_SCANNE`). L'écran du scanner traite **toute issue autre qu'`ACCEPTE` comme un refus d'entrée**. Sans ça, un agent sous pression pourrait laisser entrer ;
@@ -511,15 +549,7 @@ Test-Inscription
 - **Conflits de version massifs sous forte demande** (constat de la PR #20, section 4.8) : 8 achats simultanés sur une catégorie donnent 1 succès et 7 conflits. **À trancher avant l'ouverture de la billetterie de l'événement pilote**, avec deux leviers :
   - une nouvelle tentative bornée, avec délai aléatoire croissant, à la frontière du webhook (`orders`) ;
   - la requête SQL atomique prévue par l'ADR 0003 (ligne 101 : « à activer si le volume de conflits observé le justifie »). Le test est synthétique : idéalement, la décider sur une mesure de charge réaliste.
-- **Contrôle « événement `PUBLIE` » bloqué par un désaccord entre l'ADR 0001 et ArchUnit** :
-  - l'ADR 0001 (ligne 29) autorise « l'appel direct à un port public exposé par le module » ;
-  - la règle `modules_sont_independants` interdit **toute** dépendance entre modules (sauf `shared`) : `tickets` et `orders` ne peuvent donc pas lire le statut d'un événement.
-
-  **Décision d'architecture à prendre avant les branches `orders`**, entre deux pistes :
-  - **(a)** assouplir ArchUnit pour un package public par module (par exemple `events.api.port`) ;
-  - **(b)** `events` publie un événement applicatif (`ApplicationEventPublisher`, par exemple `EvenementPublie` / `EvenementAnnule`) et `tickets` garde le statut localement.
-
-  La piste (b) respecte à la fois l'ADR et ArchUnit.
+- ~~Contrôle « événement `PUBLIE` » bloqué par un désaccord entre l'ADR 0001 et ArchUnit~~ : **tranché par l'ADR 0005** (port public `api.publique` pour lire, événement applicatif pour réagir). Pour `orders`, la même voie est disponible : lire par `StatutEvenements`, et ajouter si besoin un port public au module `tickets`.
 - **Précision des dates du QR** : le QR signe `emisLe` à la **milliseconde** (`Ed25519QRSigner`, champ `iat`), alors que `Ticket` le garde à la microseconde. Toute comparaison entre un QR vérifié et la base doit se faire après `truncatedTo(ChronoUnit.MILLIS)` (branche 11).
 - **Contrat de `orders` envers `IssueTicketUseCase`** (relectures des PR #16 et #20, Javadoc d'`execute`) :
   - **Provenance** : catégorie, commande et quantité lues dans la commande en base, jamais dans la notification Wave. Signature et anti-rejeu Wave vérifiés avant l'appel. Commande payée, montant recalculé côté serveur. Aucune route publique ni organisateur ne mène à ce cas d'usage. Un appel avec une mauvaise quantité occupe le couple (commande, catégorie) et **bloque définitivement** la vraie émission.
@@ -536,14 +566,12 @@ Test-Inscription
     - **`ReleaseSeatsUseCase` ne vérifie aucune propriété** : aucune route ne prend `orderId` ni `categoryId` du client pour libérer. Libération seulement sur un échec ou une annulation **définitifs** confirmés par Wave, ou sur une annulation par l'acheteur authentifié. Jamais sur un statut Wave ambigu ;
     - remboursement nécessaire pour le cas rare « payé sans billet » (risque résiduel, section 4.9).
 - Messages 409/404 du module tickets : contiennent des UUID et le quota restant. À rendre génériques si un contrôleur acheteur les relaie.
-- **`IssueTicketUseCase` ne vérifie pas que l'événement est `PUBLIE`** (ni qu'il n'est pas `ANNULE`) : dépend de la décision d'architecture ci-dessus (ADR 0001 contre ArchUnit). À trancher avant `orders-confirm-payment-usecase`.
+- ~~`IssueTicketUseCase` ne vérifie pas que l'événement est `PUBLIE`~~ : **résolu** (`VenteFermeeException`, 409), comme `ReserveSeatsUseCase` (404 identique à une catégorie inconnue).
 - Une seconde émission refusée avec une **quantité différente** de la première mériterait d'être journalisée comme anomalie : elle signale un appelant défaillant.
 - **Coût d'une émission** : chaque `save()` d'un billet neuf fait un `SELECT` puis un `INSERT` (relecture de l'entité gérée), soit 40 requêtes pour 20 billets. Acceptable au MVP ; piste si besoin : une méthode de port dédiée à la création, ou un `saveAll`.
 - **Redis à durcir en production** (relecture sécurité de la PR #22) : Redis porte désormais un état critique pour la vente (les réservations). Il faudra un mot de passe ou des ACL, un réseau privé, et **`maxmemory-policy noeviction`** : une politique LRU supprimerait des réservations sans prévenir, ce qui mènerait au « payé sans billet ». *(Le volet dev est fait : PR #24 publie Redis et PostgreSQL sur `127.0.0.1` seulement.)*
 - **Mot de passe PostgreSQL de dev commité** (`billetplus_dev`, dans `infra/docker-compose.yml` et `application.yml`) : acceptable en dev depuis que le port n'est publié que sur `127.0.0.1` (PR #24). En production, il devra venir d'une variable d'environnement, comme `JWT_SECRET`.
-- **Démarrage réel après les PR #24 et #26 à confirmer** : la connexion du backend par `localhost` aux ports publiés sur `127.0.0.1` est vérifiée en local (connexion TCP sur les deux ports, Redis répond `PONG`, la base garde ses données en V5). Mais deux choses n'ont pas été observées sur un `spring-boot:run` :
-  - la disparition des 5 lignes `Could not safely identify store assignment` (effet de `spring.data.redis.repositories.enabled: false`) ;
-  - le câblage du nouveau bean `ValidateTicketScanUseCase` dans le contexte complet.
+- **Démarrage du contexte complet confirmé** le 29/10/2026 par `ContexteCompletIntegrationTest` : tous les beans se câblent (dont `ValidateTicketScanUseCase`, `CancelEventTicketsUseCase` et `StatutEvenements`), et la sortie ne contient plus aucune ligne `Could not safely identify store assignment` ni `Bootstrapping Spring Data Redis repositories`. Un `spring-boot:run` sur la base de dev n'a pas été relancé depuis la PR #22.
 - Une `RedisSystemException` (erreur de script, mémoire pleine) n'est pas une `DataAccessResourceFailureException` : elle finit en 500, pas en 503.
 - En multi-instances, les horloges doivent être synchronisées (NTP) : une instance en avance retire trop tôt des réservations encore valides.
 - `TicketCategory.libererQuota` plafonne silencieusement `quotaVendu` à 0 au lieu de signaler une sur-libération : à décider avec le cas d'usage d'annulation.
@@ -558,7 +586,7 @@ Test-Inscription
 - **Conflit de port 8080** : le conteneur `footbooking-api` (autre projet de SirrDev) publie `0.0.0.0:8080->8080` et occupe donc le port 8080 de Windows (visible via `Get-NetTCPConnection -LocalPort 8080 -State Listen` : processus `com.docker.backend` et `wslrelay`, pas `java`). Ne pas l'arrêter : lancer Billet+ sur 8081 avec `$env:SERVER_PORT = "8081"` (variable valable pour le terminal courant, `application.yml` n'est pas modifié), puis `.\mvnw spring-boot:run`. `footbooking-db` utilise le port 5433 et ne gêne pas Billet+ (5432).
 - Lancer le backend depuis `backend/` : `.\mvnw spring-boot:run`. Démarrage OK : PostgreSQL 16.4, Flyway applique V1–V3, `ddl-auto: validate` passe, Tomcat démarré. **Sans Docker démarré, l'application échoue avec `Connection to localhost:5432 refused`** (erreur sur `flywayInitializer`) — ce n'est pas un défaut du code ; les tests unitaires, eux, restent verts sans base.
 - Arrêter l'infra sans perdre les données : `docker compose -f infra/docker-compose.yml stop`.
-- Tests : `.\mvnw test` puis `.\mvnw test "-Dtest=ArchitectureTest"` (guillemets obligatoires). Résultat de référence au 29/10/2026 : 156 tests, 0 échec, 0 ignoré (Docker démarré ; sans Docker, les 38 tests d'intégration sont ignorés). Les tests d'intégration prennent environ 25 s (PostGIS) et 7 s (Redis). **Démarrage réel confirmé le 29/10/2026 au soir** après la PR #22 : `Started BilletPlusApplication` sur 8081, Flyway « 5 migrations validées, schéma à jour », `ddl-auto: validate` sans erreur. Ce démarrage n'ouvre pas de connexion Redis : elle est ouverte au premier appel. Après la suppression d'une classe, utiliser `.\mvnw clean test` : ArchUnit lit les `.class` de `target/`, et un `.class` orphelin fausserait le résultat.
+- Tests : `.\mvnw test` puis `.\mvnw test "-Dtest=ArchitectureTest"` (guillemets obligatoires). Résultat de référence au 29/10/2026 : 177 tests, 0 échec, 0 ignoré (Docker démarré ; sans Docker, les 47 tests d'intégration sont ignorés). Le test du contexte complet prend environ 45 s. Les tests d'intégration prennent environ 25 s (PostGIS) et 7 s (Redis). **Démarrage réel confirmé le 29/10/2026 au soir** après la PR #22 : `Started BilletPlusApplication` sur 8081, Flyway « 5 migrations validées, schéma à jour », `ddl-auto: validate` sans erreur. Ce démarrage n'ouvre pas de connexion Redis : elle est ouverte au premier appel. Après la suppression d'une classe, utiliser `.\mvnw clean test` : ArchUnit lit les `.class` de `target/`, et un `.class` orphelin fausserait le résultat.
 - Clé Ed25519 de dev : `src/main/resources/keys/ed25519_private_dev.pem` (gitignorée, déjà générée sur la machine de SirrDev) ; régénération : `bash ..\infra\scripts\generate-ed25519-keys.sh`.
 - Surcharger l'URL de la base pour une session sans toucher à `application.yml` : `$env:SPRING_DATASOURCE_URL = "jdbc:postgresql://localhost:5433/billetplus"` — **attention : le port 5433 est celui de `footbooking-db`, pas de Billet+** ; à n'utiliser que si le port 5432 de Billet+ a été remappé. Activer les logs de sécurité : `$env:LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY = "DEBUG"` (puis `Remove-Item Env:...`).
 - Le `git status` doit être lu depuis `backend/` ; les chemins de `docker-compose.yml` apparaissent en `../infra/`.
@@ -575,7 +603,7 @@ Test-Inscription
 - **Tests HTTP** : donner des scripts qui **vérifient l'identité du serveur** avant de tester (port 8080 occupé par FootBooking) et qui affichent le corps des réponses d'erreur, pas seulement le code. Les envelopper dans une fonction pour qu'un `return` puisse les arrêter.
 - Ne jamais demander de copier des secrets réels (JWT secret de prod, mots de passe).
 - **Convention de branches** : `feature/<contexte>-<description>`, `fix/<contexte>-<description>`, créées juste avant usage. **Conventional Commits** pour les messages.
-- **ArchUnit** : 5 règles actives (depuis `feature/backend-tickets-jpa-mapper` : domaines de niveau 3 sans JPA, Hibernate ni Spring), aucun `allowEmptyShould`. Après tout nouveau module/package, vérifier qu'elles s'appliquent à au moins une classe.
+- **ArchUnit** : 7 règles actives (5ᵉ depuis `feature/backend-tickets-jpa-mapper` : domaines de niveau 3 sans JPA, Hibernate ni Spring ; 6ᵉ et 7ᵉ depuis l'ADR 0005 : `api.publique` ne contient que des interfaces, `shared.evenements` que des records), aucun `allowEmptyShould`. Après tout nouveau module/package, vérifier qu'elles s'appliquent à au moins une classe.
 - `.gitattributes` : LF partout sauf `mvnw.cmd` ; les warnings `LF will be replaced by CRLF` sont normaux.
 - Les fichiers de projet Claude sont en lecture seule : toute correction se produit en fichier de sortie que SirrDev copie dans son dépôt, commite, puis **resynchronise (« Sync now »)**. Les fichiers non encore commités/mergés ne sont **pas visibles** de Claude : les lui coller dans le message.
 
@@ -618,55 +646,62 @@ Test-Inscription
 33. **Élargir le périmètre d'une branche avant le premier push : la renommer** (`git branch -m ancien nouveau`), pour que le nom reflète le contenu. C'est sans risque tant que la branche n'existe pas sur le dépôt distant, ce qui se vérifie avec `git ls-remote --heads origin <ancien>`. Après un push, on ne renomme plus (PR #24).
 34. **Une issue attendue n'est pas une exception** (PR #26) : un billet déjà scanné, annulé ou d'un autre événement est une situation normale à l'entrée. Le cas d'usage les renvoie dans un résultat (`ResultatScan`) au lieu de les lever. Il peut attraper les refus du domaine parce qu'ils sont levés **avant toute écriture** : la transaction n'est donc pas marquée à annuler. Un conflit détecté **à la validation** (`@Version`) ne peut pas être traduit ainsi : il reste une exception (409), que l'appelant doit traiter.
 35. **Un message d'exception métier peut atteindre le client** : `GlobalExceptionHandler` renvoie `e.getMessage()` pour toute `BusinessConflictException`. Un message d'exception du domaine ne contient donc ni identifiant, ni heure, ni stock. Les données passent par des accesseurs, et un test le vérifie (`hasMessageNotContaining(ticket.getId().toString())`, PR #26).
+36. **Une règle ArchUnit qui ouvre une exception doit être encadrée** (ADR 0005) : ignorer `..api.publique..` dans `modules_sont_independants` aurait laissé passer n'importe quelle classe déposée dans ce package. Deux règles l'encadrent : seulement des interfaces dans `api.publique`, seulement des records dans `shared.evenements`. Les tester à l'envers, **y compris** que l'accès interne (`tickets` vers `events.domain`) reste refusé.
+37. **Un `@SpyBean` sur un cas d'usage permet de tester l'atomicité entre modules** : `doThrow(...).when(espion).execute(id)` simule une panne au milieu d'une transaction qui traverse deux modules. Spring réinitialise l'espion entre les tests (merge `2f126a9`).
+38. **Un `@SpringBootTest` sans clé privée en CI** : la clé Ed25519 de dev est gitignorée. Il faut un `@MockBean QRSigner`, qui remplace la définition du bean, pour que `Ed25519Config` ne cherche pas à charger la clé.
+39. **`assertThat(tx.execute(...))` peut être ambigu à la compilation** (`reference to assertThat is ambiguous`, entre `Predicate` et `IntPredicate`) : passer par une variable typée (`Integer resultat = tx.execute(...)`).
 
 ---
 
 ## 11. Prochaine étape précise
 
-**Avant de commencer** : `git switch main` puis `git pull` (le `main` local doit être sur `f637c4d` ou plus récent), puis « Sync now » dans le projet. Docker démarré, sinon les 38 tests d'intégration sont ignorés en local (en CI, l'étape « Refuser les tests ignorés » ferait échouer le run). Supprimer les branches locales déjà mergées : `git branch -d feature/backend-tickets-jpa-mapper fix/docs-handoff-pr16 fix/ci-restore-backend-workflows fix/docs-handoff-pr18 feature/backend-tickets-quota-lock fix/docs-handoff-pr20 feature/backend-tickets-redis-seat-lock fix/docs-handoff-pr22 fix/infra-localhost-only fix/docs-handoff-pr24 feature/backend-tickets-validate-scan-usecase` (`-d` refuse toute branche non mergée ; une branche déjà supprimée est signalée puis ignorée).
+**Avant de commencer** : `git switch main` puis `git pull` (le `main` local doit être sur `2f126a9` ou plus récent), puis « Sync now » dans le projet. Docker démarré, sinon les 47 tests d'intégration sont ignorés en local (en CI, l'étape « Refuser les tests ignorés » ferait échouer le run).
 
-*(Branches 9, 10 et 11 faites : PR #20, #22 et #26, sections 4.8 à 4.10. Durcissement de l'infra de dev fait : PR #24.)*
+**Mode de travail depuis le 29/10/2026 au soir** : SirrDev a autorisé Claude Code à coder, tester, relire, commiter, pousser **et merger** lui-même. Faute de `gh` (non installé) et parce que le dépôt est privé, les merges se font **en local** (`git merge --no-ff`, puis `git push origin main`), sans PR. Avant chaque merge, Claude Code lance la commande exacte de la CI (`./mvnw clean verify`), puis le contrôle des tests ignorés. La CI tourne sur le push de `main`, mais **seul SirrDev peut en voir le résultat**. Installer `gh` (`winget install GitHub.cli`, puis `gh auth login`) permettrait de revenir aux PR et de lire la CI.
 
-### 11.1 D'abord, recommandé : décider comment un module apprend l'état d'un autre (ADR 0005)
+### 11.1 Ce qui reste pour finir le backend MVP (inventaire du 29/10/2026)
 
-Une seule décision d'architecture bloque désormais **trois** sujets (section 7) :
-- le contrôle « événement `PUBLIE` » avant la réservation et l'émission ;
-- la réservation sur la catégorie d'un événement brouillon, qui doit répondre le même 404 qu'un identifiant inconnu ;
-- **les billets d'un événement annulé, qui restent acceptés à l'entrée**.
+Ordre proposé, du plus bloquant au moins bloquant. **(P)** = branche du plan initial ; **(H)** = hors plan, identifiée dans le code.
 
-Elle bloquera aussi `orders`, qui devra lire l'événement et la catégorie.
+| # | Branche | Origine | Dépend de | Taille |
+|---|---|---|---|---|
+| 1 | Création et gestion des **catégories de billets** (cas d'usage + route organisateur, propriétaire vérifié par `events`) | H | ADR 0005 ✅ | courte |
+| 2 | **Comptes `AGENT`** créés par un organisateur, **affectation** à un événement, premier `ADMIN` hors API | H | — | moyenne |
+| 3 | **Route de scan** (contrat en section 7, tests HTTP 401/403) | H | 2 | courte |
+| 4 | **Tests HTTP** (`MockMvc`) sur le contexte complet : sécurité, visibilité, inscription | H | — | moyenne |
+| 5 | **Liste publique et recherche** d'événements (`pg_trgm` déjà activé) | H | — | moyenne |
+| 6 | **Identité de l'acheteur** (compte acheteur, ou achat sans compte avec téléphone) | H | **décision de SirrDev** | moyenne |
+| 7 | `orders-domain-model` | P | 6 | moyenne |
+| 8 | `orders-create-usecase` (réserve les places : `ReserveSeatsUseCase`) | P | 7 | moyenne |
+| 9 | `orders-wave-gateway` | P | 7 | lourde |
+| 10 | `orders-confirm-payment-usecase` (webhook, idempotence à la frontière, `IssueTicketUseCase`) | P | 8, 9 | lourde |
+| 11 | **Remboursement** (« payé sans billet », événement annulé) | H | 10, **décision MVP ou V2** | moyenne |
+| 12 | `tickets-pdf-export` (le QR se recalcule ; accès réservé à l'acheteur) | P | 6 | moyenne |
+| 13 | **Tableau de bord organisateur** (ventes, revenus, quotas ; lecture niveau 1) | H | 10 | moyenne |
+| 14 | `rate-limiting` (création de commande, scan, inscription) | P | 8, 3 | moyenne |
+| 15 | **Préparation de la production** (`Dockerfile`, secrets en variables d'environnement, Redis avec mot de passe et `noeviction`, profil `prod`) | H | — | moyenne |
+| 16 | Décision **conflits de version massifs** (relance côté `orders` ou requête atomique de l'ADR 0003), avant l'événement pilote | H | 10 | courte |
 
-Le désaccord à trancher :
-- l'ADR 0001 (ligne 29) autorise « l'appel direct à un port public exposé par le module » ;
-- la règle ArchUnit `modules_sont_independants` interdit **toute** dépendance entre modules (sauf `shared`).
+Soit **16 branches**, plus la mise à jour du HANDOFF après chaque lot. Selon la décision 6 et la taille réelle de `orders`, le total varie entre 16 et 19.
 
-Pistes *(non actées)* :
-- **(a) Port public par module.** Un package `events.api` (ou `events.application.port.publique`) exposé, et la règle ArchUnit assouplie pour n'autoriser **que** ce package. Lecture synchrone, toujours à jour, simple à tester. Mais `tickets` dépend alors de `events`.
-- **(b) Événements applicatifs** (`ApplicationEventPublisher`). `events` publie par exemple `EvenementPublie` ou `EvenementAnnule` (des types placés dans `shared`), et `tickets` garde localement l'état utile, ou annule ses billets. Aucune dépendance entre modules, et l'ADR comme ArchUnit restent tels quels. En contrepartie : copie d'état, ordre et livraison des événements à garantir (`@TransactionalEventListener(phase = AFTER_COMMIT)`), et rattrapage si un écouteur échoue.
+**Deux décisions de SirrDev débloquent la moitié de la liste** :
+- **(A) Identité de l'acheteur** au MVP : un compte acheteur (nouveau rôle, inscription ouverte, ce que le HANDOFF classait en V2), ou un achat sans compte (numéro de téléphone Wave, avec billets envoyés par lien) ?
+- **(B) Remboursement** : dans le MVP (au moins pour « payé sans billet » et l'annulation d'un événement), ou en V2 avec une procédure manuelle pour l'événement pilote ?
 
-Livrable : `docs/architecture/adr/0005-<titre>.md`, avec la règle ArchUnit ajustée si la piste (a) est retenue. Ensuite, les trois sujets ci-dessus deviennent des branches courtes.
+### 11.2 Prochaine branche : `feature/backend-tickets-category-management`
 
-### 11.2 Ensuite : branche 12, `feature/backend-tickets-pdf-export`
+**Objectif** : un organisateur crée les catégories de billets de **son** événement. Sans cette branche, **rien ne peut être vendu** : aucun cas d'usage ne crée de `TicketCategory`, seuls les tests en créent.
 
-**Objectif** : produire le billet en PDF, avec son QR code, pour l'acheteur.
-
-**Faits utiles** :
-- le QR se **recalcule** : Ed25519 est déterministe, et `QRSigner.sign(ticketId, eventId, emisLe)` redonne exactement le même contenu à partir du billet en base (section 4.6). Il n'est pas nécessaire de stocker le QR ;
-- `emisLe` est tronqué à la microseconde en base, et le QR ne signe que la milliseconde : la signature recalculée depuis la base est identique à celle de l'émission (test existant `accepte_un_qr_reellement_signe_a_l_emission`).
-
-**Pistes à préciser dans le plan** *(non actées)* :
-- choix de la bibliothèque PDF et de la génération de l'image du QR (licence compatible) ;
-- port `BilletPdfRenderer` dans `application/port`, adaptateur dans `infrastructure/` ;
-- un cas d'usage qui lit le billet et vérifie que le demandeur est bien l'acheteur de la commande. Cette vérification relève du module `orders`, qui n'existe pas : à concevoir.
-
-**Pièges** :
-- **le QR est un jeton porteur** (section 7) : le PDF est le titre d'accès. Ne jamais l'exposer sans authentification, ne pas le journaliser, et ne pas le mettre en cache côté serveur ;
-- relancer `security-reviewer`.
-
-**Rappel** : la route de scan (branche 11) attend toujours **un cas d'usage de création des comptes `AGENT`** dans `auth` (section 7).
+**Pistes** *(non actées)* :
+- cas d'usage `CreateTicketCategoryUseCase(eventId, nom, prix, quota, organisateurDuJeton)` ;
+- le contrôle de propriété passe par un **nouveau port public d'`events`** (ADR 0005), par exemple `StatutEvenements.estOrganisateur(eventId, userId)` ou un port dédié ;
+- autoriser la création seulement pour un événement `BROUILLON` ou `PUBLIE`, à trancher ;
+- une route `POST /api/events/{id}/categories` (`ORGANISATEUR`), dans un nouveau package `tickets/api` ;
+- un DTO avec `@Size(max = 255)` (V4), `@NotBlank`, prix ≥ 0, quota ≥ 1 ;
+- un test HTTP de la règle de propriété.
 
 ---
 
 ## 12. Premier message suggéré pour la nouvelle conversation
 
-> Je reprends Billet+ (voir HANDOFF.md du projet). La PR #26 (contrôle d'un billet à l'entrée) est mergée et le projet est resynchronisé. Je veux [trancher la décision ADR 0005 (section 11.1) | attaquer `feature/backend-tickets-pdf-export`]. Lis les sections 7 et 11 et propose un plan avant de coder.
+> Je reprends Billet+ (voir HANDOFF.md du projet). L'ADR 0005 et le test du contexte complet sont mergés et le projet est resynchronisé. Mes réponses aux décisions (A) identité de l'acheteur et (B) remboursement : [...]. Continue avec `feature/backend-tickets-category-management` (section 11.2) et propose un plan avant de coder.

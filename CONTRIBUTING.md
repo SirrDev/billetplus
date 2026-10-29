@@ -85,13 +85,15 @@ Ces règles sont vérifiées par ArchUnit : ne jamais les contourner même si ce
 
 ## Règles ArchUnit (`ArchitectureTest.java`)
 
-Cinq règles sont actives, sans aucun `allowEmptyShould(true)` :
+Sept règles sont actives, sans aucun `allowEmptyShould(true)` :
 
 1. `domaine_ne_depend_jamais_de_infrastructure`
 2. `domaine_ne_depend_jamais_de_api`
-3. `modules_sont_independants` (le package `shared` est le seul point de partage autorisé, et ne contient aucune logique métier)
+3. `modules_sont_independants` (seules exceptions : `shared`, qui ne contient aucune logique métier, et les ports publics `api.publique`, ADR 0005)
 4. `ports_ne_dependent_pas_de_spring_data`
 5. `domaines_niveau_3_sans_jpa_ni_spring` : aucune dépendance à `jakarta.persistence`, `org.hibernate` ni `org.springframework` dans `tickets.domain` et `orders.domain`. Ne vise pas `auth` ni `events`, qui sont en niveau 2 (JPA-as-domain) par décision (ADR 0002).
+6. `ports_publics_ne_contiennent_que_des_interfaces` : `<module>.api.publique` est le seul point d'entrée vers un autre module (ADR 0005), et ne contient que des interfaces.
+7. `evenements_applicatifs_sont_des_records` : les événements échangés entre modules (`shared.evenements`) sont de simples records, sans logique.
 
 À chaque ajout d'un nouveau module ou package (`domain/`, `application/port/`) :
 
