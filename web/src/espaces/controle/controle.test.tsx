@@ -221,7 +221,9 @@ describe('Contrôle', () => {
     await presenter(qr);
     expect(await screen.findByText(/premier passage à 21 h 02/)).toBeInTheDocument();
     expect(screen.getByText("Refuser l'entrée")).toBeInTheDocument();
-  });
+    // Attend l'écoulement réel du verdict (2,5 s) : la limite Vitest de 5 s par test était
+    // dépassée par moments dans la suite complète sous Node 20 (CI).
+  }, 15000);
 
   it("arrête le contrôle si l'agent n'est pas affecté à l'événement", async () => {
     const id = nouvelId();
