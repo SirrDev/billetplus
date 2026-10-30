@@ -3,64 +3,52 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// Voir docs/architecture/adr/0004-pwa-vs-react-native.md pour la justification
-// du choix PWA et du mode offline pour le scanner.
+// PWA unique pour les trois espaces : voir docs/architecture/adr/0004-pwa-vs-react-native.md.
 export default defineConfig({
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon-192.png', 'icon-512.png'],
+      includeAssets: ['icon.svg'],
       workbox: {
-        // pem : clé PUBLIQUE de vérification des QR, nécessaire au scanner hors ligne (ADR 0004).
+        // pem : clé PUBLIQUE de vérification des QR, utile au scanner hors ligne (ADR 0004).
+        // Les sous-ensembles vietnamien, cyrillique et grec des polices ne servent pas : hors précache.
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,pem}'],
+        globIgnores: ['**/*-vietnamese-*.woff2', '**/*-cyrillic-*.woff2', '**/*-greek-*.woff2'],
+        // Jamais de cache sur les commandes et les billets : réponses no-store, jeton en en-tête.
+        // Les billets hors ligne viennent d'IndexedDB (espaces/acheteur/commandesLocales.ts).
+        // TODO avant l'espace organisateur : restreindre aux routes PUBLIQUES (/api/events,
+        // /api/events/{id}, /api/events/{id}/categories). /api/events/mine est authentifié et
+        // Workbox ignore l'en-tête Authorization : la réponse d'un organisateur serait servie à un autre.
         runtimeCaching: [
           {
-            // Cache-first sur les billets déjà chargés — nécessaire pour que
-            // MyTicketsPage et le scanner fonctionnent hors connexion.
-            urlPattern: /\/api\/tickets\/.*/,
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/events'),
             handler: 'NetworkFirst',
-            options: {
-              cacheName: 'tickets-cache',
-              networkTimeoutSeconds: 3,
-              expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 7 },
-            },
-          },
-          {
-            urlPattern: /\/api\/events\/.*/,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'events-cache',
-              networkTimeoutSeconds: 3,
-            },
+            options: { cacheName: 'evenements', networkTimeoutSeconds: 4 },
           },
         ],
       },
       manifest: {
         name: 'Billet+',
         short_name: 'Billet+',
-        description: 'Billetterie événementielle mobile-first — Dakar',
+        description: 'Billetterie événementielle à Dakar',
+        lang: 'fr',
         display: 'standalone',
         start_url: '/',
-        background_color: '#ffffff',
-        theme_color: '#1F2A44',
-        icons: [
-          { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-        ],
+        background_color: '#FFFFFF',
+        theme_color: '#5B3DF5',
+        icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
       },
     }),
   ],
   resolve: {
-    // Même alias que "paths" dans tsconfig.json : import { Button } from '@/design-system'.
+    // Même alias que "paths" dans tsconfig.json.
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
   server: {
     port: 5173,
     proxy: {
-      // En dev, évite les soucis CORS avec le backend local. Billet+ écoute sur 8081
-      // (8080 est pris par FootBooking, qui répondrait des 400/404 trompeurs).
+      // Billet+ écoute sur 8081 (8080 est pris par FootBooking, qui répondrait des 400/404 trompeurs).
       // Autre cible : $env:BILLETPLUS_API_URL = "http://localhost:9090" avant npm run dev.
       // Sans préfixe VITE_ : lue ici seulement, jamais injectée dans le code du navigateur.
       '/api': {
@@ -72,8 +60,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./src/setupTests.ts'],
-    // Noms de classes CSS Modules lisibles (non hachés) dans les tests du design system.
+    setupFiles: ['./src/test/setup.ts'],
     css: { modules: { classNameStrategy: 'non-scoped' } },
   },
 });

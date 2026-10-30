@@ -1,3 +1,12 @@
+/*
+ * Chaque espace (acheteur, puis organisateur et contrôle) ne s'importe que par son
+ * index.ts : un code partagé va dans src/commun/ ou src/ui/, jamais d'un espace à l'autre.
+ */
+const isolerEspace = (espace) => ({
+    group: [`**/espaces/${espace}/*`, `!**/espaces/${espace}/index*`],
+    message: `N'importez pas l'intérieur de espaces/${espace}/ depuis l'extérieur : passez par son index.ts, ou déplacez le code partagé dans src/commun/.`,
+});
+
 module.exports = {
     root: true,
     env: { browser: true, es2021: true },
@@ -15,31 +24,14 @@ module.exports = {
     },
     plugins: ['react-refresh'],
     rules: {
-        'react-refresh/only-export-components': [
-            'warn',
-            { allowConstantExport: true },
-        ],
-        'no-restricted-imports': [
-            'error',
-            {
-                patterns: [
-                    {
-                        group: ['**/routes/organisateur/*', '!**/routes/organisateur/index*'],
-                        message:
-                            "N'importez pas directement depuis routes/organisateur/ en dehors de ce dossier. Passez par src/shared/ si le code doit être partagé.",
-                    },
-                    {
-                        group: ['**/routes/acheteur/*', '!**/routes/acheteur/index*'],
-                        message:
-                            "N'importez pas directement depuis routes/acheteur/ en dehors de ce dossier. Passez par src/shared/ si le code doit être partagé.",
-                    },
-                    {
-                        group: ['**/routes/scanner/*', '!**/routes/scanner/index*'],
-                        message:
-                            "N'importez pas directement depuis routes/scanner/ en dehors de ce dossier. Passez par src/shared/ si le code doit être partagé.",
-                    },
-                ],
-            },
-        ],
+        'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+        'no-restricted-imports': ['error', { patterns: [isolerEspace('acheteur')] }],
     },
+    overrides: [
+        {
+            // Les tests importent librement ce qu'ils testent.
+            files: ['**/*.test.ts', '**/*.test.tsx'],
+            rules: { 'no-restricted-imports': 'off' },
+        },
+    ],
 };

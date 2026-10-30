@@ -1,0 +1,64 @@
+.bouton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--bp-radius-s);
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-size: 15px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.bouton:disabled,
+.bouton[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.grand {
+  min-height: 56px;
+  padding: 0 28px;
+  border-radius: var(--bp-radius-m);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.pleineLargeur {
+  width: 100%;
+}
+
+.principal {
+  background: var(--bp-accent);
+  color: var(--bp-white);
+}
+
+.principal:hover:not(:disabled) {
+  background: var(--bp-accent-hover);
+  color: var(--bp-white);
+}
+
+.secondaire {
+  background: var(--bp-white);
+  border-color: var(--bp-line-strong);
+  color: var(--bp-ink);
+}
+
+.secondaire:hover:not(:disabled) {
+  border-color: var(--bp-ink);
+  color: var(--bp-ink);
+}
+
+.festif {
+  background: var(--bp-amber);
+  color: var(--bp-ink);
+}
+
+.festif:hover:not(:disabled) {
+  background: var(--bp-amber-light);
+  color: var(--bp-ink);
+}

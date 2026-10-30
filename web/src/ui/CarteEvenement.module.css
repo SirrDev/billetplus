@@ -1,0 +1,137 @@
+.grille {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 720px) {
+  .grille {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .grille {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.carte {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--bp-line);
+  border-radius: var(--bp-radius-l);
+  overflow: hidden;
+  background: var(--bp-white);
+  color: var(--bp-ink);
+  text-decoration: none;
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+
+.carte:hover {
+  border-color: var(--bp-line-strong);
+  color: var(--bp-ink);
+  transform: translateY(-2px);
+}
+
+.carteAffiche {
+  height: 168px;
+}
+
+.carteCorps {
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.date {
+  color: var(--bp-accent-text);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.titre {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.lieu {
+  color: var(--bp-ink-2);
+  font-size: 15px;
+}
+
+/* Grande carte « à l'affiche » : empilée sur mobile, affiche et texte côte à côte dès 720 px. */
+.une {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border-radius: var(--bp-radius-xl);
+  overflow: hidden;
+  background: var(--bp-ink);
+  color: var(--bp-white);
+}
+
+.uneAffiche {
+  position: relative;
+  min-height: 220px;
+}
+
+.pastille {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--bp-amber);
+  color: var(--bp-ink);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.uneCorps {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+}
+
+.uneDate {
+  color: var(--bp-amber-light);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.uneTitre {
+  font-size: 34px;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+}
+
+.uneLieu {
+  color: #c9ccd6;
+  font-size: 16px;
+}
+
+@media (min-width: 720px) {
+  .une {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .uneAffiche {
+    min-height: 340px;
+  }
+
+  .uneCorps {
+    padding: 40px;
+  }
+
+  .uneTitre {
+    font-size: 48px;
+  }
+}
