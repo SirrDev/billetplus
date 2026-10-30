@@ -165,9 +165,14 @@ export function EvenementOrganisateurPage() {
           </div>
           <div className={s.actions}>
             {evenement.status === 'PUBLIE' && (
-              <BoutonLien to={`/evenements/${evenement.id}`} variante="secondaire">
-                Voir la page publique
-              </BoutonLien>
+              <>
+                <BoutonLien to={`/evenements/${evenement.id}`} variante="secondaire">
+                  Voir la page publique
+                </BoutonLien>
+                <BoutonLien to={`/scanner/evenements/${evenement.id}`} variante="secondaire">
+                  Contrôler les entrées
+                </BoutonLien>
+              </>
             )}
             {evenement.status === 'BROUILLON' && (
               <Bouton onClick={() => void changerStatut('publier')} disabled={action || categories.length === 0}>
