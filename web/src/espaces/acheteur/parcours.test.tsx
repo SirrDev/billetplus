@@ -21,6 +21,10 @@ vi.mock('./commandesLocales', () => ({
   }),
 }));
 
+/* Le générateur PDF est testé à part (billetPdf.test.ts) : ici, seul ce qu'on lui transmet compte. */
+const telechargerBilletsPdf = vi.fn();
+vi.mock('./billetPdf', () => ({ telechargerBilletsPdf: (c: unknown) => telechargerBilletsPdf(c) }));
+
 const allerPayer = vi.fn();
 vi.mock('./pages/paiementOutils', async (original) => ({
   ...(await original<typeof import('./pages/paiementOutils')>()),
@@ -231,6 +235,43 @@ describe('Commande', () => {
     lieu: 'Grand Théâtre',
     creeLe: COMMANDE.creeLe,
   };
+
+  it('télécharge en PDF les seuls billets valables, avec leur QR signé intact', async () => {
+    stockage.set('c1', locale);
+    telechargerBilletsPdf.mockReset();
+    backend({
+      'GET /api/orders/c1/billets': () => [
+        { id: '4f2a91c0-0000-4000-8000-000000000001', categoryId: 'std', categorie: 'Standard', statut: 'EMIS', qr: 'charge.signature' },
+        { id: 'b2', categoryId: 'std', categorie: 'Standard', statut: 'SCANNE', qr: null },
+      ],
+      'GET /api/orders/c1': () => ({ ...COMMANDE, status: 'PAYEE', payeeLe: '2026-10-30T10:02:00Z' }),
+      'GET /api/events/e1/categories': () => CATEGORIES,
+    });
+    ouvrir('/commandes/c1');
+    // Un seul billet valable : libellé au singulier.
+    await userEvent.click(await screen.findByRole('button', { name: 'Télécharger mon billet (PDF)' }));
+    await waitFor(() => expect(telechargerBilletsPdf).toHaveBeenCalledTimes(1));
+    expect(telechargerBilletsPdf).toHaveBeenCalledWith(
+      expect.objectContaining({
+        titre: 'Nuit du Mbalax',
+        lieu: 'Grand Théâtre',
+        commandeId: 'c1',
+        billets: [{ code: 'BP-4F2A-91C0', categorie: 'Standard', qr: 'charge.signature' }],
+      }),
+    );
+  });
+
+  it("ne propose pas de PDF quand aucun billet n'est plus valable", async () => {
+    stockage.set('c1', locale);
+    backend({
+      'GET /api/orders/c1/billets': () => [{ id: 'b2', categoryId: 'std', categorie: 'Standard', statut: 'SCANNE', qr: null }],
+      'GET /api/orders/c1': () => ({ ...COMMANDE, status: 'PAYEE', payeeLe: '2026-10-30T10:02:00Z' }),
+      'GET /api/events/e1/categories': () => CATEGORIES,
+    });
+    ouvrir('/commandes/c1');
+    expect(await screen.findByText('Déjà utilisé')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Télécharger/ })).not.toBeInTheDocument();
+  });
 
   it('affiche les billets payés avec leur QR et les garde pour le hors-ligne', async () => {
     stockage.set('c1', locale);

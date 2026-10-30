@@ -22,8 +22,9 @@ etc.sha512Async = async (...messages: Uint8Array[]) =>
 configure({ asyncUtilTimeout: 3000 });
 
 beforeEach(() => {
-  // jsdom n'implémente pas le défilement (App remonte en haut à chaque page).
-  window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
+  // jsdom n'implémente pas le défilement (App remonte en haut à chaque page). Absent des
+  // tests en environnement node (« @vitest-environment node »), qui n'ont pas de window.
+  if (typeof window !== 'undefined') window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
 });
 
 afterEach(() => {
