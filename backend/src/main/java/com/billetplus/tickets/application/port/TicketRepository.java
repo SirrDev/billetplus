@@ -26,5 +26,12 @@ public interface TicketRepository {
     /** Billets d'une commande, quel que soit leur statut. */
     List<Ticket> findByOrderId(UUID orderId);
 
+    /** Nombre de billets d'une catégorie dans un statut (une ligne par couple présent). */
+    record CompteBillets(UUID categoryId, TicketStatus statut, long nombre) {
+    }
+
+    /** Billets d'un événement comptés par catégorie et par statut, en une seule requête. */
+    List<CompteBillets> compterParCategorieEtStatut(UUID eventId);
+
     Ticket save(Ticket ticket);
 }

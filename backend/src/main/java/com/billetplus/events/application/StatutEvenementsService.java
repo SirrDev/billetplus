@@ -54,6 +54,14 @@ class StatutEvenementsService implements StatutEvenements {
         return eventId != null && agentId != null && affectationRepository.existe(eventId, agentId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public boolean estAnnule(UUID eventId) {
+        return lire(eventId)
+            .map(event -> event.getStatus() == EventStatus.ANNULE)
+            .orElse(false);
+    }
+
     private Optional<Event> lire(UUID eventId) {
         return eventId == null ? Optional.empty() : eventRepository.findById(eventId);
     }

@@ -2,6 +2,8 @@ package com.billetplus.tickets.infrastructure.persistence;
 
 import com.billetplus.tickets.domain.TicketStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.UUID;
@@ -17,4 +19,9 @@ interface SpringDataTicketRepository extends JpaRepository<TicketJpaEntity, UUID
 
     /** Servie par idx_tickets_order_id_category_id (V4), préfixe order_id. */
     List<TicketJpaEntity> findByOrderId(UUID orderId);
+
+    /** Servie par idx_tickets_event_id (V4). Chaque ligne : categoryId, statut, nombre. */
+    @Query("select t.categoryId, t.status, count(t) from TicketJpaEntity t where t.eventId = :eventId "
+        + "group by t.categoryId, t.status")
+    List<Object[]> compterParCategorieEtStatut(@Param("eventId") UUID eventId);
 }

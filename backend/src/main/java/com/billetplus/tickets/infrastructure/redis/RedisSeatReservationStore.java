@@ -111,6 +111,24 @@ class RedisSeatReservationStore implements SeatReservationStore {
         return 1
         """, Long.class);
 
+    /**
+     * KEYS[1] = sorted set, KEYS[2] = hash des quantités ; ARGV[1] = maintenant (ms).
+     * Somme des quantités des réservations dont l'expiration est strictement future.
+     * En O(n) sur les réservations actives (bornées par le quota) : lecture du
+     * tableau de bord, pas du chemin de vente.
+     */
+    private static final RedisScript<Long> PLACES_RESERVEES = new DefaultRedisScript<>("""
+        local membres = redis.call('ZRANGEBYSCORE', KEYS[1], '(' .. ARGV[1], '+inf')
+        local total = 0
+        for _, membre in ipairs(membres) do
+            local quantite = redis.call('HGET', KEYS[2], membre)
+            if quantite then
+                total = total + tonumber(quantite)
+            end
+        end
+        return total
+        """, Long.class);
+
     private final StringRedisTemplate redis;
 
     RedisSeatReservationStore(StringRedisTemplate redis) {
@@ -136,6 +154,13 @@ class RedisSeatReservationStore implements SeatReservationStore {
     @Override
     public void liberer(UUID categoryId, UUID orderId) {
         redis.execute(LIBERER, cles(categoryId), orderId.toString());
+    }
+
+    @Override
+    public int placesReservees(UUID categoryId, Instant maintenant) {
+        Long total = redis.execute(PLACES_RESERVEES, List.of(cleReservations(categoryId), cleQuantites(categoryId)),
+            String.valueOf(maintenant.toEpochMilli()));
+        return total == null ? 0 : total.intValue();
     }
 
     static String cleReservations(UUID categoryId) {
