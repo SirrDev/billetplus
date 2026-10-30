@@ -7,6 +7,7 @@ import {
   formatHeure,
   formatMobile,
   heureDakarVersInstant,
+  majusculeInitiale,
   versE164,
 } from './format';
 
@@ -37,6 +38,11 @@ describe('dates', () => {
     expect(heureDakarVersInstant('2026-02-31T10:00')).toBeNull();
     expect(heureDakarVersInstant('2026-11-14')).toBeNull();
     expect(heureDakarVersInstant('')).toBeNull();
+  });
+
+  it('ne met de majuscule qu’à la première lettre, pas aux mois', () => {
+    expect(majusculeInitiale('mercredi 4 novembre 2026')).toBe('Mercredi 4 novembre 2026');
+    expect(majusculeInitiale('')).toBe('');
   });
 
   it('formate le compte à rebours sans jamais passer sous zéro', () => {

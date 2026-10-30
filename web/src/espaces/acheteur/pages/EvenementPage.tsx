@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { formatDateLongue, formatFcfa, formatHeure } from '@/commun/format';
+import { formatDateLongue, formatFcfa, formatHeure, majusculeInitiale } from '@/commun/format';
 import {
   Affiche,
   Avis,
@@ -89,9 +89,7 @@ export function EvenementPage() {
                   <Icone nom="calendrier" />
                 </span>
                 <div>
-                  <p className={s.infoTitre} style={{ textTransform: 'capitalize' }}>
-                    {formatDateLongue(evenement.debuteLe)}
-                  </p>
+                  <p className={s.infoTitre}>{majusculeInitiale(formatDateLongue(evenement.debuteLe))}</p>
                   <p className={s.infoDetail}>
                     {formatHeure(evenement.debuteLe)}
                     {evenement.termineLe ? ` – ${formatHeure(evenement.termineLe)}` : ''}, heure de Dakar
