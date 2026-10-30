@@ -1,0 +1,12 @@
+# Contexte de construction de l'image : seuls pom.xml, mvnw, .mvn et src sont utiles.
+target/
+.idea/
+*.iml
+.vscode/
+*.log
+
+# JAMAIS de clé privée dans l'image : la clé de dev générée en local
+# (src/main/resources/keys/ed25519_private_dev.pem) serait sinon copiée dans
+# le jar. En production, les deux clés sont montées depuis l'extérieur.
+src/main/resources/keys/ed25519_private*.pem
+**/*private*.pem

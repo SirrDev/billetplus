@@ -49,7 +49,9 @@ billetplus:
       refresh-expiration-days: 7
     qr-signing:
       private-key-path: ${QR_PRIVATE_KEY_PATH:classpath:keys/ed25519_private_dev.pem}
-      public-key-path: classpath:keys/ed25519_public.pem
+      # Paramétrable comme la clé privée : en production, les DEUX clés viennent de
+      # fichiers montés hors de l'image (Ed25519Config vérifie qu'elles forment une paire).
+      public-key-path: ${QR_PUBLIC_KEY_PATH:classpath:keys/ed25519_public.pem}
   # Premier compte ADMIN, créé au démarrage s'il n'en existe aucun
   # (PremierAdminInitializer). Jamais de valeur ici : uniquement par variables
   # d'environnement. Vides, rien n'est créé (cas normal en dev et en CI).
@@ -89,19 +91,86 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+# Seule la sonde de santé est exposée (/actuator/health, publique dans
+# SecurityConfig), sans détail : elle vérifie PostgreSQL et Redis, et sert de
+# sonde au conteneur et au proxy. Aucun autre endpoint actuator n'est publié.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+      # Pas de page /actuator listant les endpoints exposés.
+      discovery:
+        enabled: false
+  endpoint:
+    health:
+      show-details: never
+
 logging:
   level:
     com.billetplus: DEBUG
     org.hibernate.SQL: DEBUG
 
 ---
+# Profil de production (SPRING_PROFILES_ACTIVE=prod). Chaque secret est une
+# variable d'environnement SANS valeur par défaut : absente, l'application refuse
+# de démarrer au lieu de retomber sur une valeur de dev. VerificationProduction
+# ajoute les contrôles que Spring ne fait pas (secret JWT de dev, clés du
+# classpath, Redis sans noeviction). Liste des variables : infra/.env.prod.example.
 spring:
   config:
     activate:
       on-profile: prod
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    # Jamais de « baseline » silencieuse en production : une base non vide sans
+    # historique Flyway doit arrêter le démarrage, pas être déclarée à jour.
+    baseline-on-migrate: false
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+
+server:
+  port: 8080
+  # Derrière le proxy (TLS), l'adresse du client vient de X-Forwarded-For, que
+  # Tomcat (RemoteIpValve) ne lit QUE si la connexion vient d'un proxy de confiance
+  # (adresses privées par défaut : réseau Docker, réseau local). Un client
+  # exposé directement ne peut donc pas choisir son IP. Indispensable à la
+  # limitation de débit par IP (shared.limitation).
+  forward-headers-strategy: native
+  # Proxies de confiance : valeur par défaut de Tomcat (adresses privées, dont les
+  # réseaux Docker, et boucle locale). Si le proxy a une adresse publique, la
+  # déclarer par la variable SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES (expression régulière).
+  error:
+    include-message: never
+    include-stacktrace: never
+
+billetplus:
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+    qr-signing:
+      private-key-path: ${QR_PRIVATE_KEY_PATH}
+      public-key-path: ${QR_PUBLIC_KEY_PATH}
+
+# Pas de documentation d'API publique en production.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 logging:
   level:
     com.billetplus: INFO
