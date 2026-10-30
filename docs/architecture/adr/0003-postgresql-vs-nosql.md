@@ -100,6 +100,17 @@ Rejeté. Aucune justification à la volumétrie attendue, même au scénario mat
 - La montée en charge (réplique de lecture, partitionnement) demande une intervention explicite aux paliers V2/V3 — ce n'est pas un système qui scale horizontalement de façon transparente comme le ferait une base distribuée dès le départ. Ce compromis est jugé acceptable au regard du gain de simplicité opérationnelle au MVP.
 - Le verrouillage optimiste JPA peut générer des retries sous très forte charge ponctuelle (drop massif d'un événement très demandé) ; la requête SQL atomique décrite ci-dessus est le mécanisme de repli prévu pour ce cas, à activer si le volume de conflits observé le justifie.
 
+## Mise à jour du 30 octobre 2026 : requête atomique activée (mesure n° 16)
+
+La mesure prévue ci-dessus a été faite (`ChargeConfirmationsIntegrationTest`, vrai PostgreSQL) : **40 paiements confirmés simultanément** sur une même catégorie, avec une relance bornée à 3 tentatives côté `orders`.
+
+- **Avec le verrouillage optimiste** (`save()` sous `@Version`) : 20 émissions réussies, **20 échecs** sur conflit de version. Tant que la politique de relance de la passerelle est inconnue (ADR 0007), chaque échec est un client payé sans billet.
+- **Avec la requête atomique** (`TicketCategoryRepository.consommerQuota`) : 40 sur 40 en 1,4 à 1,8 s. Une mesure ponctuelle à **150 confirmations simultanées** donne 150 sur 150 en 4,1 s.
+
+**Décision** : la vente du quota passe par `UPDATE ticket_categories SET quota_vendu = quota_vendu + :q, version = version + 1 WHERE id = :id AND quota_vendu + :q <= quota_total`, exécutée **en dernier** dans l'émission, pour que le verrou de la ligne soit tenu le moins longtemps possible. La règle du domaine (`TicketCategory.reserver`) reste un refus rapide sur l'état lu. La version est toujours incrémentée, pour qu'un `save()` concurrent fondé sur une lecture plus ancienne échoue. Le `CHECK` de V4 reste le dernier rempart.
+
+Le verrouillage optimiste reste en place pour le reste : les billets (double scan) et les commandes.
+
 ## Références
 
 - [ADR 0001 — Monolithe modulaire](0001-monolithe-modulaire.md)

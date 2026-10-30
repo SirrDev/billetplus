@@ -554,30 +554,30 @@ class TicketPersistenceIntegrationTest {
 
     /**
      * Des commandes différentes sur la même catégorie, quota suffisant pour
-     * toutes : chaque perdant d'une course reçoit un conflit de version (409,
-     * à relancer par l'appelant), jamais une réservation écrasée. Le quota
-     * vendu est exactement la somme des émissions réussies.
+     * toutes : depuis la requête atomique (mesure n° 16), TOUTES réussissent. Les
+     * émissions s'attendent sur le verrou de la ligne au lieu de se perdre en
+     * conflits de version. Le quota vendu est exactement la somme des émissions.
      */
     @Test
-    void des_commandes_simultanees_ne_perdent_aucune_reservation() throws Exception {
+    void des_commandes_simultanees_reussissent_toutes_quand_le_quota_suffit() throws Exception {
         TicketCategory category = categorieEnregistree(100);
         when(qrSigner.sign(any(UUID.class), any(UUID.class), any(Instant.class))).thenReturn("payload.signature");
 
         List<Object> resultats = enParallele(THREADS, i -> () -> issueTicket.execute(category.getId(), UUID.randomUUID(), 3));
 
-        long reussies = succes(resultats);
-        assertThat(reussies).isGreaterThanOrEqualTo(1);
-        assertThat(resultats).filteredOn(r -> r instanceof Throwable)
-            .allSatisfy(r -> assertThat(r).isInstanceOf(OptimisticLockingFailureException.class));
-        assertThat(quotaVenduEnBase(category.getId())).isEqualTo(3 * reussies);
-        assertThat(nombreDeBillets()).isEqualTo(3 * reussies);
-        assertThat(nombreDEmissions()).isEqualTo(reussies);  // les perdants n'ont rien laissé
+        // Depuis la requête atomique (mesure n° 16) : aucun conflit de version.
+        assertThat(resultats).noneMatch(r -> r instanceof Throwable);
+        assertThat(succes(resultats)).isEqualTo(THREADS);
+        assertThat(quotaVenduEnBase(category.getId())).isEqualTo(3 * THREADS);
+        assertThat(nombreDeBillets()).isEqualTo(3 * THREADS);
+        assertThat(nombreDEmissions()).isEqualTo(THREADS);
+        assertThat(versionEnBase("ticket_categories", category.getId())).isEqualTo(THREADS);
     }
 
     /**
      * Le pic de mise en vente : plus de demandes que de places. Le quota n'est
-     * jamais dépassé ; chaque refus est soit un quota insuffisant (lu après la
-     * validation d'un concurrent), soit un conflit de version (lu avant).
+     * jamais dépassé, et il est vendu en entier : la requête atomique réévalue
+     * la condition sur la valeur à jour, chaque refus est un quota insuffisant.
      */
     @Test
     void des_commandes_simultanees_ne_depassent_jamais_le_quota() throws Exception {
@@ -586,11 +586,12 @@ class TicketPersistenceIntegrationTest {
 
         List<Object> resultats = enParallele(THREADS, i -> () -> issueTicket.execute(category.getId(), UUID.randomUUID(), 3));
 
+        // Le quota est vendu en ENTIER (3 lots de 3 sur 10 places), et chaque refus
+        // est un quota insuffisant, jamais un conflit de version (mesure n° 16).
         long reussies = succes(resultats);
-        assertThat(reussies).isBetween(1L, 3L);
+        assertThat(reussies).isEqualTo(3L);
         assertThat(resultats).filteredOn(r -> r instanceof Throwable)
-            .allSatisfy(r -> assertThat(r).isInstanceOfAny(
-                QuotaDepasseException.class, OptimisticLockingFailureException.class));
+            .allSatisfy(r -> assertThat(r).isInstanceOf(QuotaDepasseException.class));
         assertThat(quotaVenduEnBase(category.getId())).isEqualTo(3 * reussies).isLessThanOrEqualTo(10);
         assertThat(nombreDeBillets()).isEqualTo(3 * reussies);
         assertThat(nombreDEmissions()).isEqualTo(reussies);

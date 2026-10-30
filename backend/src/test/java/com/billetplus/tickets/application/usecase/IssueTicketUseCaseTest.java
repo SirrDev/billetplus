@@ -35,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -69,6 +70,8 @@ class IssueTicketUseCaseTest {
         // Par défaut, l'événement est ouvert à la vente ; lenient : beaucoup de
         // tests s'arrêtent avant ce contrôle (quantité refusée, catégorie inconnue).
         lenient().when(statutEvenements.estOuvertALaVente(any())).thenReturn(true);
+        // Par défaut, la requête atomique accepte la vente (quota suffisant en base).
+        lenient().when(categoryRepository.consommerQuota(any(), anyInt())).thenReturn(true);
     }
 
     @AfterEach
@@ -105,8 +108,9 @@ class IssueTicketUseCaseTest {
             assertThat(issued.qrContent()).isEqualTo("payload.signature");
         });
         assertThat(emis).extracting(issued -> issued.ticket().getId()).doesNotHaveDuplicates();
-        assertThat(category.getQuotaVendu()).isEqualTo(3);
-        verify(categoryRepository).save(category);
+        // Le quota est vendu par la requête atomique, jamais par un save() de la catégorie.
+        verify(categoryRepository).consommerQuota(category.getId(), 3);
+        verify(categoryRepository, never()).save(any());
         verify(ticketRepository, times(3)).save(any(Ticket.class));
     }
 
@@ -129,7 +133,7 @@ class IssueTicketUseCaseTest {
      * commande soit bloqué par la clé primaire avant toute réservation.
      */
     @Test
-    void enregistre_l_emission_avant_de_reserver_le_quota_et_de_creer_les_billets() {
+    void enregistre_l_emission_en_premier_et_vend_le_quota_en_dernier() {
         TicketCategory category = categorie(10);
         UUID orderId = UUID.randomUUID();
         when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));
@@ -140,8 +144,30 @@ class IssueTicketUseCaseTest {
         InOrder ordre = inOrder(categoryRepository, issuanceRepository, ticketRepository);
         ordre.verify(categoryRepository).findById(category.getId());
         ordre.verify(issuanceRepository).enregistrer(orderId, category.getId(), 2);
-        ordre.verify(categoryRepository).save(category);
         ordre.verify(ticketRepository, times(2)).save(any(Ticket.class));
+        // En dernier : le verrou de la ligne de la catégorie est tenu le moins longtemps possible (n° 16).
+        ordre.verify(categoryRepository).consommerQuota(category.getId(), 2);
+    }
+
+    /**
+     * Le quota lu suffisait, mais une émission concurrente l'a épuisé : la requête
+     * atomique refuse, et l'exception annule toute la transaction (billets et
+     * registre compris, vérifié en intégration). Aucune réservation n'est libérée.
+     */
+    @Test
+    void un_quota_epuise_par_une_emission_concurrente_refuse_la_vente() {
+        TicketCategory category = categorie(10);
+        UUID orderId = UUID.randomUUID();
+        when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));
+        when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(categoryRepository.consommerQuota(category.getId(), 2)).thenReturn(false);
+
+        assertThatThrownBy(() -> useCase().execute(category.getId(), orderId, 2))
+            .isInstanceOf(QuotaDepasseException.class)
+            .hasMessageContaining("10 restants");
+
+        assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
+        verifyNoInteractions(reservationStore);
     }
 
     /** Les places sont vendues : la réservation temporaire est libérée, mais seulement une fois la vente validée. */
@@ -212,7 +238,7 @@ class IssueTicketUseCaseTest {
             .isInstanceOf(BusinessConflictException.class);
 
         assertThat(category.getQuotaVendu()).isZero();
-        verify(categoryRepository, never()).save(any());
+        verify(categoryRepository, never()).consommerQuota(any(), anyInt());
         verify(ticketRepository, never()).save(any());
         verifyNoInteractions(qrSigner);
     }
@@ -230,7 +256,7 @@ class IssueTicketUseCaseTest {
             .isInstanceOf(BusinessConflictException.class);
 
         assertThat(category.getQuotaVendu()).isZero();
-        verify(categoryRepository, never()).save(any());
+        verify(categoryRepository, never()).consommerQuota(any(), anyInt());
         verify(ticketRepository, never()).save(any());
         verifyNoInteractions(qrSigner);
     }
@@ -298,6 +324,6 @@ class IssueTicketUseCaseTest {
 
         assertThat(category.getQuotaVendu()).isZero();
         verifyNoInteractions(issuanceRepository, ticketRepository, qrSigner);
-        verify(categoryRepository, never()).save(any());
+        verify(categoryRepository, never()).consommerQuota(any(), anyInt());
     }
 }
