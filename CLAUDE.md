@@ -22,6 +22,7 @@ Ne pas remettre en cause sans raison **nouvelle et explicite**. Si une demande c
 - **ADR 0003** : PostgreSQL + Flyway (`ddl-auto: validate`) + Redis. PostGIS activé mais pas encore mappé en JPA.
 - **ADR 0004** : PWA React (`web/`) ; QR codes signés en **Ed25519** (clé privée côté backend uniquement, clé publique côté scanner).
 - **ADR 0006** : **achat sans compte** (acheteur identifié par son mobile `+2217XXXXXXXX`, accès à la commande par un jeton secret remis une seule fois, seule son empreinte SHA-256 est stockée) ; **remboursement en V2** (statut `PAYEE_SANS_BILLET` au MVP, remboursement manuel).
+- **ADR 0007** : paiement par la passerelle **UnitechPay** (Wave et Orange Money) derrière le port `PasserellePaiement` ; un seul paiement par commande ; aucun appel HTTP dans une transaction ; le webhook n'identifie la commande que par des champs signés (`reference`, `amount`) ; clé `UNITECHPAY_API_KEY` jamais journalisée.
 
 | Module | Niveau | Ce que ça impose |
 |---|---|---|
