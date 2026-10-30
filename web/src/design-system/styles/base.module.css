@@ -40,6 +40,12 @@
 .dark {
   background: var(--bp-ink);
   color: var(--bp-white);
+  /*
+   * Sur grand écran, le fond sombre déborde jusqu'aux bords de la fenêtre (mode
+   * contrôle plein écran) sans élargir la colonne de contenu ni créer de défilement.
+   */
+  box-shadow: 0 0 0 100vmax var(--bp-ink);
+  clip-path: inset(0 -100vmax);
 }
 
 .actionBar {
@@ -64,9 +70,8 @@
 }
 
 @media (min-width: 1024px) {
-  /* Navigation en haut sur ordinateur : la place réservée passe du bas vers le haut. */
+  /* Sur ordinateur, la navigation basse est masquée par l'application : plus de place à réserver. */
   .withNav {
-    padding-top: calc(var(--bp-topnav-h) + 24px);
     padding-bottom: 32px;
   }
 

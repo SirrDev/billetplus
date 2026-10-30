@@ -57,7 +57,7 @@
   --bp-bar-h: 92px;
   --bp-app-max: 480px;
   --bp-gutter: 20px;
-  /* Hauteur de la navigation quand elle passe en haut de l'écran (ordinateur). */
+  /* Hauteur de l'en-tête de site sur ordinateur (posée par l'application, au-dessus de l'écran). */
   --bp-topnav-h: 64px;
 }
 

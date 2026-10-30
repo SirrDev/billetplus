@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  BottomNav,
   Button,
   EmptyState,
   EventFeaturedCard,
@@ -11,6 +10,7 @@ import {
   TopBar,
   buyerNavItems,
 } from '@/design-system';
+import { NavigationSite } from '@/shared/ui/EnTete';
 import m from '@/shared/ui/miseEnPage.module.css';
 import { rechercherEvenements, type EvenementPublic } from '../api';
 import { messageErreur, versResume } from '../affichage';
@@ -71,6 +71,7 @@ export function DecouvrirPage() {
 
   return (
     <Screen withNav>
+      <NavigationSite liens={buyerNavItems} libelle="Navigation principale" />
       <div className={m.pile}>
         <TopBar title="Découvrir" large subtitle="Concerts, matchs, festivals à Dakar" />
         <TextField
@@ -126,8 +127,6 @@ export function DecouvrirPage() {
           </Button>
         ) : null}
       </div>
-
-      <BottomNav items={buyerNavItems} />
     </Screen>
   );
 }

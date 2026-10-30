@@ -38,7 +38,7 @@ export function ChoixEvenementPage() {
           </Button>
         }
       />
-      <div className={m.pile}>
+      <div className={`${m.pile} ${m.apresTitre}`}>
         <TextField
           label="Événement à contrôler"
           type="search"

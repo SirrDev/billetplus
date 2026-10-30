@@ -22,6 +22,7 @@ export function MesEvenementsPage() {
 
   return (
     <Screen withNav>
+      <NavigationOrganisateur />
       <TopBar
         title="Mes événements"
         large
@@ -32,7 +33,7 @@ export function MesEvenementsPage() {
           </Button>
         }
       />
-      <div className={m.ligneActions}>
+      <div className={`${m.ligneActions} ${m.apresTitre}`}>
         <ButtonLink to="/organisateur/evenements/nouveau" icon="plus" size="md">
           Créer un événement
         </ButtonLink>
@@ -56,20 +57,21 @@ export function MesEvenementsPage() {
         />
       ) : null}
 
-      <ul className={`${m.grille} ${s.liste}`} aria-label="Mes événements">
-        {evenements?.map((evenement) => (
-          <li key={evenement.id}>
-            <Link to={`/organisateur/evenements/${evenement.id}`} className={s.carte}>
-              <BadgeStatut statut={evenement.status} />
-              <span className={s.carteTitre}>{evenement.titre}</span>
-              <span className={m.muet}>
-                {formatEventDate(new Date(evenement.debuteLe))} · {evenement.venueNom}
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-      <NavigationOrganisateur />
+      <div className={m.apresTitre}>
+        <ul className={`${m.grille} ${s.liste}`} aria-label="Mes événements">
+          {evenements?.map((evenement) => (
+            <li key={evenement.id}>
+              <Link to={`/organisateur/evenements/${evenement.id}`} className={s.carte}>
+                <BadgeStatut statut={evenement.status} />
+                <span className={s.carteTitre}>{evenement.titre}</span>
+                <span className={m.muet}>
+                  {formatEventDate(new Date(evenement.debuteLe))} · {evenement.venueNom}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
     </Screen>
   );
 }

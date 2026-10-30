@@ -47,8 +47,9 @@ export function AgentsPage() {
 
   return (
     <Screen withNav>
+      <NavigationOrganisateur />
       <TopBar title="Mes agents" large subtitle="Comptes du personnel de contrôle" />
-      <div className={m.deuxColonnes}>
+      <div className={`${m.deuxColonnes} ${m.apresTitre}`}>
         <section className={m.pile} aria-labelledby="titre-liste">
           <h2 id="titre-liste" className={m.titreSection}>
             Agents
@@ -127,7 +128,6 @@ export function AgentsPage() {
           </Button>
         </form>
       </div>
-      <NavigationOrganisateur />
     </Screen>
   );
 }

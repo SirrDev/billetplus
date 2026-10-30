@@ -11,10 +11,12 @@ import {
   TopBar,
   formatEventDate,
   formatFcfa,
+  buyerNavItems,
 } from '@/design-system';
 import { ApiError } from '@/shared/api/httpClient';
 import { lireCategories, lireEvenement, type CategorieBillet, type Evenement } from '../api';
 import { afficheDe, messageErreur } from '../affichage';
+import { NavigationSite } from '@/shared/ui/EnTete';
 import m from '@/shared/ui/miseEnPage.module.css';
 
 /** Fiche d'un événement : date à l'heure de Dakar, lieu, description, catégories et prix (lecture). */
@@ -45,6 +47,7 @@ export function EvenementPage() {
   if (erreur) {
     return (
       <Screen>
+        <NavigationSite liens={buyerNavItems} libelle="Navigation principale" barreMobile={false} />
         <TopBar title="Événement" backTo="/" backLabel="Retour à la liste" />
         <EmptyState
           icon={erreur.introuvable ? 'search' : 'wifiOff'}
@@ -58,6 +61,7 @@ export function EvenementPage() {
   if (!evenement) {
     return (
       <Screen>
+        <NavigationSite liens={buyerNavItems} libelle="Navigation principale" barreMobile={false} />
         <TopBar title="Événement" backTo="/" backLabel="Retour à la liste" />
         <Notice icon="clock">Chargement…</Notice>
       </Screen>
@@ -67,10 +71,13 @@ export function EvenementPage() {
   const enVente = evenement.status === 'PUBLIE' && categories.some((c) => c.disponible);
   return (
     <Screen withActionBar>
+      <NavigationSite liens={buyerNavItems} libelle="Navigation principale" barreMobile={false} />
       <TopBar title={evenement.titre} backTo="/" backLabel="Retour à la liste" />
-      <div className={m.deuxColonnes}>
+      <div className={`${m.deuxColonnes} ${m.apresTitre}`}>
         <div className={m.pile}>
-          <Poster variant={afficheDe(evenement.id)} />
+          <div className={m.affiche}>
+            <Poster variant={afficheDe(evenement.id)} />
+          </div>
           <p className={m.texte}>
             <strong>{formatEventDate(new Date(evenement.debuteLe))}</strong>
             <br />

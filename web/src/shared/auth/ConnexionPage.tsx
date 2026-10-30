@@ -60,36 +60,38 @@ export function ConnexionPage({ titre, sousTitre, accueil, roles, pied }: Connex
 
   return (
     <Screen>
-      <TopBar title={titre} subtitle={sousTitre} backTo="/" backLabel="Retour à l'accueil" />
-      <form className={m.formulaire} onSubmit={soumettre} noValidate>
-        <TextField
-          label="Email"
-          type="email"
-          autoComplete="username"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          maxLength={255}
-        />
-        <TextField
-          label="Mot de passe"
-          type="password"
-          autoComplete="current-password"
-          value={motDePasse}
-          onChange={(e) => setMotDePasse(e.target.value)}
-          required
-          maxLength={72}
-        />
-        {erreur ? (
-          <Notice tone="danger" role="alert" icon="warning">
-            {erreur}
-          </Notice>
-        ) : null}
-        <Button type="submit" fullWidth loading={envoi} disabled={!email || !motDePasse}>
-          Se connecter
-        </Button>
-        {pied}
-      </form>
+      <div className={m.carteCentree}>
+        <TopBar title={titre} subtitle={sousTitre} backTo="/" backLabel="Retour à l'accueil" />
+        <form className={`${m.formulaire} ${m.apresTitre}`} onSubmit={soumettre} noValidate>
+          <TextField
+            label="Email"
+            type="email"
+            autoComplete="username"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            maxLength={255}
+          />
+          <TextField
+            label="Mot de passe"
+            type="password"
+            autoComplete="current-password"
+            value={motDePasse}
+            onChange={(e) => setMotDePasse(e.target.value)}
+            required
+            maxLength={72}
+          />
+          {erreur ? (
+            <Notice tone="danger" role="alert" icon="warning">
+              {erreur}
+            </Notice>
+          ) : null}
+          <Button type="submit" fullWidth loading={envoi} disabled={!email || !motDePasse}>
+            Se connecter
+          </Button>
+          {pied}
+        </form>
+      </div>
     </Screen>
   );
 }

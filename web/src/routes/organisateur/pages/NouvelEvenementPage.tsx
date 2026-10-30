@@ -49,72 +49,84 @@ export function NouvelEvenementPage() {
 
   return (
     <Screen withNav>
+      <NavigationOrganisateur />
       <TopBar title="Nouvel événement" backTo="/organisateur" backLabel="Retour à mes événements" />
-      <form className={m.formulaire} onSubmit={soumettre} noValidate>
-        <TextField
-          label="Titre"
-          value={titre}
-          onChange={(e) => setTitre(e.target.value)}
-          required
-          maxLength={255}
-          placeholder="Ex. Dakar Sunset Sessions"
-        />
-        <TextField
-          label="Description"
-          hint="Facultative : programme, artistes, informations pratiques."
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          maxLength={5000}
-        />
-        <div className={s.paire}>
+      <div className={`${m.deuxColonnes} ${m.apresTitre}`}>
+        <form className={m.formulaire} onSubmit={soumettre} noValidate>
           <TextField
-            label="Début (heure de Dakar)"
-            type="datetime-local"
-            value={debut}
-            onChange={(e) => setDebut(e.target.value)}
-            required
-          />
-          <TextField
-            label="Fin (facultative)"
-            type="datetime-local"
-            value={fin}
-            min={debut || undefined}
-            onChange={(e) => setFin(e.target.value)}
-            error={finAvantDebut ? 'La fin doit suivre le début.' : undefined}
-          />
-        </div>
-        <div className={s.paire}>
-          <TextField
-            label="Lieu"
-            value={lieu}
-            onChange={(e) => setLieu(e.target.value)}
+            label="Titre"
+            value={titre}
+            onChange={(e) => setTitre(e.target.value)}
             required
             maxLength={255}
-            placeholder="Ex. Grand Théâtre"
+            placeholder="Ex. Dakar Sunset Sessions"
           />
           <TextField
-            label="Adresse"
-            value={adresse}
-            onChange={(e) => setAdresse(e.target.value)}
-            required
-            maxLength={500}
-            placeholder="Ex. Place de la Nation, Dakar"
+            label="Description"
+            hint="Facultative : programme, artistes, informations pratiques."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            maxLength={5000}
           />
-        </div>
-        <Notice icon="calendar">
-          L'événement est créé en brouillon, invisible du public. Ajoutez ensuite ses catégories de billets, puis
-          publiez-le.
-        </Notice>
-        {erreur ? (
-          <Notice tone="danger" role="alert" icon="warning">
-            {erreur}
+          <div className={s.paire}>
+            <TextField
+              label="Début (heure de Dakar)"
+              type="datetime-local"
+              value={debut}
+              onChange={(e) => setDebut(e.target.value)}
+              required
+            />
+            <TextField
+              label="Fin (facultative)"
+              type="datetime-local"
+              value={fin}
+              min={debut || undefined}
+              onChange={(e) => setFin(e.target.value)}
+              error={finAvantDebut ? 'La fin doit suivre le début.' : undefined}
+            />
+          </div>
+          <div className={s.paire}>
+            <TextField
+              label="Lieu"
+              value={lieu}
+              onChange={(e) => setLieu(e.target.value)}
+              required
+              maxLength={255}
+              placeholder="Ex. Grand Théâtre"
+            />
+            <TextField
+              label="Adresse"
+              value={adresse}
+              onChange={(e) => setAdresse(e.target.value)}
+              required
+              maxLength={500}
+              placeholder="Ex. Place de la Nation, Dakar"
+            />
+          </div>
+          <Notice icon="calendar">
+            L'événement est créé en brouillon, invisible du public. Ajoutez ensuite ses catégories de billets, puis
+            publiez-le.
           </Notice>
-        ) : null}
-        <Button type="submit" fullWidth loading={envoi} disabled={!complet}>
-          Créer le brouillon
-        </Button>
-      </form>
-      <NavigationOrganisateur />
+          {erreur ? (
+            <Notice tone="danger" role="alert" icon="warning">
+              {erreur}
+            </Notice>
+          ) : null}
+          <Button type="submit" fullWidth loading={envoi} disabled={!complet}>
+            Créer le brouillon
+          </Button>
+        </form>
+        <aside className={`${m.pile} ${m.lateral}`} aria-labelledby="titre-etapes">
+          <h2 id="titre-etapes" className={m.titreSection}>
+            Ouvrir la vente en trois étapes
+          </h2>
+          <ol className={m.etapes}>
+            <li>Créez l'événement : il reste un brouillon, invisible du public.</li>
+            <li>Ajoutez ses catégories de billets (prix et nombre de places).</li>
+            <li>Publiez-le : la vente ouvre, et l'événement apparaît dans Découvrir.</li>
+          </ol>
+        </aside>
+      </div>
     </Screen>
   );
 }

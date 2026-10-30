@@ -1,7 +1,8 @@
-import { Badge, BottomNav, type NavItem, type Tone } from '@/design-system';
+import { Badge, type NavItem, type Tone } from '@/design-system';
+import { NavigationSite } from '@/shared/ui/EnTete';
 import type { StatutEvenement } from './api';
 
-/** Navigation de l'espace organisateur : en bas sur téléphone, en haut sur ordinateur. */
+/** Liens de l'espace organisateur : barre basse sur téléphone, en-tête de site sur ordinateur. */
 const NAVIGATION: ReadonlyArray<NavItem> = [
   { to: '/organisateur', label: 'Événements', icon: 'chart', end: true },
   { to: '/organisateur/agents', label: 'Agents', icon: 'user' },
@@ -10,7 +11,7 @@ const NAVIGATION: ReadonlyArray<NavItem> = [
 ];
 
 export function NavigationOrganisateur() {
-  return <BottomNav items={NAVIGATION} label="Espace organisateur" />;
+  return <NavigationSite liens={NAVIGATION} libelle="Espace organisateur" />;
 }
 
 const STATUTS: Record<StatutEvenement, { libelle: string; ton: Tone }> = {

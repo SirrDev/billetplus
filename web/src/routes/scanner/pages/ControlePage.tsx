@@ -172,7 +172,7 @@ export function ControlePage() {
   return (
     <Screen dark>
       <TopBar title={titre} subtitle="Contrôle d'entrée" backTo="/scanner" backLabel="Changer d'événement" onDark />
-      <div className={m.deuxColonnes}>
+      <div className={`${m.deuxColonnes} ${m.apresTitre}`}>
         <div className={m.pile}>
           {verdict ? (
             <div className={s.verdict}>
