@@ -205,14 +205,73 @@ class OrderTest {
         assertThatThrownBy(payee::annuler).isInstanceOf(TransitionCommandeInterditeException.class);
     }
 
+    private static final Duration MARGE = Duration.ofSeconds(60);
+
+    private static Paiement paiement(MoyenPaiement moyen, Instant ouvertLe) {
+        return new Paiement(moyen, "wave_" + UUID.randomUUID(), 18, "https://pay.example/p/1", ouvertLe);
+    }
+
+    @Test
+    void un_paiement_s_ouvre_une_seule_fois_sur_une_commande_en_attente() {
+        Order commande = enAttente();
+        Paiement premier = paiement(MoyenPaiement.WAVE, MAINTENANT.plusSeconds(10));
+
+        commande.ouvrirPaiement(premier, MARGE);
+        assertThat(commande.getPaiement()).isEqualTo(premier);
+
+        assertThatThrownBy(() -> commande.ouvrirPaiement(paiement(MoyenPaiement.ORANGE_MONEY, MAINTENANT), MARGE))
+            .isInstanceOf(TransitionCommandeInterditeException.class)
+            .hasMessage("Un paiement est déjà ouvert pour cette commande");
+        assertThat(commande.getPaiement()).isEqualTo(premier);
+    }
+
+    @Test
+    void aucun_paiement_ne_s_ouvre_a_moins_de_la_marge_avant_l_expiration() {
+        Order commande = enAttente();
+        Instant justeAvantLaMarge = commande.getExpireLe().minus(MARGE).minusMillis(1);
+        Instant dansLaMarge = commande.getExpireLe().minus(MARGE);
+
+        commande.verifierPeutOuvrirUnPaiement(justeAvantLaMarge, MARGE);
+        assertThatThrownBy(() -> commande.verifierPeutOuvrirUnPaiement(dansLaMarge, MARGE))
+            .isInstanceOf(TransitionCommandeInterditeException.class)
+            .hasMessageContaining("presque écoulé");
+        assertThatThrownBy(() -> commande.ouvrirPaiement(paiement(MoyenPaiement.WAVE, dansLaMarge), MARGE))
+            .isInstanceOf(TransitionCommandeInterditeException.class);
+        assertThat(commande.getPaiement()).isNull();
+    }
+
+    @Test
+    void une_commande_qui_n_attend_plus_de_paiement_n_en_ouvre_pas() {
+        Order annulee = enAttente();
+        annulee.annuler();
+        assertThatThrownBy(() -> annulee.ouvrirPaiement(paiement(MoyenPaiement.WAVE, MAINTENANT), MARGE))
+            .isInstanceOf(TransitionCommandeInterditeException.class)
+            .hasMessage("Cette commande n'attend plus de paiement");
+    }
+
+    @Test
+    void un_paiement_exige_une_reference_un_lien_https_et_une_date() {
+        assertThatThrownBy(() -> new Paiement(MoyenPaiement.WAVE, " ", 1, "https://p", MAINTENANT))
+            .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new Paiement(MoyenPaiement.WAVE, "r".repeat(101), 1, "https://p", MAINTENANT))
+            .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new Paiement(MoyenPaiement.WAVE, "ref", 1, "http://p", MAINTENANT))
+            .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new Paiement(null, "ref", 1, "https://p", MAINTENANT))
+            .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new Paiement(MoyenPaiement.WAVE, "ref", 1, "https://p", null))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
     @Test
     void reconstituer_restaure_l_etat_sans_revalider() {
         Order origine = enAttente();
+        origine.ouvrirPaiement(paiement(MoyenPaiement.WAVE, MAINTENANT), MARGE);
         origine.marquerPayeeSansBillet(MotifSansBillet.PLACES_INDISPONIBLES, MAINTENANT);
 
         Order copie = Order.reconstituer(origine.getId(), origine.getEventId(), origine.getTelephone(),
             origine.getLignes(), origine.getEmpreinteJeton(), origine.getCreeLe(), origine.getExpireLe(),
-            origine.getStatus(), origine.getPayeeLe(), origine.getMotifSansBillet());
+            origine.getStatus(), origine.getPayeeLe(), origine.getMotifSansBillet(), origine.getPaiement());
 
         assertThat(copie).usingRecursiveComparison().isEqualTo(origine);
     }

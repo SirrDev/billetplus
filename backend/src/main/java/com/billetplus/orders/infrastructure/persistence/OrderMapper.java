@@ -3,12 +3,13 @@ package com.billetplus.orders.infrastructure.persistence;
 import com.billetplus.orders.domain.NumeroTelephone;
 import com.billetplus.orders.domain.Order;
 import com.billetplus.orders.domain.OrderLine;
+import com.billetplus.orders.domain.Paiement;
 import com.billetplus.shared.Money;
 
 /**
- * Conversion domaine ↔ entité JPA pour les commandes. Seuls status, payeeLe et
- * motifSansBillet changent après la création : ce sont les seuls champs
- * recopiés par {@link #copierDans}. Les lignes ne sont jamais réécrites.
+ * Conversion domaine ↔ entité JPA pour les commandes. Seuls status, payeeLe,
+ * motifSansBillet et le paiement changent après la création : ce sont les seuls
+ * champs recopiés par {@link #copierDans}. Les lignes ne sont jamais réécrites.
  */
 final class OrderMapper {
 
@@ -29,12 +30,15 @@ final class OrderMapper {
             entity.getExpireLe(),
             entity.getStatus(),
             entity.getPayeeLe(),
-            entity.getMotifSansBillet()
+            entity.getMotifSansBillet(),
+            entity.getPaiementReference() == null ? null : new Paiement(entity.getPaiementMoyen(),
+                entity.getPaiementReference(), entity.getPaiementTransactionId(), entity.getPaiementUrl(),
+                entity.getPaiementOuvertLe())
         );
     }
 
     static OrderJpaEntity versNouvelleEntite(Order order) {
-        return new OrderJpaEntity(
+        OrderJpaEntity entity = new OrderJpaEntity(
             order.getId(),
             order.getEventId(),
             order.getTelephone().valeur(),
@@ -49,6 +53,18 @@ final class OrderMapper {
                     l.prixUnitaire().valeur().longValueExact()))
                 .toList()
         );
+        copierPaiement(order, entity);
+        return entity;
+    }
+
+    private static void copierPaiement(Order order, OrderJpaEntity entity) {
+        Paiement paiement = order.getPaiement();
+        if (paiement == null) {
+            entity.setPaiement(null, null, null, null, null);
+        } else {
+            entity.setPaiement(paiement.moyen(), paiement.reference(), paiement.transactionId(), paiement.url(),
+                paiement.ouvertLe());
+        }
     }
 
     static void copierDans(Order order, OrderJpaEntity entity) {
@@ -59,5 +75,6 @@ final class OrderMapper {
         entity.setStatus(order.getStatus());
         entity.setPayeeLe(order.getPayeeLe());
         entity.setMotifSansBillet(order.getMotifSansBillet());
+        copierPaiement(order, entity);
     }
 }
