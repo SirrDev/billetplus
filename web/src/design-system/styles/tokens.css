@@ -1,0 +1,81 @@
+/*
+ * Billet+ — design tokens
+ * Source de vérité visuelle du prototype « Vibrant et festif ».
+ * Toutes les variables sont préfixées --bp- pour ne jamais entrer en collision
+ * avec le reste de l'application. Aucune règle globale n'est posée ici.
+ */
+:root {
+  /* Marque */
+  --bp-violet: #5b2be0;
+  --bp-violet-soft: #f3eeff;
+  --bp-violet-surface: #f5f1fb;
+  --bp-violet-night: #2a1b52;
+  --bp-pink: #e8327c;
+  --bp-orange: #ff5a1f;
+  --bp-orange-hover: #ff6d3a;
+  --bp-yellow: #ffc93c;
+  --bp-yellow-soft: #fff1c7;
+
+  /* Texte et traits */
+  --bp-ink: #1a1033;
+  --bp-ink-muted: #4b4560;
+  --bp-ink-faint: #6b6580;
+  --bp-ink-on-dark-muted: #d9d0f0;
+  --bp-white: #ffffff;
+  --bp-border: #e3dcf0;
+  --bp-border-strong: #c9bee3;
+  --bp-divider: #d8cfea;
+  --bp-track: #3a2a66;
+
+  /* États (toujours associés à une icône ou un texte, jamais la couleur seule) */
+  --bp-success: #0b6b42;
+  --bp-success-strong: #0b8a55;
+  --bp-success-soft: #ddf5e8;
+  --bp-warning: #7a4b00;
+  --bp-warning-soft: #fff1c7;
+  --bp-danger: #9b1c1c;
+  --bp-danger-soft: #fde3e3;
+  --bp-switch-off: #8a8299;
+
+  /* Dégradé signature (coucher de soleil) */
+  --bp-gradient-sunset: linear-gradient(180deg, #5b2be0 0%, #e8327c 55%, #ff5a1f 100%);
+
+  /* Typographie */
+  --bp-font-display: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', system-ui, sans-serif;
+  --bp-font-body: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, sans-serif;
+
+  /* Rayons */
+  --bp-r-sm: 14px;
+  --bp-r-md: 18px;
+  --bp-r-lg: 24px;
+  --bp-r-xl: 28px;
+  --bp-r-pill: 999px;
+
+  /* Gabarits */
+  --bp-touch: 44px;
+  --bp-nav-h: 76px;
+  --bp-bar-h: 92px;
+  --bp-app-max: 480px;
+  --bp-gutter: 20px;
+  /* Hauteur de la navigation quand elle passe en haut de l'écran (ordinateur). */
+  --bp-topnav-h: 64px;
+}
+
+/*
+ * Adaptation à la taille de l'écran. Mobile d'abord : les valeurs ci-dessus valent
+ * pour un téléphone ; on élargit ensuite les écrans sur tablette et ordinateur.
+ * Les pages organisent leur contenu en grilles à ces mêmes seuils (768 et 1024 px).
+ */
+@media (min-width: 768px) {
+  :root {
+    --bp-app-max: 720px;
+    --bp-gutter: 28px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --bp-app-max: 1120px;
+    --bp-gutter: 32px;
+  }
+}
