@@ -50,7 +50,7 @@ public class SecurityConfig {
                         // Achat sans compte (ADR 0006) : créer une commande et la relire avec son
                         // jeton ne demandent aucun compte. Le jeton est contrôlé par le cas d'usage.
                         .requestMatchers(HttpMethod.POST, "/api/orders").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/orders/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/orders/*", "/api/orders/*/billets").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/orders/*/paiement").permitAll()
                         // Webhook de la passerelle : authentifié par la signature HMAC du corps (ADR 0007).
                         .requestMatchers(HttpMethod.POST, "/api/paiements/unitechpay/webhook").permitAll()
