@@ -306,6 +306,34 @@ describe('Commande', () => {
     await waitFor(() => expect(allerPayer).toHaveBeenCalledWith('https://pay.test/w'));
   });
 
+  it("n'affiche l'échec d'ouverture du paiement que tant que la commande l'attend", async () => {
+    stockage.set('c1', locale);
+    let statut = 'EN_ATTENTE_PAIEMENT';
+    backend({
+      'GET /api/orders/c1/billets': () => [],
+      'GET /api/orders/c1': () => ({ ...COMMANDE, status: statut }),
+      'GET /api/events/e1/categories': () => CATEGORIES,
+    });
+    const entree = { pathname: '/commandes/c1', state: { erreurPaiement: 'Service de paiement indisponible' } };
+    const premier = render(
+      <MemoryRouter initialEntries={[entree]}>
+        <Routage />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('Service de paiement indisponible')).toBeInTheDocument();
+    premier.unmount();
+
+    // Même entrée d'historique (le state survit au rechargement), mais commande désormais payée.
+    statut = 'PAYEE';
+    render(
+      <MemoryRouter initialEntries={[entree]}>
+        <Routage />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole('heading', { name: 'Vos billets' })).toBeInTheDocument();
+    expect(screen.queryByText('Service de paiement indisponible')).not.toBeInTheDocument();
+  });
+
   it('explique le remboursement manuel quand la commande est payée sans billet', async () => {
     stockage.set('c1', locale);
     backend({
