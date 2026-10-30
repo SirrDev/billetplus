@@ -1,4 +1,12 @@
-import { effacerJetons, enregistrerJetons, lireJetons, surChangementDeSession } from './session';
+import {
+  CLE_LISTE_CONTROLE,
+  effacerJetons,
+  enregistrerJetons,
+  enregistrerProfil,
+  lireJetons,
+  lireProfil,
+  surChangementDeSession,
+} from './session';
 
 describe('session', () => {
   beforeEach(() => effacerJetons());
@@ -8,6 +16,16 @@ describe('session', () => {
     expect(JSON.parse(localStorage.getItem('billetplus.session') ?? '{}')).toEqual({ accessToken: 'a', refreshToken: 'r' });
     localStorage.setItem('billetplus.session', '{pas du json');
     expect(lireJetons()).toBeNull();
+  });
+
+  it("efface avec la session tout ce que le compte a laissé sur l'appareil", () => {
+    enregistrerJetons({ accessToken: 'a', refreshToken: 'r' });
+    enregistrerProfil({ id: 'agent-1', role: 'AGENT' });
+    localStorage.setItem(CLE_LISTE_CONTROLE, JSON.stringify({ compte: 'agent-1', evenements: [] }));
+    effacerJetons();
+    expect(lireJetons()).toBeNull();
+    expect(lireProfil()).toBeNull();
+    expect(localStorage.getItem(CLE_LISTE_CONTROLE)).toBeNull();
   });
 
   it("prévient d'une déconnexion faite dans un autre onglet", () => {

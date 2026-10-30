@@ -1,55 +1,90 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSession } from '@/commun/auth';
+import { CLE_LISTE_CONTROLE } from '@/commun/session';
 import { formatDateCourte } from '@/commun/format';
-import { messageErreur } from '@/commun/http';
-import { Affiche, Avis, ChampRecherche, Chargement, EtatVide, Icone } from '@/ui';
-import { evenementsDeLOrganisateur, evenementsPublics, type EvenementControle } from '../api';
+import { ApiError, messageErreur } from '@/commun/http';
+import { Affiche, Avis, Chargement, EtatVide, Icone } from '@/ui';
+import { evenementsAffectes, evenementsDeLOrganisateur, type EvenementControle } from '../api';
 import { CadreControle } from './CadreControle';
 import s from './controle.module.css';
 
 /**
- * Choix de l'événement à contrôler. Le backend n'expose pas les affectations d'un agent :
- * un agent cherche parmi les événements publiés, et le serveur refuse le scan (403) s'il
- * n'y est pas affecté ; un organisateur voit directement ses événements publiés.
+ * Dernière liste reçue, gardée sur l'appareil : le jour J, le scanner doit se rouvrir sans
+ * réseau (la route est authentifiée, donc jamais mise en cache par le service worker).
+ * Données publiques seulement (titre, date, lieu), propres au compte qui les a reçues.
+ */
+const CLE_LISTE = CLE_LISTE_CONTROLE;
+
+function listeGardee(compte: string): EvenementControle[] | null {
+  try {
+    const brut = localStorage.getItem(CLE_LISTE);
+    const garde = brut ? (JSON.parse(brut) as { compte?: string; evenements?: EvenementControle[] }) : null;
+    return garde?.compte === compte && Array.isArray(garde.evenements) ? garde.evenements : null;
+  } catch {
+    return null;
+  }
+}
+
+function garderListe(compte: string, evenements: EvenementControle[]) {
+  try {
+    localStorage.setItem(CLE_LISTE, JSON.stringify({ compte, evenements }));
+  } catch {
+    // Stockage indisponible : la liste reste affichée, seule la réouverture hors ligne est perdue.
+  }
+}
+
+/**
+ * Choix de l'événement à contrôler : pour un agent, ceux auxquels l'organisateur l'a
+ * affecté ; pour un organisateur, ses événements publiés. Sans réseau : la dernière liste.
  */
 export function ChoixEvenementPage() {
   const { session } = useSession();
-  const organisateur = session.etat === 'connecte' && session.utilisateur.role === 'ORGANISATEUR';
-  const nom = session.etat === 'connecte' ? session.utilisateur.nomComplet : '';
-  const [saisie, setSaisie] = useState('');
+  const utilisateur = session.etat === 'connecte' ? session.utilisateur : null;
+  const organisateur = utilisateur?.role === 'ORGANISATEUR';
+  const compte = utilisateur?.id ?? '';
   const [evenements, setEvenements] = useState<EvenementControle[] | null>(null);
+  const [horsLigne, setHorsLigne] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!compte) return;
     let annule = false;
-    const minuterie = window.setTimeout(() => {
-      setErreur(null);
-      const chargement = organisateur
-        ? evenementsDeLOrganisateur().then((liste) => liste.filter((e) => e.status === 'PUBLIE'))
-        : evenementsPublics(saisie);
-      chargement
-        .then((liste) => !annule && setEvenements(liste))
-        .catch((e: unknown) => !annule && setErreur(messageErreur(e)));
-    }, 300);
+    setErreur(null);
+    const chargement = organisateur
+      ? evenementsDeLOrganisateur().then((liste) => liste.filter((e) => e.status === 'PUBLIE'))
+      : evenementsAffectes();
+    chargement
+      .then((liste) => {
+        if (annule) return;
+        setEvenements(liste);
+        setHorsLigne(false);
+        garderListe(compte, liste);
+      })
+      .catch((e: unknown) => {
+        if (annule) return;
+        const gardee = !(e instanceof ApiError) ? listeGardee(compte) : null;
+        if (gardee) {
+          setEvenements(gardee);
+          setHorsLigne(true);
+        } else setErreur(messageErreur(e));
+      });
     return () => {
       annule = true;
-      window.clearTimeout(minuterie);
     };
-  }, [saisie, organisateur]);
+  }, [compte, organisateur]);
 
   return (
     <CadreControle>
       <div className={s.pile}>
         <div>
-          <p className={s.surtitre}>Connecté : {nom}</p>
+          <p className={s.surtitre}>Connecté : {utilisateur?.nomComplet}</p>
           <h1 className={s.titrePage}>Événement à contrôler</h1>
         </div>
-        {!organisateur && (
-          <>
-            <ChampRecherche valeur={saisie} onChange={setSaisie} libelle="Rechercher un événement" placeholder="Titre de l'événement" />
-            <p className={s.texte}>Choisissez l'événement auquel l'organisateur vous a affecté.</p>
-          </>
+        {horsLigne && (
+          <Avis ton="attention" icone="horsLigne">
+            <p>Sans réseau : dernière liste reçue sur cet appareil.</p>
+          </Avis>
         )}
         {erreur && (
           <Avis ton="danger">
@@ -61,7 +96,11 @@ export function ChoixEvenementPage() {
           <EtatVide
             icone="calendrier"
             titre="Aucun événement à contrôler"
-            texte={organisateur ? "Publiez un événement pour pouvoir en contrôler l'entrée." : 'Aucun événement publié ne correspond.'}
+            texte={
+              organisateur
+                ? "Publiez un événement pour pouvoir en contrôler l'entrée."
+                : "L'organisateur ne vous a affecté à aucun événement à venir. Demandez-lui de le faire depuis son espace."
+            }
           />
         )}
         {evenements && evenements.length > 0 && (
