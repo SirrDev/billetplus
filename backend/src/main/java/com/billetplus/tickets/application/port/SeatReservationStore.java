@@ -36,4 +36,11 @@ public interface SeatReservationStore {
 
     /** Supprime la réservation de la commande pour la catégorie. Sans effet si elle n'existe pas. */
     void liberer(UUID categoryId, UUID orderId);
+
+    /**
+     * Places de la catégorie bloquées par des réservations encore valides à
+     * {@code maintenant} (les réservations expirées non encore nettoyées sont exclues).
+     * Lecture seule, pour le tableau de bord.
+     */
+    int placesReservees(UUID categoryId, Instant maintenant);
 }

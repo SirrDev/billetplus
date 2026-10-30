@@ -107,6 +107,18 @@ class RedisSeatReservationStoreIntegrationTest {
     }
 
     @Test
+    void les_places_reservees_ne_comptent_que_les_reservations_encore_valables() {
+        assertThat(store.placesReservees(categoryId, maintenant)).isZero();
+        store.reserver(reservation(UUID.randomUUID(), 3), 100, maintenant);
+        store.reserver(reservation(UUID.randomUUID(), 2), 100, maintenant);
+
+        assertThat(store.placesReservees(categoryId, maintenant)).isEqualTo(5);
+        // À l'instant d'expiration (inclus), et après : plus rien, même avant tout nettoyage.
+        assertThat(store.placesReservees(categoryId, maintenant.plus(CINQ_MINUTES))).isZero();
+        assertThat(nombreDeReservations()).isEqualTo(2);
+    }
+
+    @Test
     void enregistre_une_reservation_qui_tient_dans_la_limite_et_renvoie_son_expiration() {
         UUID orderId = UUID.randomUUID();
         ReservationTemporaire reservation = reservation(orderId, 3);

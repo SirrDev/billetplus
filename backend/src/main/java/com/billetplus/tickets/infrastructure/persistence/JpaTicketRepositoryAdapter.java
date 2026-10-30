@@ -49,6 +49,13 @@ class JpaTicketRepositoryAdapter implements TicketRepository {
             .toList();
     }
 
+    @Override
+    public List<CompteBillets> compterParCategorieEtStatut(UUID eventId) {
+        return springRepo.compterParCategorieEtStatut(eventId).stream()
+            .map(ligne -> new CompteBillets((UUID) ligne[0], (TicketStatus) ligne[1], (Long) ligne[2]))
+            .toList();
+    }
+
     /**
      * MANDATORY, pour la même raison que {@link JpaTicketCategoryRepositoryAdapter#save} :
      * hors transaction de l'appelant, deux scans concurrents du même billet
