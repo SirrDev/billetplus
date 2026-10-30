@@ -15,6 +15,7 @@ import {
   TopBar,
   formatEventDate,
   formatFcfa,
+  buyerNavItems,
 } from '@/design-system';
 import {
   lireBillets,
@@ -27,6 +28,7 @@ import {
 } from '../api';
 import { lireCommandeLocale, type CommandeLocale } from '../commandesLocales';
 import { codeBillet, messageErreur } from '../affichage';
+import { NavigationSite } from '@/shared/ui/EnTete';
 import m from '@/shared/ui/miseEnPage.module.css';
 
 /** Pendant l'attente du paiement : relecture régulière, pour l'acheteur qui revient de Wave ou d'Orange Money. */
@@ -89,6 +91,7 @@ export function CommandePage() {
   if (etat.type === 'chargement') {
     return (
       <Screen>
+        <NavigationSite liens={buyerNavItems} libelle="Navigation principale" barreMobile={false} />
         <TopBar title="Ma commande" backTo="/billets" backLabel="Retour à mes billets" />
         <Notice icon="clock">Chargement de la commande…</Notice>
       </Screen>
@@ -97,6 +100,7 @@ export function CommandePage() {
   if (etat.type === 'absente') {
     return (
       <Screen>
+        <NavigationSite liens={buyerNavItems} libelle="Navigation principale" barreMobile={false} />
         <TopBar title="Ma commande" backTo="/billets" backLabel="Retour à mes billets" />
         <EmptyState
           icon="lock"
@@ -110,6 +114,7 @@ export function CommandePage() {
   if (etat.type === 'erreur') {
     return (
       <Screen>
+        <NavigationSite liens={buyerNavItems} libelle="Navigation principale" barreMobile={false} />
         <TopBar title="Ma commande" backTo="/billets" backLabel="Retour à mes billets" />
         <EmptyState
           icon="wifiOff"
@@ -143,6 +148,7 @@ export function CommandePage() {
     case 'PAYEE_SANS_BILLET':
       return (
         <Screen>
+          <NavigationSite liens={buyerNavItems} libelle="Navigation principale" barreMobile={false} />
           {titre}
           <EmptyState
             icon="warning"
@@ -162,6 +168,7 @@ export function CommandePage() {
 function CommandeExpiree({ titre, locale }: { titre: JSX.Element; locale: CommandeLocale }) {
   return (
     <Screen>
+      <NavigationSite liens={buyerNavItems} libelle="Navigation principale" barreMobile={false} />
       {titre}
       <EmptyState
         icon="clock"
@@ -202,8 +209,9 @@ function Paiement({ titre, locale, commande, lignes, onExpire }: PaiementProps) 
 
   return (
     <Screen withActionBar>
+      <NavigationSite liens={buyerNavItems} libelle="Navigation principale" barreMobile={false} />
       {titre}
-      <div className={m.deuxColonnes}>
+      <div className={`${m.deuxColonnes} ${m.apresTitre}`}>
         <div className={m.pile}>
           <CountdownNotice deadline={new Date(commande.expireLe)} onExpire={onExpire} />
           <PriceSummary lines={lignes} totalFcfa={commande.montantTotalFcfa} />
@@ -247,46 +255,84 @@ function BilletsPayes({ locale, commande, lignes }: BilletsPayesProps) {
   }, [commande.id, locale.jeton]);
 
   const date = formatEventDate(new Date(locale.debuteLe));
+  const [pdf, setPdf] = useState<'pret' | 'en-cours' | 'erreur'>('pret');
+  const valables = (billets ?? []).filter((b) => b.statut === 'EMIS' && b.qr);
+
+  // jsPDF n'est chargé qu'à ce moment-là : le parcours d'achat reste léger.
+  const telecharger = async () => {
+    setPdf('en-cours');
+    try {
+      const { telechargerBilletsPdf } = await import('../billetPdf');
+      telechargerBilletsPdf({
+        titre: locale.titre,
+        date,
+        lieu: locale.venueNom,
+        commandeId: commande.id,
+        billets: valables.map((b) => ({ code: codeBillet(b.id), categorie: b.categorie, qr: b.qr as string })),
+      });
+      setPdf('pret');
+    } catch {
+      setPdf('erreur');
+    }
+  };
   return (
     // Le bandeau ouvre l'écran (il déborde jusqu'au bord, comme dans le prototype) :
     // pas de barre de titre au-dessus, qu'il recouvrirait.
     <Screen>
+      <NavigationSite liens={buyerNavItems} libelle="Navigation principale" barreMobile={false} />
       <SuccessHero
         title="Paiement confirmé !"
         description={`Présentez ces QR codes à l'entrée. Ils restent sur cet appareil.`}
       />
-      <PriceSummary lines={lignes} totalFcfa={commande.montantTotalFcfa} totalLabel="Payé" />
-      {erreur ? (
-        <Notice tone="danger" role="alert" icon="warning">
-          {erreur}
-        </Notice>
-      ) : null}
-      {billets === null && !erreur ? <Notice icon="clock">Chargement des billets…</Notice> : null}
-      <div className={m.grille}>
-        {billets?.map((billet) =>
-          billet.statut === 'EMIS' && billet.qr ? (
-            <TicketPass
-              key={billet.id}
-              eventTitle={locale.titre}
-              categoryName={billet.categorie}
-              dateLabel={date}
-              venue={locale.venueNom}
-              qrPayload={billet.qr}
-              code={codeBillet(billet.id)}
-              status="valid"
-            />
-          ) : (
-            // Aucun QR n'est fourni pour un billet inactif : on n'en dessine pas.
-            <Notice key={billet.id} tone={billet.statut === 'SCANNE' ? 'warning' : 'danger'} icon="ticket">
-              Billet {billet.categorie} {codeBillet(billet.id)} :{' '}
-              {billet.statut === 'SCANNE' ? 'déjà utilisé à l’entrée.' : 'annulé.'}
-            </Notice>
-          ),
-        )}
+      <div className={`${m.pile} ${m.apresTitre}`}>
+        <PriceSummary lines={lignes} totalFcfa={commande.montantTotalFcfa} totalLabel="Payé" />
+        {erreur ? (
+          <Notice tone="danger" role="alert" icon="warning">
+            {erreur}
+          </Notice>
+        ) : null}
+        {billets === null && !erreur ? <Notice icon="clock">Chargement des billets…</Notice> : null}
+        <div className={m.grille}>
+          {billets?.map((billet) =>
+            billet.statut === 'EMIS' && billet.qr ? (
+              <TicketPass
+                key={billet.id}
+                eventTitle={locale.titre}
+                categoryName={billet.categorie}
+                dateLabel={date}
+                venue={locale.venueNom}
+                qrPayload={billet.qr}
+                code={codeBillet(billet.id)}
+                status="valid"
+              />
+            ) : (
+              // Aucun QR n'est fourni pour un billet inactif : on n'en dessine pas.
+              <Notice key={billet.id} tone={billet.statut === 'SCANNE' ? 'warning' : 'danger'} icon="ticket">
+                Billet {billet.categorie} {codeBillet(billet.id)} :{' '}
+                {billet.statut === 'SCANNE' ? 'déjà utilisé à l’entrée.' : 'annulé.'}
+              </Notice>
+            ),
+          )}
+        </div>
+        <div className={`${m.ligneActions} ${m.empileesMobile}`}>
+          <Button
+            icon="download"
+            loading={pdf === 'en-cours'}
+            disabled={valables.length === 0}
+            onClick={() => void telecharger()}
+          >
+            Télécharger mes billets (PDF)
+          </Button>
+          <ButtonLink to="/billets" variant="secondary" icon="ticket">
+            Mes billets
+          </ButtonLink>
+        </div>
+        {pdf === 'erreur' ? (
+          <Notice tone="danger" role="alert" icon="warning">
+            Le PDF n'a pas pu être créé. Vos QR codes restent affichés ci-dessus.
+          </Notice>
+        ) : null}
       </div>
-      <ButtonLink to="/billets" variant="secondary" icon="ticket" fullWidth>
-        Mes billets
-      </ButtonLink>
     </Screen>
   );
 }
