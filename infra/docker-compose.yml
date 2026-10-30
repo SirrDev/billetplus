@@ -51,8 +51,10 @@ services:
       timeout: 5s
       retries: 10
 
-  # Décommenter une fois backend/Dockerfile créé (le backend se lance pour
-  # l'instant avec .\mvnw spring-boot:run depuis backend/).
+  # En dev, le backend se lance avec .\mvnw spring-boot:run depuis backend/.
+  # backend/Dockerfile produit l'image de PRODUCTION (profil prod, secrets
+  # obligatoires) : pour la lancer, voir infra/docker-compose.prod.yml. Ce bloc
+  # ne fonctionnerait qu'en ajoutant SPRING_PROFILES_ACTIVE: default.
   # backend:
   #   build:
   #     context: ../backend

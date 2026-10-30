@@ -1,3 +1,7 @@
 /.idea
 CLAUDE.local.md
 .claude/settings.local.json
+
+# Secrets de production (infra/docker-compose.prod.yml) : jamais commités
+infra/.env.prod
+infra/secrets/
