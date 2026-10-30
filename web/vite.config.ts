@@ -15,7 +15,11 @@ export default defineConfig({
         // pem : clé PUBLIQUE de vérification des QR, utile au scanner hors ligne (ADR 0004).
         // Les sous-ensembles vietnamien, cyrillique et grec des polices ne servent pas : hors précache.
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,pem}'],
-        globIgnores: ['**/*-vietnamese-*.woff2', '**/*-cyrillic-*.woff2', '**/*-greek-*.woff2'],
+        // Hors précache aussi : les morceaux « jspdf-optionnel-* » (html2canvas, DOMPurify, canvg),
+        // que jsPDF ne charge que pour .html() et le SVG, inutilisés par le billet PDF (≈ 110 Ko
+        // gzippés économisés à chaque installation, en données mobiles). Ils restent dans le build.
+        // Le morceau billetPdf, lui, RESTE précaché : le PDF se génère sans réseau.
+        globIgnores: ['**/*-vietnamese-*.woff2', '**/*-cyrillic-*.woff2', '**/*-greek-*.woff2', '**/jspdf-optionnel-*.js'],
         // Jamais de cache sur les commandes et les billets : réponses no-store, jeton en en-tête.
         // Les billets hors ligne viennent d'IndexedDB (espaces/acheteur/commandesLocales.ts).
         // Lectures PUBLIQUES des événements seulement, jamais une requête authentifiée :
@@ -43,6 +47,18 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        // Nom explicite pour les dépendances optionnelles de jsPDF : l'exclusion du précache
+        // (globIgnores) vise ce préfixe, jamais un nom générique qui pourrait toucher autre chose.
+        chunkFileNames: (morceau) =>
+          morceau.moduleIds.some((id) => /node_modules[\\/](canvg|html2canvas|dompurify)[\\/]/.test(id))
+            ? 'assets/jspdf-optionnel-[name]-[hash].js'
+            : 'assets/[name]-[hash].js',
+      },
+    },
+  },
   resolve: {
     // Même alias que "paths" dans tsconfig.json.
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
