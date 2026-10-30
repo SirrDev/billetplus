@@ -1,3 +1,7 @@
+// @vitest-environment node
+// Environnement Node et non jsdom : jsdom remplace Uint8Array et ArrayBuffer par les siens,
+// que le WebCrypto de Node 20 (celui de la CI) refuse (« not instance of ArrayBuffer »).
+// Ce test n'utilise aucun DOM. Dans un navigateur, il n'y a qu'un seul jeu de types.
 import { getPublicKeyAsync, signAsync, utils } from '@noble/ed25519';
 import { describe, expect, it } from 'vitest';
 import { clePemVersOctets, verifierHorsLigne } from './verificationHorsLigne';
