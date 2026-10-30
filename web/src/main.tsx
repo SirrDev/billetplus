@@ -1,13 +1,16 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+// Polices embarquées dans le bundle : elles s'affichent aussi hors ligne (PWA).
+import '@fontsource-variable/inter';
+import '@fontsource-variable/space-grotesk';
+import './styles/global.css';
 import App from './App';
-import './styles/globals.css';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>
+const racine = document.getElementById('root');
+if (!racine) throw new Error('Élément #root absent de index.html');
+
+createRoot(racine).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
 );
