@@ -1,0 +1,99 @@
+.avis {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: var(--bp-radius-m);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.info {
+  background: var(--bp-accent-soft);
+  color: var(--bp-accent-ink);
+}
+
+.attention {
+  background: var(--bp-amber-soft);
+  color: var(--bp-amber-ink);
+}
+
+.danger {
+  background: var(--bp-danger-soft);
+  color: var(--bp-danger);
+}
+
+.succes {
+  background: var(--bp-success-soft);
+  color: var(--bp-success);
+}
+
+.avisCorps {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 48px 16px;
+}
+
+.videIcone {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  background: var(--bp-accent-soft);
+  color: var(--bp-accent-text);
+}
+
+.videIcone.attention {
+  background: var(--bp-amber-soft);
+  color: var(--bp-amber-ink);
+}
+
+.videIcone.danger {
+  background: var(--bp-danger-soft);
+  color: var(--bp-danger);
+}
+
+.videTitre {
+  font-size: 24px;
+}
+
+.videTexte {
+  max-width: 44ch;
+  color: var(--bp-ink-2);
+}
+
+.chargement {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 16px;
+  color: var(--bp-ink-2);
+}
+
+.roue {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid var(--bp-line);
+  border-top-color: var(--bp-accent);
+  animation: tourne 0.8s linear infinite;
+}
+
+@keyframes tourne {
+  to {
+    transform: rotate(360deg);
+  }
+}

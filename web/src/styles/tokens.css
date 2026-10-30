@@ -1,0 +1,55 @@
+/*
+ * Jetons du design Billet+ (direction validée le 2026-10-30 : canevas « Billet+ — proposition de design »).
+ * Toute couleur, rayon ou police d'un composant passe par ces variables.
+ * Contrastes WCAG mesurés sur blanc : --bp-ink 18,9 · --bp-ink-2 8,1 · --bp-accent-text 7,4
+ * · blanc sur --bp-accent 6,3 · --bp-ink sur --bp-amber 10,4 · --bp-success 5,4 · --bp-danger 6,6.
+ */
+:root {
+  --bp-ink: #0f1115;
+  --bp-ink-2: #4a4f5c;
+  --bp-line: #e6e4ee;
+  --bp-line-strong: #b9b5c9;
+  --bp-surface: #f4f3f8;
+  --bp-white: #ffffff;
+  --bp-night: #1b1640;
+
+  --bp-accent: #5b3df5;
+  --bp-accent-hover: #4a2fe0;
+  --bp-accent-text: #4a2fe0;
+  --bp-accent-ink: #2e1ba8;
+  --bp-accent-soft: #f1eeff;
+
+  --bp-amber: #ffb020;
+  --bp-amber-light: #ffcf70;
+  --bp-amber-soft: #fff4db;
+  --bp-amber-ink: #6b4500;
+
+  --bp-success: #0f7b4f;
+  --bp-success-soft: #e5f4ec;
+  --bp-danger: #b42318;
+  --bp-danger-soft: #fdecea;
+
+  --bp-font-display: 'Space Grotesk Variable', 'Space Grotesk', system-ui, sans-serif;
+  --bp-font-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
+
+  --bp-radius-s: 12px;
+  --bp-radius-m: 16px;
+  --bp-radius-l: 22px;
+  --bp-radius-xl: 28px;
+
+  --bp-content-max: 1200px;
+  --bp-content-narrow: 1040px;
+  --bp-gutter: 16px;
+  --bp-focus: 0 0 0 3px var(--bp-white), 0 0 0 5px var(--bp-accent);
+}
+
+/*
+ * Points de rupture, mobile d'abord : 720 px (tablette) et 1024 px (ordinateur).
+ * Une variable CSS ne fonctionne pas dans @media : ces valeurs sont écrites en dur
+ * dans les modules CSS. Toujours min-width, jamais max-width.
+ */
+@media (min-width: 720px) {
+  :root {
+    --bp-gutter: 24px;
+  }
+}

@@ -1,0 +1,158 @@
+/* Mobile d'abord : barre de navigation en bas ; dès 720 px, liens dans l'en-tête. */
+.site {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--fond, var(--bp-white));
+}
+
+.entete {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bp-white);
+  border-bottom: 1px solid var(--bp-line);
+}
+
+.enteteInterieur {
+  max-width: var(--bp-content-max);
+  margin: 0 auto;
+  padding: 10px var(--bp-gutter);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  text-decoration: none;
+  color: var(--bp-ink);
+  border-radius: var(--bp-radius-s);
+}
+
+.logoMarque {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--bp-accent);
+  color: var(--bp-white);
+  display: grid;
+  place-items: center;
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.logoNom {
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 21px;
+  letter-spacing: -0.02em;
+}
+
+.principal {
+  flex: 1;
+  width: 100%;
+  max-width: var(--bp-content-max);
+  margin: 0 auto;
+  padding: 20px var(--bp-gutter) calc(96px + env(safe-area-inset-bottom));
+}
+
+.etroit {
+  max-width: var(--bp-content-narrow);
+}
+
+.nav {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(var(--nb-liens, 2), minmax(0, 1fr));
+  background: var(--bp-white);
+  border-top: 1px solid var(--bp-line);
+  padding: 6px 8px calc(8px + env(safe-area-inset-bottom));
+}
+
+.lien {
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: var(--bp-radius-s);
+  color: var(--bp-ink-2);
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.lien[aria-current='page'] {
+  color: var(--bp-accent-text);
+  font-weight: 700;
+}
+
+/* Écran plein (scanner, paiement) : pas de barre basse, donc pas de marge pour elle. */
+.sansNav .principal {
+  padding-bottom: 32px;
+}
+
+@media (min-width: 720px) {
+  .principal {
+    padding-top: 32px;
+    padding-bottom: 64px;
+  }
+
+  .nav {
+    position: static;
+    display: flex;
+    gap: 4px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .lien {
+    flex-direction: row;
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 15px;
+  }
+
+  .lien svg {
+    display: none;
+  }
+
+  .lien[aria-current='page'] {
+    background: var(--bp-accent-soft);
+    color: var(--bp-accent-ink);
+  }
+}
+
+.pied {
+  border-top: 1px solid var(--bp-line);
+  display: none;
+}
+
+.piedInterieur {
+  max-width: var(--bp-content-max);
+  margin: 0 auto;
+  padding: 24px var(--bp-gutter);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--bp-ink-2);
+  font-size: 14px;
+}
+
+@media (min-width: 720px) {
+  .pied {
+    display: block;
+  }
+}

@@ -1,0 +1,294 @@
+.panneau {
+  background: var(--bp-white);
+  border-radius: var(--bp-radius-l);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.panneauBordure {
+  border: 1px solid var(--bp-line);
+}
+
+@media (min-width: 720px) {
+  .panneau {
+    padding: 24px;
+  }
+}
+
+.panneauTitre {
+  font-size: 22px;
+}
+
+/* Barre d'action collée en bas de l'écran sur mobile, au-dessus de la navigation basse. */
+.barre {
+  position: sticky;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  z-index: 5;
+  margin: 24px calc(-1 * var(--bp-gutter)) 0;
+  padding: 14px var(--bp-gutter);
+  background: var(--bp-white);
+  border-top: 1px solid var(--bp-line);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+}
+
+.barreSansNav {
+  bottom: 0;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 720px) {
+  .barre {
+    bottom: 0;
+    margin: 24px 0 0;
+    padding: 16px 20px;
+    border: 1px solid var(--bp-line);
+    border-radius: var(--bp-radius-l);
+  }
+}
+
+.barreResume {
+  flex: 1 1 160px;
+}
+
+.barreLibelle {
+  color: var(--bp-ink-2);
+  font-size: 14px;
+}
+
+.barreMontant {
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 24px;
+}
+
+.barreAction {
+  flex: 1 1 240px;
+  display: flex;
+}
+
+.barreAction > * {
+  flex: 1;
+}
+
+@media (min-width: 720px) {
+  .barreAction {
+    flex: 0 0 auto;
+  }
+}
+
+.ligne {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px solid var(--bp-line);
+}
+
+.ligneInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.ligneNom {
+  font-weight: 700;
+}
+
+.ligneDetail {
+  color: var(--bp-ink-2);
+  font-size: 14px;
+}
+
+.epuise {
+  color: var(--bp-ink-2);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--bp-surface);
+}
+
+.quantite {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pas {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--bp-radius-s);
+  border: 1px solid var(--bp-line-strong);
+  background: var(--bp-white);
+  color: var(--bp-ink);
+  cursor: pointer;
+}
+
+.pasPlus {
+  border-color: transparent;
+  background: var(--bp-accent);
+  color: var(--bp-white);
+}
+
+.pas:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.valeur {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 17px;
+}
+
+.recap {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 15px;
+}
+
+.recapLigne {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.recapLigne dd {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.recapTotal {
+  padding-top: 12px;
+  border-top: 1px solid var(--bp-line);
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.passe {
+  background: var(--bp-white);
+  border-radius: var(--bp-radius-xl);
+  border: 1px solid var(--bp-line);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.passeHaut {
+  padding: 20px 22px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.passeEntete {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.categorie {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--bp-accent-soft);
+  color: var(--bp-accent-ink);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.statut {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.statutValide {
+  color: var(--bp-success);
+}
+
+.statutInactif {
+  color: var(--bp-ink-2);
+}
+
+.passeTitre {
+  font-size: 24px;
+}
+
+.passeSous {
+  color: var(--bp-ink-2);
+  font-size: 15px;
+}
+
+/* Découpe du billet : deux demi-cercles et un pointillé. */
+.decoupe {
+  position: relative;
+  height: 24px;
+}
+
+.decoupe::before,
+.decoupe::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--fond-decoupe, var(--bp-surface));
+  border: 1px solid var(--bp-line);
+}
+
+.decoupe::before {
+  left: -13px;
+}
+
+.decoupe::after {
+  right: -13px;
+}
+
+.pointilles {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  top: 11px;
+  border-top: 2px dashed var(--bp-line);
+}
+
+.passeBas {
+  padding: 8px 22px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.qr {
+  width: min(100%, 240px);
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.code {
+  font-family: var(--bp-font-display);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 0.08em;
+}
+
+.consigne {
+  color: var(--bp-ink-2);
+  font-size: 14px;
+}
