@@ -52,6 +52,21 @@ export function formatDateLongue(valeur: string | Date): string {
   return DATE_LONGUE.format(enDate(valeur));
 }
 
+/**
+ * Valeur d'un <input type="datetime-local"> (« 2026-11-14T21:00 »), lue comme l'heure
+ * DE DAKAR (UTC+0 toute l'année), quel que soit le fuseau de l'ordinateur de
+ * l'organisateur -> Instant ISO envoyé au backend (« 2026-11-14T21:00:00Z »).
+ * Renvoie null pour une saisie incomplète ou invalide.
+ */
+export function heureDakarVersInstant(valeurLocale: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(valeurLocale);
+  if (!m) return null;
+  const instant = `${valeurLocale}:00Z`;
+  const date = new Date(instant);
+  // Rejette les dates impossibles (31 février...) que Date corrigerait en silence.
+  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 16) !== valeurLocale ? null : instant;
+}
+
 /** 582 -> « 09:42 » ; jamais négatif. */
 export function formatCompteARebours(secondes: number): string {
   const s = Math.max(0, Math.floor(secondes));

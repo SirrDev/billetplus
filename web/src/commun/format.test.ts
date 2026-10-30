@@ -6,6 +6,7 @@ import {
   formatFcfa,
   formatHeure,
   formatMobile,
+  heureDakarVersInstant,
   versE164,
 } from './format';
 
@@ -29,6 +30,13 @@ describe('dates', () => {
     // 21:00 UTC = 21 h 00 à Dakar (UTC+0 toute l'année).
     expect(formatHeure('2026-11-14T21:00:00Z')).toBe('21 h 00');
     expect(espaces(formatDateCourte('2026-11-14T21:00:00Z'))).toBe('sam. 14 nov. · 21 h 00');
+  });
+
+  it("lit la saisie de l'organisateur comme l'heure de Dakar", () => {
+    expect(heureDakarVersInstant('2026-11-14T21:00')).toBe('2026-11-14T21:00:00Z');
+    expect(heureDakarVersInstant('2026-02-31T10:00')).toBeNull();
+    expect(heureDakarVersInstant('2026-11-14')).toBeNull();
+    expect(heureDakarVersInstant('')).toBeNull();
   });
 
   it('formate le compte à rebours sans jamais passer sous zéro', () => {

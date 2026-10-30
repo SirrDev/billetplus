@@ -84,6 +84,86 @@ export function ChampTelephone({
   );
 }
 
+/**
+ * Champ de saisie avec libellé visible, aide et erreur reliées (aria-describedby).
+ * `maxLength` doit reprendre le @Size(max) du DTO backend : sinon PostgreSQL refuse et
+ * l'API répond 500 au lieu de 400.
+ */
+export function ChampTexte({
+  libelle,
+  valeur,
+  onChange,
+  type = 'text',
+  multiligne,
+  aide,
+  erreur,
+  requis,
+  maxLength,
+  minLength,
+  autoComplete,
+  min,
+  inputMode,
+}: {
+  libelle: string;
+  valeur: string;
+  onChange: (valeur: string) => void;
+  type?: 'text' | 'email' | 'password' | 'number' | 'datetime-local';
+  multiligne?: boolean;
+  aide?: string;
+  erreur?: string;
+  requis?: boolean;
+  maxLength?: number;
+  minLength?: number;
+  autoComplete?: string;
+  min?: string;
+  inputMode?: 'numeric' | 'text' | 'email';
+}) {
+  const id = useId();
+  const decrit = [aide && `${id}-aide`, erreur && `${id}-erreur`].filter(Boolean).join(' ') || undefined;
+  const commun = {
+    id,
+    className: s.input,
+    value: valeur,
+    required: requis,
+    maxLength,
+    minLength,
+    'aria-invalid': erreur ? true : undefined,
+    'aria-describedby': decrit,
+  } as const;
+  return (
+    <div className={s.champ}>
+      <label htmlFor={id} className={s.libelle}>
+        {libelle}
+        {!requis && <span className={s.facultatif}> (facultatif)</span>}
+      </label>
+      <div className={[s.saisie, multiligne && s.saisieMultiligne, erreur && s.saisieInvalide].filter(Boolean).join(' ')}>
+        {multiligne ? (
+          <textarea {...commun} rows={4} onChange={(e) => onChange(e.target.value)} />
+        ) : (
+          <input
+            {...commun}
+            type={type}
+            min={min}
+            inputMode={inputMode}
+            autoComplete={autoComplete}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        )}
+      </div>
+      {aide && (
+        <p id={`${id}-aide`} className={s.aide}>
+          {aide}
+        </p>
+      )}
+      {erreur && (
+        <p id={`${id}-erreur`} className={s.erreur} role="alert">
+          {erreur}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export interface OptionCarte<V extends string> {
   valeur: V;
   titre: string;

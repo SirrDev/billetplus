@@ -25,9 +25,27 @@ module.exports = {
     plugins: ['react-refresh'],
     rules: {
         'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
-        'no-restricted-imports': ['error', { patterns: [isolerEspace('acheteur')] }],
+        'no-restricted-imports': ['error', { patterns: [isolerEspace('acheteur'), isolerEspace('organisateur')] }],
     },
     overrides: [
+        {
+            // Sens des dépendances : les espaces utilisent ui/ et commun/, jamais l'inverse.
+            files: ['src/ui/**', 'src/commun/**'],
+            excludedFiles: ['**/*.test.ts', '**/*.test.tsx'],
+            rules: {
+                'no-restricted-imports': [
+                    'error',
+                    {
+                        patterns: [
+                            {
+                                group: ['@/espaces/*', '**/espaces/*'],
+                                message: 'src/ui et src/commun ne dépendent d’aucun espace : déplacez le code partagé ici.',
+                            },
+                        ],
+                    },
+                ],
+            },
+        },
         {
             // Les tests importent librement ce qu'ils testent.
             files: ['**/*.test.ts', '**/*.test.tsx'],

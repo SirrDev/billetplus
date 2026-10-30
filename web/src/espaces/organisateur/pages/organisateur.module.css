@@ -1,0 +1,140 @@
+.pile {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.surtitre {
+  color: var(--bp-ink-2);
+  font-size: 14px;
+}
+
+.titrePage {
+  font-size: 30px;
+}
+
+@media (min-width: 720px) {
+  .titrePage {
+    font-size: 36px;
+  }
+}
+
+.titreSection {
+  font-size: 22px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Deux champs côte à côte dès la tablette (dates, prix et quota). */
+.paire {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+@media (min-width: 720px) {
+  .paire {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.texte {
+  color: var(--bp-ink-2);
+}
+
+.lienDiscret {
+  color: var(--bp-accent-text);
+  font-weight: 600;
+}
+
+/* Liste « Mes événements » : une ligne par événement, cliquable en entier. */
+.liste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ligne {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: var(--bp-radius-l);
+  background: var(--bp-white);
+  color: var(--bp-ink);
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+
+.ligne:hover {
+  border-color: var(--bp-line-strong);
+  color: var(--bp-ink);
+}
+
+.vignette {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--bp-radius-m);
+  overflow: hidden;
+}
+
+.ligneCorps {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ligneTitre {
+  font-weight: 700;
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.ligneDetail {
+  color: var(--bp-ink-2);
+  font-size: 14px;
+}
+
+/* Écran d'un événement : contenu principal + colonne d'actions dès l'ordinateur. */
+.deuxColonnes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .deuxColonnes {
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  }
+}
+
+.connexion {
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+}

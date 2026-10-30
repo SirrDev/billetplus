@@ -54,6 +54,13 @@
   letter-spacing: -0.02em;
 }
 
+.actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .principal {
   flex: 1;
   width: 100%;

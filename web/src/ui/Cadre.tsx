@@ -13,6 +13,10 @@ interface CadreProps {
   /** Fond gris des écrans à cartes blanches. */
   fondGris?: boolean;
   liens?: ReadonlyArray<LienNav>;
+  /** Accueil de l'espace (cible du logo) : « / » pour l'acheteur, « /organisateur »... */
+  accueil?: string;
+  /** Actions de l'en-tête, à droite (déconnexion de l'organisateur). */
+  actions?: ReactNode;
 }
 
 /**
@@ -20,7 +24,7 @@ interface CadreProps {
  * La navigation est le même <nav> à toutes les tailles ; seul le CSS la déplace
  * (barre basse sur mobile, en-tête dès 720 px) : même ordre de tabulation partout.
  */
-export function Cadre({ children, etroit, sansNav, fondGris, liens = navAcheteur }: CadreProps) {
+export function Cadre({ children, etroit, sansNav, fondGris, liens = navAcheteur, accueil = '/', actions }: CadreProps) {
   const style = {
     '--nb-liens': liens.length,
     '--fond': fondGris ? 'var(--bp-surface)' : undefined,
@@ -32,7 +36,7 @@ export function Cadre({ children, etroit, sansNav, fondGris, liens = navAcheteur
       </a>
       <header className={s.entete}>
         <div className={s.enteteInterieur}>
-          <Link to="/" className={s.logo} aria-label="Billet+, accueil">
+          <Link to={accueil} className={s.logo} aria-label="Billet+, accueil">
             <span className={s.logoMarque} aria-hidden="true">
               B+
             </span>
@@ -50,6 +54,7 @@ export function Cadre({ children, etroit, sansNav, fondGris, liens = navAcheteur
               ))}
             </nav>
           )}
+          {actions && <div className={s.actions}>{actions}</div>}
         </div>
       </header>
       <main id="contenu" tabIndex={-1} className={[s.principal, etroit && s.etroit].filter(Boolean).join(' ')}>

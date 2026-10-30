@@ -16,7 +16,16 @@ export {
 export { Bouton, BoutonLien } from './Bouton';
 export { Cadre } from './Cadre';
 export { CarteEvenement, EvenementALaUne, GrilleEvenements, type ResumeEvenement } from './CarteEvenement';
-export { ChampRecherche, ChampTelephone, ChoixCartes, type OptionCarte } from './Formulaire';
+export { ChampRecherche, ChampTelephone, ChampTexte, ChoixCartes, type OptionCarte } from './Formulaire';
 export { Icone, type NomIcone } from './Icone';
-export { codeBillet, motifDe, navAcheteur, useCompteARebours, type LienNav, type Motif } from './outils';
+export {
+  codeBillet,
+  motifDe,
+  navAcheteur,
+  navOrganisateur,
+  useCompteARebours,
+  type LienNav,
+  type Motif,
+} from './outils';
+export { Indicateur, Indicateurs, Pastille, Tableau, type ColonneTableau, type TonPastille } from './Pilotage';
 export { Avis, Chargement, EtatVide } from './Retour';

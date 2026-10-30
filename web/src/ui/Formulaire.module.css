@@ -40,6 +40,23 @@
   border-color: var(--bp-danger);
 }
 
+.saisieMultiligne {
+  align-items: stretch;
+}
+
+.saisieMultiligne textarea {
+  height: auto;
+  min-height: 112px;
+  padding: 12px 14px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.facultatif {
+  color: var(--bp-ink-2);
+  font-weight: 500;
+}
+
 .prefixe {
   align-self: stretch;
   display: flex;
