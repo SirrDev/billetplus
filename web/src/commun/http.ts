@@ -1,3 +1,5 @@
+import { effacerJetons, enregistrerJetons, lireJetons, type Jetons } from './session';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '/api';
 
 /**
@@ -14,21 +16,116 @@ export class ApiError extends Error {
   }
 }
 
+export interface OptionsHttp extends RequestInit {
+  /**
+   * Ajoute le jeton d'accès de la session (espace organisateur). Les routes publiques et
+   * celles de l'acheteur (jeton de commande en en-tête) n'en envoient jamais.
+   */
+  authentifie?: boolean;
+}
+
+/** Marge avant l'expiration du jeton d'accès à partir de laquelle on le renouvelle d'avance. */
+const MARGE_EXPIRATION_MS = 30_000;
+
 /**
  * Appel de l'API Billet+. Les en-têtes de l'appelant (jeton de commande...)
  * s'ajoutent à Content-Type. 201/204 sans corps : renvoie undefined.
- * L'authentification de l'espace organisateur s'ajoutera ici.
+ *
+ * Requête authentifiée :
+ * - jeton d'accès (15 min) expiré ou presque : renouvelé AVANT l'appel. Indispensable, car le
+ *   backend ignore un jeton expiré (JwtAuthenticationFilter) : sur une route publique
+ *   (GET /api/events/{id}), il répond la vue anonyme (404 pour un brouillon), jamais 401 ;
+ * - 401 malgré tout : un seul rafraîchissement, puis la requête est rejouée ;
+ * - rafraîchissement REFUSÉ par le backend : session fermée. Coupure réseau : session
+ *   gardée (le jeton de rafraîchissement reste valable 7 jours), l'erreur remonte.
  */
-export async function http<T>(chemin: string, options: RequestInit = {}): Promise<T> {
-  const reponse = await fetch(`${API_BASE_URL}${chemin}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-  });
+export async function http<T>(chemin: string, options: OptionsHttp = {}): Promise<T> {
+  const { authentifie = false, ...init } = options;
+  let jetons = authentifie ? lireJetons() : null;
+  if (jetons && expireBientot(jetons.accessToken)) {
+    jetons = await jetonsValides(jetons);
+  }
+  let reponse = await appeler(chemin, init, jetons?.accessToken);
+
+  if (reponse.status === 401 && jetons) {
+    const nouveaux = await jetonsValides(jetons);
+    if (nouveaux) reponse = await appeler(chemin, init, nouveaux.accessToken);
+  }
+
   if (!reponse.ok) {
     throw new ApiError(reponse.status, await messageDErreur(reponse));
   }
   const texte = await reponse.text();
   return (texte ? JSON.parse(texte) : undefined) as T;
+}
+
+function appeler(chemin: string, init: RequestInit, accessToken?: string): Promise<Response> {
+  return fetch(`${API_BASE_URL}${chemin}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...init.headers,
+    },
+  });
+}
+
+/**
+ * Échéance (champ « exp » du JWT) lue sans vérifier la signature : elle ne sert qu'à
+ * décider QUAND renouveler, le backend reste seul juge de la validité. Illisible : on
+ * laisse partir la requête (le 401 éventuel déclenchera le rafraîchissement).
+ */
+function expireBientot(accessToken: string): boolean {
+  try {
+    const charge = accessToken.split('.')[1];
+    if (!charge) return false;
+    const json = atob(charge.replace(/-/g, '+').replace(/_/g, '/'));
+    const exp = (JSON.parse(json) as { exp?: unknown }).exp;
+    return typeof exp === 'number' && exp * 1000 - Date.now() < MARGE_EXPIRATION_MS;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Jetons utilisables après un échec ou une expiration de `utilises`. Si une autre requête
+ * a déjà renouvelé la session entre-temps, on reprend ses jetons sans nouvel appel : un
+ * deuxième /auth/refresh casserait une future rotation avec détection de réutilisation.
+ * null : session fermée (refus du backend).
+ */
+async function jetonsValides(utilises: Jetons): Promise<Jetons | null> {
+  const actuels = lireJetons();
+  if (!actuels) return null;
+  if (actuels.accessToken !== utilises.accessToken) return actuels;
+  return rafraichir(actuels);
+}
+
+/** Un seul rafraîchissement à la fois, partagé par les requêtes parties ensemble. */
+let rafraichissementEnCours: Promise<Jetons | null> | null = null;
+
+function rafraichir(jetons: Jetons): Promise<Jetons | null> {
+  rafraichissementEnCours ??= fetch(`${API_BASE_URL}/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken: jetons.refreshToken }),
+  })
+    .then(async (r) => {
+      if (!r.ok) {
+        // Refus du backend (jeton de rafraîchissement expiré ou invalide) : fin de session.
+        // 5xx : panne passagère, on garde la session et l'erreur remonte.
+        if (r.status < 500) effacerJetons();
+        return null;
+      }
+      const corps = (await r.json()) as Jetons;
+      const session = { accessToken: corps.accessToken, refreshToken: corps.refreshToken };
+      enregistrerJetons(session);
+      return session;
+    })
+    // Coupure réseau : rejetée telle quelle, sans toucher à la session.
+    .finally(() => {
+      rafraichissementEnCours = null;
+    });
+  return rafraichissementEnCours;
 }
 
 async function messageDErreur(reponse: Response): Promise<string> {
