@@ -93,6 +93,7 @@ billetplus:
       - { nom: creation-commande,  methode: POST, chemin: /api/orders,             cle: IP,     limite: 20,  fenetre: 1m }
       - { nom: lecture-commande,   methode: GET,  chemin: /api/orders/*,           cle: IP,     limite: 120, fenetre: 1m }
       - { nom: ouverture-paiement, methode: POST, chemin: /api/orders/*/paiement,  cle: IP,     limite: 20,  fenetre: 1m }
+      - { nom: lecture-billets,    methode: GET,  chemin: /api/orders/*/billets,   cle: IP,     limite: 60,  fenetre: 1m }
       - { nom: connexion,          methode: POST, chemin: /api/auth/login,         cle: IP,     limite: 10,  fenetre: 1m }
       - { nom: inscription,        methode: POST, chemin: /api/auth/register,      cle: IP,     limite: 5,   fenetre: 10m }
       - { nom: rafraichissement,   methode: POST, chemin: /api/auth/refresh,       cle: IP,     limite: 30,  fenetre: 1m }

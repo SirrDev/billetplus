@@ -42,6 +42,13 @@ class JpaTicketRepositoryAdapter implements TicketRepository {
             .toList();
     }
 
+    @Override
+    public List<Ticket> findByOrderId(UUID orderId) {
+        return springRepo.findByOrderId(orderId).stream()
+            .map(TicketMapper::versDomaine)
+            .toList();
+    }
+
     /**
      * MANDATORY, pour la même raison que {@link JpaTicketCategoryRepositoryAdapter#save} :
      * hors transaction de l'appelant, deux scans concurrents du même billet

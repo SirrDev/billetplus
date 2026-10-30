@@ -14,4 +14,7 @@ interface SpringDataTicketRepository extends JpaRepository<TicketJpaEntity, UUID
 
     /** Servie par l'index idx_tickets_event_id (V4). */
     List<TicketJpaEntity> findByEventIdAndStatus(UUID eventId, TicketStatus status);
+
+    /** Servie par idx_tickets_order_id_category_id (V4), préfixe order_id. */
+    List<TicketJpaEntity> findByOrderId(UUID orderId);
 }

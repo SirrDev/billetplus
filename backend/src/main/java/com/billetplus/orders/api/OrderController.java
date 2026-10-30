@@ -1,10 +1,12 @@
 package com.billetplus.orders.api;
 
+import com.billetplus.orders.api.dto.BilletDto;
 import com.billetplus.orders.api.dto.CommandeCreeeResponse;
 import com.billetplus.orders.api.dto.CommandeDto;
 import com.billetplus.orders.api.dto.CreateOrderRequest;
 import com.billetplus.orders.api.dto.LienPaiementDto;
 import com.billetplus.orders.api.dto.OuvrirPaiementRequest;
+import com.billetplus.orders.application.usecase.ConsulterBilletsUseCase;
 import com.billetplus.orders.application.usecase.ConsulterCommandeUseCase;
 import com.billetplus.orders.application.usecase.CreateOrderUseCase;
 import com.billetplus.orders.application.usecase.OuvrirPaiementUseCase;
@@ -15,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -34,12 +37,14 @@ public class OrderController {
     private final CreateOrderUseCase createOrder;
     private final ConsulterCommandeUseCase consulterCommande;
     private final OuvrirPaiementUseCase ouvrirPaiement;
+    private final ConsulterBilletsUseCase consulterBillets;
 
     public OrderController(CreateOrderUseCase createOrder, ConsulterCommandeUseCase consulterCommande,
-                           OuvrirPaiementUseCase ouvrirPaiement) {
+                           OuvrirPaiementUseCase ouvrirPaiement, ConsulterBilletsUseCase consulterBillets) {
         this.createOrder = createOrder;
         this.consulterCommande = consulterCommande;
         this.ouvrirPaiement = ouvrirPaiement;
+        this.consulterBillets = consulterBillets;
     }
 
     @PostMapping
@@ -60,6 +65,18 @@ public class OrderController {
         return ResponseEntity.ok()
             .cacheControl(CacheControl.noStore())
             .body(CommandeDto.from(consulterCommande.execute(id, jeton)));
+    }
+
+    /**
+     * Billets d'une commande payée, avec leur QR (jeton porteur) : 404 sans le bon
+     * jeton, 409 tant que la commande n'est pas payée (la PWA réessaie).
+     */
+    @GetMapping("/{id}/billets")
+    public ResponseEntity<List<BilletDto>> billets(@PathVariable UUID id,
+                                                   @RequestHeader(name = EN_TETE_JETON, required = false) String jeton) {
+        return ResponseEntity.ok()
+            .cacheControl(CacheControl.noStore())
+            .body(consulterBillets.execute(id, jeton).stream().map(BilletDto::from).toList());
     }
 
     /**
