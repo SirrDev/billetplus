@@ -46,6 +46,7 @@ public class Order {
     private OrderStatus status;
     private Instant payeeLe;
     private MotifSansBillet motifSansBillet;
+    private Paiement paiement;
 
     /**
      * Le résultat d'une création : la commande, et son jeton d'accès EN CLAIR, à
@@ -95,7 +96,7 @@ public class Order {
         JetonAcces jeton = JetonAcces.generer();
         Order commande = new Order(UUID.randomUUID(), eventId, telephone, List.copyOf(lignes), jeton.empreinte(),
             creeLe, creeLe.plus(dureeValidite).truncatedTo(ChronoUnit.MICROS),
-            OrderStatus.EN_ATTENTE_PAIEMENT, null, null);
+            OrderStatus.EN_ATTENTE_PAIEMENT, null, null, null);
         return new CommandeCreee(commande, jeton);
     }
 
@@ -105,14 +106,14 @@ public class Order {
      */
     public static Order reconstituer(UUID id, UUID eventId, NumeroTelephone telephone, List<OrderLine> lignes,
                                      String empreinteJeton, Instant creeLe, Instant expireLe, OrderStatus status,
-                                     Instant payeeLe, MotifSansBillet motifSansBillet) {
+                                     Instant payeeLe, MotifSansBillet motifSansBillet, Paiement paiement) {
         return new Order(id, eventId, telephone, List.copyOf(lignes), empreinteJeton, creeLe, expireLe,
-            status, payeeLe, motifSansBillet);
+            status, payeeLe, motifSansBillet, paiement);
     }
 
     private Order(UUID id, UUID eventId, NumeroTelephone telephone, List<OrderLine> lignes, String empreinteJeton,
                   Instant creeLe, Instant expireLe, OrderStatus status, Instant payeeLe,
-                  MotifSansBillet motifSansBillet) {
+                  MotifSansBillet motifSansBillet, Paiement paiement) {
         this.id = id;
         this.eventId = eventId;
         this.telephone = telephone;
@@ -123,6 +124,7 @@ public class Order {
         this.status = status;
         this.payeeLe = payeeLe;
         this.motifSansBillet = motifSansBillet;
+        this.paiement = paiement;
     }
 
     /** Somme des lignes, recalculée à chaque appel : aucun total stocké ne peut diverger des lignes. */
@@ -133,6 +135,45 @@ public class Order {
     /** Vrai si le délai de paiement est écoulé : la commande ne peut plus être payée à temps. */
     public boolean delaiDepasse(Instant maintenant) {
         return !maintenant.isBefore(expireLe);
+    }
+
+    /**
+     * Enregistre le paiement ouvert chez la passerelle (ADR 0007). Une seule fois :
+     * deux paiements ouverts pour une commande pourraient tous deux aboutir, et le
+     * second serait encaissé sans billet.
+     *
+     * Il doit rester au moins {@code margeMinimale} avant l'expiration : un paiement
+     * ouvert dans les dernières secondes aboutirait presque sûrement après
+     * l'expiration des places (payé sans billet). L'appelant vérifie cette marge
+     * AVANT d'appeler la passerelle ({@link #verifierPeutOuvrirUnPaiement}), et le
+     * domaine la revérifie ici, à l'heure de l'enregistrement.
+     *
+     * @throws TransitionCommandeInterditeException si la commande n'attend plus de paiement, si un
+     *                                              paiement est déjà ouvert, ou si le délai restant est trop court
+     */
+    public void ouvrirPaiement(Paiement nouveau, Duration margeMinimale) {
+        if (nouveau == null) {
+            throw new IllegalArgumentException("Le paiement est obligatoire");
+        }
+        verifierPeutOuvrirUnPaiement(nouveau.ouvertLe(), margeMinimale);
+        paiement = nouveau;
+    }
+
+    /**
+     * Un paiement peut-il être ouvert à {@code maintenant} ? Commande en attente,
+     * sans paiement, et au moins {@code margeMinimale} avant l'expiration.
+     *
+     * @throws TransitionCommandeInterditeException sinon, avec la raison
+     */
+    public void verifierPeutOuvrirUnPaiement(Instant maintenant, Duration margeMinimale) {
+        if (paiement != null) {
+            throw new TransitionCommandeInterditeException("Un paiement est déjà ouvert pour cette commande");
+        }
+        exigerStatut(OrderStatus.EN_ATTENTE_PAIEMENT, "Cette commande n'attend plus de paiement");
+        if (delaiDepasse(maintenant.plus(margeMinimale))) {
+            throw new TransitionCommandeInterditeException(
+                "Le délai de paiement de cette commande est presque écoulé : passez une nouvelle commande");
+        }
     }
 
     /**
@@ -251,5 +292,10 @@ public class Order {
 
     public MotifSansBillet getMotifSansBillet() {
         return motifSansBillet;
+    }
+
+    /** Le paiement ouvert chez la passerelle, ou null s'il n'y en a pas encore. */
+    public Paiement getPaiement() {
+        return paiement;
     }
 }

@@ -69,6 +69,19 @@ billetplus:
   commande:
     delai-paiement: 4m
     max-en-attente-par-telephone: 3
+  # Passerelle de paiement UnitechPay (ADR 0007). La clé d'API est aussi le secret
+  # HMAC des webhooks : jamais de valeur ici, uniquement UNITECHPAY_API_KEY. Vide
+  # (dev, CI), toute ouverture de paiement répond 503.
+  paiement:
+    # Pas de paiement ouvert à moins de 60 s de l'expiration de la commande : il
+    # aboutirait presque sûrement après l'expiration des places.
+    marge-minimale: 60s
+    unitechpay:
+      url-api: https://api.unitech.sn
+      cle-api: ${UNITECHPAY_API_KEY:}
+      # Pages de la PWA après le paiement ; {orderId} est remplacé. Vides : non envoyées.
+      url-retour-succes: ${UNITECHPAY_URL_RETOUR_SUCCES:}
+      url-retour-annulation: ${UNITECHPAY_URL_RETOUR_ANNULATION:}
   # Limitation de débit (shared.limitation). Fenêtres fixes ; clé IP ou COMPTE
   # (compte authentifié, à défaut l'IP). Au-delà : 429 avec Retry-After.
   # Attention au NAT des opérateurs mobiles : beaucoup d'acheteurs peuvent partager
@@ -79,6 +92,7 @@ billetplus:
     regles:
       - { nom: creation-commande,  methode: POST, chemin: /api/orders,             cle: IP,     limite: 20,  fenetre: 1m }
       - { nom: lecture-commande,   methode: GET,  chemin: /api/orders/*,           cle: IP,     limite: 120, fenetre: 1m }
+      - { nom: ouverture-paiement, methode: POST, chemin: /api/orders/*/paiement,  cle: IP,     limite: 20,  fenetre: 1m }
       - { nom: connexion,          methode: POST, chemin: /api/auth/login,         cle: IP,     limite: 10,  fenetre: 1m }
       - { nom: inscription,        methode: POST, chemin: /api/auth/register,      cle: IP,     limite: 5,   fenetre: 10m }
       - { nom: rafraichissement,   methode: POST, chemin: /api/auth/refresh,       cle: IP,     limite: 30,  fenetre: 1m }
@@ -163,6 +177,9 @@ billetplus:
     qr-signing:
       private-key-path: ${QR_PRIVATE_KEY_PATH}
       public-key-path: ${QR_PUBLIC_KEY_PATH}
+  paiement:
+    unitechpay:
+      cle-api: ${UNITECHPAY_API_KEY}
 
 # Pas de documentation d'API publique en production.
 springdoc:

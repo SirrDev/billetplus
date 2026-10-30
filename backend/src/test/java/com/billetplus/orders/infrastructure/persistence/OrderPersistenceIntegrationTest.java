@@ -1,10 +1,12 @@
 package com.billetplus.orders.infrastructure.persistence;
 
 import com.billetplus.orders.domain.MotifSansBillet;
+import com.billetplus.orders.domain.MoyenPaiement;
 import com.billetplus.orders.domain.NumeroTelephone;
 import com.billetplus.orders.domain.Order;
 import com.billetplus.orders.domain.OrderLine;
 import com.billetplus.orders.domain.OrderStatus;
+import com.billetplus.orders.domain.Paiement;
 import com.billetplus.shared.Money;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -159,6 +161,47 @@ class OrderPersistenceIntegrationTest {
         })).isInstanceOf(OptimisticLockingFailureException.class);
 
         assertThat(commandes.findById(commande.getId()).orElseThrow().getStatus()).isEqualTo(OrderStatus.PAYEE);
+    }
+
+    @Test
+    void un_paiement_ouvert_est_persiste_et_sa_reference_est_unique() {
+        Order premiere = nouvelle().commande();
+        Order seconde = nouvelle().commande();
+        enregistrer(premiere);
+        enregistrer(seconde);
+        String reference = "wave_" + UUID.randomUUID();
+
+        enTransaction(() -> {
+            Order chargee = commandes.findById(premiere.getId()).orElseThrow();
+            chargee.ouvrirPaiement(new Paiement(MoyenPaiement.WAVE, reference, 18, "https://pay.wave.com/c/1",
+                MAINTENANT.plusSeconds(5)), Duration.ofSeconds(60));
+            return commandes.save(chargee);
+        });
+        Paiement relu = commandes.findById(premiere.getId()).orElseThrow().getPaiement();
+        assertThat(relu.moyen()).isEqualTo(MoyenPaiement.WAVE);
+        assertThat(relu.reference()).isEqualTo(reference);
+        assertThat(relu.transactionId()).isEqualTo(18);
+        assertThat(relu.url()).isEqualTo("https://pay.wave.com/c/1");
+        assertThat(relu.ouvertLe()).isEqualTo(Instant.parse("2026-11-01T10:00:05.123456789Z").truncatedTo(java.time.temporal.ChronoUnit.MICROS));
+
+        // La même référence sur une autre commande est refusée par la base.
+        assertThatThrownBy(() -> enTransaction(() -> {
+            Order chargee = commandes.findById(seconde.getId()).orElseThrow();
+            chargee.ouvrirPaiement(new Paiement(MoyenPaiement.ORANGE_MONEY, reference, 19, "https://om.example/p",
+                MAINTENANT.plusSeconds(5)), Duration.ofSeconds(60));
+            return commandes.save(chargee);
+        })).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void la_base_refuse_un_paiement_enregistre_a_moitie() {
+        UUID id = UUID.randomUUID();
+        insererCommande(id, "+221771234567", "EN_ATTENTE_PAIEMENT", null, null);
+        assertThatThrownBy(() -> jdbc.update("UPDATE orders SET paiement_reference = 'wave_x' WHERE id = ?", id))
+            .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbc.update("UPDATE orders SET paiement_moyen = 'CARTE', paiement_reference = 'r', "
+                + "paiement_transaction_id = 1, paiement_url = 'https://p', paiement_ouvert_le = now() WHERE id = ?", id))
+            .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test

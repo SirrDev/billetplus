@@ -1,5 +1,6 @@
 package com.billetplus;
 
+import com.billetplus.orders.application.port.PasserellePaiement;
 import com.billetplus.tickets.application.port.QRSigner;
 import com.billetplus.tickets.application.usecase.CancelEventTicketsUseCase;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,7 +45,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * @SpyBean (ceux d'ici, et aucun autre) : Spring réutilise alors un seul contexte
  * pour toutes, au lieu d'en démarrer un par classe (~25 s chacun).
  *
- * Seul le signataire Ed25519 est simulé (clé privée gitignorée, absente en CI).
+ * Seuls le signataire Ed25519 (clé privée gitignorée, absente en CI) et la
+ * passerelle de paiement (UnitechPay, sans environnement de test : ADR 0007)
+ * sont simulés.
  * Sans Docker : conteneurs non démarrés, tests ignorés (disabledWithoutDocker).
  */
 @SpringBootTest
@@ -97,6 +100,8 @@ public abstract class ContexteCompletTestBase {
 
     @MockBean
     protected QRSigner qrSigner;
+    @MockBean
+    protected PasserellePaiement passerellePaiement;
     /** Espion sur le vrai cas d'usage : permet de simuler une panne pendant l'annulation. */
     @SpyBean
     protected CancelEventTicketsUseCase cancelEventTickets;

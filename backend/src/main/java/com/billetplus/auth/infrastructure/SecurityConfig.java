@@ -51,6 +51,7 @@ public class SecurityConfig {
                         // jeton ne demandent aucun compte. Le jeton est contrôlé par le cas d'usage.
                         .requestMatchers(HttpMethod.POST, "/api/orders").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/orders/*").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/orders/*/paiement").permitAll()
                         .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         // Tomcat redirige vers /error pour produire les réponses 4xx/5xx. Sans cette règle,

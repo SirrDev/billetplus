@@ -1,6 +1,7 @@
 package com.billetplus.orders.infrastructure.persistence;
 
 import com.billetplus.orders.domain.MotifSansBillet;
+import com.billetplus.orders.domain.MoyenPaiement;
 import com.billetplus.orders.domain.OrderStatus;
 import jakarta.persistence.*;
 
@@ -49,6 +50,20 @@ class OrderJpaEntity {
 
     @Enumerated(EnumType.STRING)
     private MotifSansBillet motifSansBillet;
+
+    /** Paiement ouvert chez la passerelle (V9) : les cinq colonnes sont nulles ou toutes renseignées. */
+    @Enumerated(EnumType.STRING)
+    private MoyenPaiement paiementMoyen;
+
+    @Column(length = 100)
+    private String paiementReference;
+
+    private Long paiementTransactionId;
+
+    @Column(columnDefinition = "TEXT")
+    private String paiementUrl;
+
+    private Instant paiementOuvertLe;
 
     @ElementCollection
     @CollectionTable(name = "order_lines", joinColumns = @JoinColumn(name = "order_id"))
@@ -127,6 +142,34 @@ class OrderJpaEntity {
 
     void setMotifSansBillet(MotifSansBillet motifSansBillet) {
         this.motifSansBillet = motifSansBillet;
+    }
+
+    MoyenPaiement getPaiementMoyen() {
+        return paiementMoyen;
+    }
+
+    String getPaiementReference() {
+        return paiementReference;
+    }
+
+    Long getPaiementTransactionId() {
+        return paiementTransactionId;
+    }
+
+    String getPaiementUrl() {
+        return paiementUrl;
+    }
+
+    Instant getPaiementOuvertLe() {
+        return paiementOuvertLe;
+    }
+
+    void setPaiement(MoyenPaiement moyen, String reference, Long transactionId, String url, Instant ouvertLe) {
+        this.paiementMoyen = moyen;
+        this.paiementReference = reference;
+        this.paiementTransactionId = transactionId;
+        this.paiementUrl = url;
+        this.paiementOuvertLe = ouvertLe;
     }
 
     List<OrderLineEmbeddable> getLignes() {

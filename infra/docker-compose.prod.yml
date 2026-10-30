@@ -65,6 +65,10 @@ services:
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      # Passerelle de paiement (ADR 0007) : la clé signe aussi les webhooks.
+      UNITECHPAY_API_KEY: ${UNITECHPAY_API_KEY}
+      UNITECHPAY_URL_RETOUR_SUCCES: ${UNITECHPAY_URL_RETOUR_SUCCES:-}
+      UNITECHPAY_URL_RETOUR_ANNULATION: ${UNITECHPAY_URL_RETOUR_ANNULATION:-}
       QR_PRIVATE_KEY_PATH: file:/run/secrets/ed25519_private.pem
       QR_PUBLIC_KEY_PATH: file:/run/secrets/ed25519_public.pem
       BILLETPLUS_ADMIN_EMAIL: ${BILLETPLUS_ADMIN_EMAIL:-}

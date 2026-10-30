@@ -30,7 +30,8 @@ import java.util.NoSuchElementException;
  * Correspondances :
  * BadCredentials → 401, IllegalArgument → 400, NoSuchElement → 404,
  * BusinessConflict → 409, OptimisticLockingFailure → 409,
- * DataAccessResourceFailure → 503, TropDeRequetes → 429 (avec Retry-After),
+ * DataAccessResourceFailure → 503, ServiceExterneIndisponible → 503,
+ * TropDeRequetes → 429 (avec Retry-After),
  * AccessDenied → 401 (anonyme) ou 403 (connecté), MethodArgumentNotValid → 400.
  *
  * Une IllegalStateException ordinaire n'a volontairement PAS de handler :
@@ -105,6 +106,14 @@ public class GlobalExceptionHandler {
         return anonyme
                 ? buildResponse(HttpStatus.UNAUTHORIZED, "Authentification requise")
                 : buildResponse(HttpStatus.FORBIDDEN, "Accès refusé");
+    }
+
+    /** Service externe en panne : cause détaillée dans le journal, message générique au client. */
+    @ExceptionHandler(ServiceExterneIndisponibleException.class)
+    public ResponseEntity<Map<String, Object>> handleServiceExterne(ServiceExterneIndisponibleException e) {
+        LOG.warn("Service externe indisponible : {}", e.getMessage(), e);
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE,
+                "Service de paiement momentanément indisponible, réessayez dans quelques instants");
     }
 
     /** Limite de débit atteinte (shared.limitation) : Retry-After indique quand réessayer. */
