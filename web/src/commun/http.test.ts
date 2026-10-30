@@ -122,6 +122,20 @@ describe('requêtes authentifiées', () => {
   });
 });
 
+describe('délai d’expiration', () => {
+  it('abandonne une requête sans réponse, avec une erreur qui n’est pas une ApiError', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      (_u, init) =>
+        new Promise((_ok, ko) => {
+          init?.signal?.addEventListener('abort', () => ko(init.signal?.reason));
+        }),
+    );
+    const erreur = await http('/events/e1/scans', { method: 'POST', delaiMs: 30 }).catch((e: unknown) => e);
+    expect(erreur).not.toBeInstanceOf(ApiError);
+    expect((erreur as DOMException).name).toBe('TimeoutError');
+  });
+});
+
 describe('messageErreur', () => {
   it('traduit les cas que l acheteur doit comprendre', () => {
     expect(messageErreur(new ApiError(404, 'Commande introuvable'))).toBe('Commande introuvable');

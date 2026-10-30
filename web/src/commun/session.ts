@@ -40,8 +40,33 @@ export function enregistrerJetons(jetons: Jetons): void {
 export function effacerJetons(): void {
   try {
     localStorage.removeItem(CLE);
+    localStorage.removeItem(CLE_PROFIL);
   } finally {
     ecouteurs.forEach((f) => f());
+  }
+}
+
+/*
+ * Profil de la dernière session (id, e-mail, nom, rôle : rien de secret), pour rouvrir
+ * l'application SANS RÉSEAU (scanner relancé le jour J sans connexion). Il ne donne aucun
+ * droit : le backend reste seul juge à chaque appel. Effacé avec les jetons.
+ */
+const CLE_PROFIL = 'billetplus.profil';
+
+export function enregistrerProfil(profil: unknown): void {
+  try {
+    localStorage.setItem(CLE_PROFIL, JSON.stringify(profil));
+  } catch {
+    // Stockage indisponible : la session marche, seule la réouverture hors ligne est perdue.
+  }
+}
+
+export function lireProfil(): unknown {
+  try {
+    const brut = localStorage.getItem(CLE_PROFIL);
+    return brut ? (JSON.parse(brut) as unknown) : null;
+  } catch {
+    return null;
   }
 }
 

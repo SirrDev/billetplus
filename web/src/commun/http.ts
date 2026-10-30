@@ -22,6 +22,11 @@ export interface OptionsHttp extends RequestInit {
    * celles de l'acheteur (jeton de commande en en-tête) n'en envoient jamais.
    */
   authentifie?: boolean;
+  /**
+   * Abandon après ce délai (ms) : un réseau qui ne répond plus (2G saturée, portail captif)
+   * lève alors une erreur non-ApiError, traitée comme une absence de réseau.
+   */
+  delaiMs?: number;
 }
 
 /** Marge avant l'expiration du jeton d'accès à partir de laquelle on le renouvelle d'avance. */
@@ -40,7 +45,8 @@ const MARGE_EXPIRATION_MS = 30_000;
  *   gardée (le jeton de rafraîchissement reste valable 7 jours), l'erreur remonte.
  */
 export async function http<T>(chemin: string, options: OptionsHttp = {}): Promise<T> {
-  const { authentifie = false, ...init } = options;
+  const { authentifie = false, delaiMs, ...reste } = options;
+  const init: RequestInit = delaiMs && !reste.signal ? { ...reste, signal: AbortSignal.timeout(delaiMs) } : reste;
   let jetons = authentifie ? lireJetons() : null;
   if (jetons && expireBientot(jetons.accessToken)) {
     jetons = await jetonsValides(jetons);
