@@ -23,5 +23,8 @@ public interface TicketRepository {
     /** Billets d'un événement ayant un statut donné (par exemple tous les EMIS, à annuler). */
     List<Ticket> findByEventIdAndStatus(UUID eventId, TicketStatus status);
 
+    /** Billets d'une commande, quel que soit leur statut. */
+    List<Ticket> findByOrderId(UUID orderId);
+
     Ticket save(Ticket ticket);
 }
