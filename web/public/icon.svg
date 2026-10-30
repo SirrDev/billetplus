@@ -1,5 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#5B3DF5"/>
-  <circle cx="380" cy="132" r="64" fill="#FFB020"/>
-  <text x="256" y="330" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="220" fill="#FFFFFF">B+</text>
+  <!-- Même géométrie que scripts/generer-icones.mjs : tracés seulement, aucune police. -->
+  <rect width="512" height="512" rx="112.6" fill="#5B3DF5"/>
+  <circle cx="375.8" cy="136.2" r="50.7" fill="#FFB020"/>
+  <path d="M137.4 163.8V357.4M117.8 183.4H196.1A38.6 38.6 0 0 1 196.1 260.6H117.8M117.8 260.6H205.3A38.6 38.6 0 0 1 205.3 337.8H117.8" fill="none" stroke="#FFFFFF" stroke-width="39.2"/>
+  <path d="M292.9 236.4H403.5V275.6H292.9ZM328.6 200.7H367.8V311.3H328.6Z" fill="#FFFFFF"/>
 </svg>
