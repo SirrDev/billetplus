@@ -37,6 +37,14 @@ function enDate(valeur: string | Date): Date {
   return typeof valeur === 'string' ? new Date(valeur) : valeur;
 }
 
+/**
+ * Majuscule à la première lettre seulement (« mercredi 4 novembre » -> « Mercredi 4 novembre ») :
+ * text-transform: capitalize en mettrait une à chaque mot, ce qui est fautif en français.
+ */
+export function majusculeInitiale(texte: string): string {
+  return texte.charAt(0).toLocaleUpperCase('fr-FR') + texte.slice(1);
+}
+
 /** « 21 h 00 » */
 export function formatHeure(valeur: string | Date): string {
   return HEURE.format(enDate(valeur)).replace(':', ' h ');

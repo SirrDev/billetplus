@@ -34,7 +34,9 @@ export const INTERVALLE_SUIVI_MS = 4000;
 
 export function CommandePage() {
   const { id } = useParams();
-  const erreurInitiale = (useLocation().state as { erreurPaiement?: string } | null)?.erreurPaiement ?? null;
+  // Échec d'ouverture du paiement transmis par l'écran précédent : il ne concerne que la
+  // commande EN ATTENTE (il survit dans l'historique au rechargement, d'où le filtre plus bas).
+  const erreurPaiement = (useLocation().state as { erreurPaiement?: string } | null)?.erreurPaiement ?? null;
 
   const [locale, setLocale] = useState<CommandeLocale | null | undefined>(undefined);
   const [commande, setCommande] = useState<Commande | null>(null);
@@ -42,7 +44,7 @@ export function CommandePage() {
   const [noms, setNoms] = useState<Record<string, string>>({});
   const [horsLigne, setHorsLigne] = useState(false);
   const [introuvable, setIntrouvable] = useState(false);
-  const [erreur, setErreur] = useState<string | null>(erreurInitiale);
+  const [erreur, setErreur] = useState<string | null>(null);
   const [moyen, setMoyen] = useState<MoyenPaiement>('WAVE');
   const [envoi, setEnvoi] = useState(false);
   const [tour, setTour] = useState(0);
@@ -166,9 +168,9 @@ export function CommandePage() {
             <p>Pas de connexion : affichage des billets enregistrés sur cet appareil.</p>
           </Avis>
         )}
-        {erreur && (
+        {(erreur ?? (enAttente ? erreurPaiement : null)) && (
           <Avis ton="danger">
-            <p>{erreur}</p>
+            <p>{erreur ?? erreurPaiement}</p>
           </Avis>
         )}
 
