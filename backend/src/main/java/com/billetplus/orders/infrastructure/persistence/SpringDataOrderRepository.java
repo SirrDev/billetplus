@@ -1,10 +1,12 @@
 package com.billetplus.orders.infrastructure.persistence;
 
 import com.billetplus.orders.domain.OrderStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,4 +24,11 @@ interface SpringDataOrderRepository extends JpaRepository<OrderJpaEntity, UUID> 
     /** Servie par idx_orders_telephone_cree_le (V8), préfixe telephone. */
     long countByTelephoneAndEventIdAndStatusAndExpireLeAfter(String telephone, UUID eventId, OrderStatus status,
                                                              Instant maintenant);
+
+    /** Servie par l'index unique uq_orders_paiement_reference (V9). */
+    @EntityGraph(attributePaths = "lignes")
+    Optional<OrderJpaEntity> findByPaiementReference(String reference);
+
+    @EntityGraph(attributePaths = "lignes")
+    List<OrderJpaEntity> findByStatusOrderByPayeeLeAsc(OrderStatus status, Pageable pageable);
 }

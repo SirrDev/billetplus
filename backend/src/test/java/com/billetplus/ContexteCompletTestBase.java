@@ -96,7 +96,14 @@ public abstract class ContexteCompletTestBase {
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("spring.data.redis.host", REDIS::getHost);
         registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
+        registry.add("billetplus.paiement.unitechpay.cle-api", () -> CLE_UNITECHPAY_DE_TEST);
     }
+
+    /**
+     * Clé fictive : la passerelle est simulée pour ouvrir un paiement, mais les webhooks
+     * sont vérifiés par le vrai code de signature, qui a besoin d'une clé.
+     */
+    protected static final String CLE_UNITECHPAY_DE_TEST = "cle-unitechpay-de-test";
 
     @MockBean
     protected QRSigner qrSigner;

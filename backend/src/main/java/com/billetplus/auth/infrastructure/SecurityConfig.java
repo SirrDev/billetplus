@@ -52,6 +52,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/orders").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/orders/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/orders/*/paiement").permitAll()
+                        // Webhook de la passerelle : authentifié par la signature HMAC du corps (ADR 0007).
+                        .requestMatchers(HttpMethod.POST, "/api/paiements/unitechpay/webhook").permitAll()
                         .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         // Tomcat redirige vers /error pour produire les réponses 4xx/5xx. Sans cette règle,

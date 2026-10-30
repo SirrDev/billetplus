@@ -4,11 +4,13 @@ import com.billetplus.orders.application.port.OrderRepository;
 import com.billetplus.orders.domain.NumeroTelephone;
 import com.billetplus.orders.domain.Order;
 import com.billetplus.orders.domain.OrderStatus;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -61,5 +63,16 @@ class JpaOrderRepositoryAdapter implements OrderRepository {
     public long compterEnAttente(NumeroTelephone telephone, UUID eventId, Instant maintenant) {
         return springRepo.countByTelephoneAndEventIdAndStatusAndExpireLeAfter(
             telephone.valeur(), eventId, OrderStatus.EN_ATTENTE_PAIEMENT, maintenant);
+    }
+
+    @Override
+    public Optional<Order> findByReferencePaiement(String reference) {
+        return springRepo.findByPaiementReference(reference).map(OrderMapper::versDomaine);
+    }
+
+    @Override
+    public List<Order> findPayeesSansBillet(int limite) {
+        return springRepo.findByStatusOrderByPayeeLeAsc(OrderStatus.PAYEE_SANS_BILLET, PageRequest.of(0, limite))
+            .stream().map(OrderMapper::versDomaine).toList();
     }
 }

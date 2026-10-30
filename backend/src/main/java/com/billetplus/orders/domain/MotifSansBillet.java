@@ -7,5 +7,12 @@ public enum MotifSansBillet {
     /** L'événement a été annulé ou n'est plus en vente entre la commande et le paiement. */
     VENTE_FERMEE,
     /** Le quota de la catégorie était épuisé au moment de l'émission (risque résiduel). */
-    PLACES_INDISPONIBLES
+    PLACES_INDISPONIBLES,
+    /** La passerelle signale un montant payé différent de celui de la commande. */
+    MONTANT_INCORRECT,
+    /**
+     * Paiement reçu pour une commande déjà annulée : par exemple un webhook « payé »
+     * arrivé après un « expiré » (l'ordre d'arrivée des webhooks n'est pas garanti).
+     */
+    PAIEMENT_APRES_ANNULATION
 }
