@@ -12,11 +12,14 @@ export default defineConfig({
       includeAssets: ['icon.svg'],
       workbox: {
         // pem : clé PUBLIQUE de vérification des QR, utile au scanner hors ligne (ADR 0004).
-        // Les sous-ensembles vietnamien et cyrillique des polices ne servent pas : hors précache.
+        // Les sous-ensembles vietnamien, cyrillique et grec des polices ne servent pas : hors précache.
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,pem}'],
         globIgnores: ['**/*-vietnamese-*.woff2', '**/*-cyrillic-*.woff2', '**/*-greek-*.woff2'],
         // Jamais de cache sur les commandes et les billets : réponses no-store, jeton en en-tête.
         // Les billets hors ligne viennent d'IndexedDB (espaces/acheteur/commandesLocales.ts).
+        // TODO avant l'espace organisateur : restreindre aux routes PUBLIQUES (/api/events,
+        // /api/events/{id}, /api/events/{id}/categories). /api/events/mine est authentifié et
+        // Workbox ignore l'en-tête Authorization : la réponse d'un organisateur serait servie à un autre.
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/api/events'),
