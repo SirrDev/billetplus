@@ -80,12 +80,12 @@ beforeEach(async () => {
 });
 
 describe('Connexion et choix de l’événement', () => {
-  it('connecte un agent et lui propose les événements publiés', async () => {
+  it('connecte un agent et lui propose les événements auxquels il est affecté', async () => {
     const id = nouvelId();
-    backend({
+    const appels = backend({
       'POST /api/auth/login': () => ({ accessToken: 'a', refreshToken: 'r', tokenType: 'Bearer' }),
       'GET /api/auth/me': () => AGENT,
-      'GET /api/events': () => ({ contenu: [evenement(id)], page: 0, taille: 20, total: 1, pages: 1 }),
+      'GET /api/events/affectes': () => [evenement(id)],
     });
     ouvrir('/scanner');
     expect(await screen.findByRole('heading', { name: "Connexion de l'agent" })).toBeInTheDocument();
@@ -94,6 +94,30 @@ describe('Connexion et choix de l’événement', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
     expect(await screen.findByRole('heading', { name: 'Événement à contrôler' })).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: /Nuit du Mbalax/ })).toHaveAttribute('href', `/scanner/evenements/${id}`);
+    const liste = appels.mock.calls.find(([u]) => String(u) === '/api/events/affectes');
+    expect((liste?.[1]?.headers as Record<string, string>).Authorization).toBe('Bearer a');
+  });
+
+  it('rouvre la dernière liste sans réseau, pour le même compte seulement', async () => {
+    const id = nouvelId();
+    enregistrerJetons({ accessToken: 'a', refreshToken: 'r' });
+    enregistrerProfil(AGENT);
+    backend({ 'GET /api/auth/me': () => AGENT, 'GET /api/events/affectes': () => [evenement(id)] });
+    const premier = ouvrir('/scanner');
+    expect(await screen.findByRole('link', { name: /Nuit du Mbalax/ })).toBeInTheDocument();
+    premier.unmount();
+
+    reseau.coupe = true;
+    ouvrir('/scanner');
+    expect(await screen.findByText(/dernière liste reçue sur cet appareil/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Nuit du Mbalax/ })).toBeInTheDocument();
+  });
+
+  it("dit à l'agent sans affectation de s'adresser à l'organisateur", async () => {
+    enregistrerJetons({ accessToken: 'a', refreshToken: 'r' });
+    backend({ 'GET /api/auth/me': () => ({ ...AGENT, id: 'agent-sans-affectation' }), 'GET /api/events/affectes': () => [] });
+    ouvrir('/scanner');
+    expect(await screen.findByText(/ne vous a affecté à aucun événement/)).toBeInTheDocument();
   });
 
   it("refuse un compte qui ne peut pas contrôler, sans garder ses jetons", async () => {

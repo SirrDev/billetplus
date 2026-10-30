@@ -44,6 +44,10 @@ public class SecurityConfig {
                         // Les règles sont évaluées dans l'ordre, la première qui correspond gagne :
                         // « mine » doit donc précéder la règle publique GET /api/events/** ci-dessous.
                         .requestMatchers(HttpMethod.GET, "/api/events/mine").authenticated()
+                        // Liste d'un agent : jeton exigé ici, en plus du @PreAuthorize AGENT du contrôleur
+                        // (défense en profondeur : sans cette règle, l'anonyme reçoit déjà 401 par
+                        // GlobalExceptionHandler, mais la route ne dépendrait plus que de l'annotation).
+                        .requestMatchers(HttpMethod.GET, "/api/events/affectes").authenticated()
                         // Parcourir les événements/lieux ne requiert pas de compte (acheteur anonyme).
                         // Créer/publier/annuler reste protégé par @PreAuthorize sur les controllers.
                         .requestMatchers(HttpMethod.GET, "/api/events/**", "/api/venues/**").permitAll()

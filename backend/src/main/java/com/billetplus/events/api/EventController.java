@@ -1,9 +1,11 @@
 package com.billetplus.events.api;
 
 import com.billetplus.events.api.dto.CreateEventRequest;
+import com.billetplus.events.api.dto.EvenementPublicDto;
 import com.billetplus.events.api.dto.EventDto;
 import com.billetplus.events.api.dto.PageEvenementsPublicsDto;
 import com.billetplus.events.application.AffectationAgentService;
+import com.billetplus.events.application.EvenementsAControlerService;
 import com.billetplus.events.application.EventService;
 import com.billetplus.events.application.RechercheEvenementsService;
 import com.billetplus.events.domain.Event;
@@ -25,12 +27,27 @@ public class EventController {
     private final EventService eventService;
     private final AffectationAgentService affectationAgentService;
     private final RechercheEvenementsService rechercheEvenementsService;
+    private final EvenementsAControlerService evenementsAControlerService;
 
     public EventController(EventService eventService, AffectationAgentService affectationAgentService,
-                           RechercheEvenementsService rechercheEvenementsService) {
+                           RechercheEvenementsService rechercheEvenementsService,
+                           EvenementsAControlerService evenementsAControlerService) {
         this.eventService = eventService;
         this.affectationAgentService = affectationAgentService;
         this.rechercheEvenementsService = rechercheEvenementsService;
+        this.evenementsAControlerService = evenementsAControlerService;
+    }
+
+    /**
+     * Événements que l'agent du jeton peut contrôler (affecté, publiés, à venir ou en cours).
+     * Vue publique de l'événement (sans organizerId). Doit précéder la règle publique
+     * GET /api/events/** dans SecurityConfig, comme /mine.
+     */
+    @GetMapping("/affectes")
+    @PreAuthorize("hasRole('AGENT')")
+    public ResponseEntity<List<EvenementPublicDto>> affectes(Authentication auth) {
+        UUID agentId = (UUID) auth.getPrincipal();
+        return ResponseEntity.ok(evenementsAControlerService.pourLAgent(agentId).stream().map(EvenementPublicDto::from).toList());
     }
 
     /**

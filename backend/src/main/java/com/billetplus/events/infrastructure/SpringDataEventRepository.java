@@ -58,4 +58,20 @@ interface SpringDataEventRepository extends JpaRepository<Event, UUID> {
           and e.titre ilike :motif escape '\\'
         """)
     Page<Event> rechercherPublies(@Param("motif") String motif, @Param("maintenant") Instant maintenant, Pageable pageable);
+
+    /**
+     * Événements à contrôler par un agent : affectation (event_agents, même module) et
+     * statut PUBLIE ; début récent ou à venir, ou fin encore à venir. Le lieu est chargé
+     * dans la même requête (DTO lu hors transaction, voir findById).
+     */
+    @EntityGraph(attributePaths = "venue")
+    @Query("""
+        select e from Event e
+        where e.status = com.billetplus.events.domain.EventStatus.PUBLIE
+          and e.id in (select a.eventId from AffectationAgent a where a.agentId = :agentId)
+          and (e.debuteLe > :debutApres or (e.termineLe is not null and e.termineLe > :maintenant))
+        order by e.debuteLe asc, e.id asc
+        """)
+    List<Event> findAffectesA(@Param("agentId") UUID agentId, @Param("debutApres") Instant debutApres,
+                              @Param("maintenant") Instant maintenant);
 }

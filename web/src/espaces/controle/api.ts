@@ -19,17 +19,17 @@ export interface ReponseScan {
   statut?: string;
 }
 
-/** EventDto / EvenementPublicDto : champs utiles au contrôle (route publique). */
+/**
+ * Champs utiles au contrôle, communs à EvenementPublicDto (/affectes, /{id}) et EventDto
+ * (/mine). `status` n'existe que dans EventDto : /affectes ne l'envoie pas, et c'est normal
+ * (le backend n'y renvoie que des événements publiés).
+ */
 export interface EvenementControle {
   id: string;
   titre: string;
   debuteLe: string;
   venueNom: string;
   status?: string;
-}
-
-interface PageEvenements {
-  contenu: EvenementControle[];
 }
 
 /** Au-delà, la porte bascule sur la vérification hors ligne au lieu d'attendre. */
@@ -49,11 +49,13 @@ export function lireEvenement(id: string): Promise<EvenementControle> {
   return http<EvenementControle>(`/events/${encodeURIComponent(id)}`);
 }
 
-/** Événements publiés (le backend n'expose pas les affectations d'un agent). */
-export async function evenementsPublics(q: string): Promise<EvenementControle[]> {
-  const parametres = new URLSearchParams({ page: '0', taille: '20' });
-  if (q.trim()) parametres.set('q', q.trim());
-  return (await http<PageEvenements>(`/events?${parametres}`)).contenu;
+/**
+ * Agent : les événements auxquels il est affecté, publiés, à venir ou en cours
+ * (GET /api/events/affectes, rôle AGENT). La liste ne donne aucun droit : la route de
+ * scan vérifie de nouveau l'affectation.
+ */
+export function evenementsAffectes(): Promise<EvenementControle[]> {
+  return http<EvenementControle[]>('/events/affectes', { authentifie: true });
 }
 
 /** Organisateur : ses propres événements (il peut contrôler les siens). */

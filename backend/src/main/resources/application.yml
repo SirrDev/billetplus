@@ -99,6 +99,7 @@ billetplus:
       - { nom: rafraichissement,   methode: POST, chemin: /api/auth/refresh,       cle: IP,     limite: 30,  fenetre: 1m }
       - { nom: scan,               methode: POST, chemin: /api/events/*/scans,     cle: COMPTE, limite: 120, fenetre: 1m }
       - { nom: creation-agent,     methode: POST, chemin: /api/agents,             cle: COMPTE, limite: 30,  fenetre: 1h }
+      - { nom: evenements-affectes, methode: GET, chemin: /api/events/affectes,    cle: COMPTE, limite: 60,  fenetre: 1m }
 
 springdoc:
   api-docs:

@@ -43,6 +43,11 @@ class JpaEventRepositoryAdapter implements EventRepository {
         return new PageEvenements(resultat.getContent(), page, taille, resultat.getTotalElements());
     }
 
+    @Override
+    public List<Event> findAffectesA(UUID agentId, Instant debutApres, Instant maintenant) {
+        return springRepo.findAffectesA(agentId, debutApres, maintenant);
+    }
+
     /**
      * Une recherche « 100% » ou « a_b » cherche ces caractères tels quels : % et _
      * sont des jokers de LIKE, échappés ici (avec la barre oblique inverse elle-même).

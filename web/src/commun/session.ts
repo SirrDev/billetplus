@@ -14,6 +14,8 @@ export interface Jetons {
 }
 
 const CLE = 'billetplus.session';
+/** Clé de la liste gardée par le contrôle d'entrée (déclarée ici pour être effacée avec la session). */
+export const CLE_LISTE_CONTROLE = 'billetplus.controle.evenements';
 const ecouteurs = new Set<() => void>();
 
 export function lireJetons(): Jetons | null {
@@ -41,6 +43,9 @@ export function effacerJetons(): void {
   try {
     localStorage.removeItem(CLE);
     localStorage.removeItem(CLE_PROFIL);
+    // Dernière liste d'événements du contrôle d'entrée (espaces/controle) : effacée à toute
+    // fin de session, volontaire ou forcée, pour ne rien laisser du compte sur l'appareil.
+    localStorage.removeItem(CLE_LISTE_CONTROLE);
   } finally {
     ecouteurs.forEach((f) => f());
   }
