@@ -3,8 +3,11 @@ package com.billetplus.orders.api;
 import com.billetplus.orders.api.dto.CommandeCreeeResponse;
 import com.billetplus.orders.api.dto.CommandeDto;
 import com.billetplus.orders.api.dto.CreateOrderRequest;
+import com.billetplus.orders.api.dto.LienPaiementDto;
+import com.billetplus.orders.api.dto.OuvrirPaiementRequest;
 import com.billetplus.orders.application.usecase.ConsulterCommandeUseCase;
 import com.billetplus.orders.application.usecase.CreateOrderUseCase;
+import com.billetplus.orders.application.usecase.OuvrirPaiementUseCase;
 import com.billetplus.orders.domain.Order;
 import jakarta.validation.Valid;
 import org.springframework.http.CacheControl;
@@ -30,10 +33,13 @@ public class OrderController {
 
     private final CreateOrderUseCase createOrder;
     private final ConsulterCommandeUseCase consulterCommande;
+    private final OuvrirPaiementUseCase ouvrirPaiement;
 
-    public OrderController(CreateOrderUseCase createOrder, ConsulterCommandeUseCase consulterCommande) {
+    public OrderController(CreateOrderUseCase createOrder, ConsulterCommandeUseCase consulterCommande,
+                           OuvrirPaiementUseCase ouvrirPaiement) {
         this.createOrder = createOrder;
         this.consulterCommande = consulterCommande;
+        this.ouvrirPaiement = ouvrirPaiement;
     }
 
     @PostMapping
@@ -54,5 +60,18 @@ public class OrderController {
         return ResponseEntity.ok()
             .cacheControl(CacheControl.noStore())
             .body(CommandeDto.from(consulterCommande.execute(id, jeton)));
+    }
+
+    /**
+     * Ouvre le paiement chez la passerelle (ADR 0007) et renvoie le lien à ouvrir.
+     * Même jeton que la lecture. Redemander le même moyen renvoie le même lien.
+     */
+    @PostMapping("/{id}/paiement")
+    public ResponseEntity<LienPaiementDto> payer(@PathVariable UUID id,
+                                                 @RequestHeader(name = EN_TETE_JETON, required = false) String jeton,
+                                                 @Valid @RequestBody OuvrirPaiementRequest request) {
+        return ResponseEntity.ok()
+            .cacheControl(CacheControl.noStore())
+            .body(LienPaiementDto.from(ouvrirPaiement.execute(id, jeton, request.moyen())));
     }
 }

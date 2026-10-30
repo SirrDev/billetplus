@@ -40,15 +40,17 @@ class VerificationProduction {
                            @Value("${billetplus.security.qr-signing.private-key-path}") String clePrivee,
                            @Value("${billetplus.security.qr-signing.public-key-path}") String clePublique,
                            @Value("${billetplus.limitation.active:true}") boolean limitationActive,
+                           @Value("${billetplus.paiement.unitechpay.cle-api:}") String clePaiement,
                            StringRedisTemplate redis) {
-        List<String> erreurs = verifier(secretJwt, clePrivee, clePublique, limitationActive);
+        List<String> erreurs = verifier(secretJwt, clePrivee, clePublique, limitationActive, clePaiement);
         if (!erreurs.isEmpty()) {
             throw new IllegalStateException("Configuration de production refusée : " + String.join(" ; ", erreurs));
         }
         verifierPolitiqueRedis(redis);
     }
 
-    static List<String> verifier(String secretJwt, String clePrivee, String clePublique, boolean limitationActive) {
+    static List<String> verifier(String secretJwt, String clePrivee, String clePublique, boolean limitationActive,
+                                 String clePaiement) {
         List<String> erreurs = new ArrayList<>();
         if (secretJwt == null || secretJwt.equals(SECRET_JWT_DE_DEV)
             || secretJwt.getBytes(StandardCharsets.UTF_8).length < SECRET_JWT_OCTETS_MIN) {
@@ -65,6 +67,9 @@ class VerificationProduction {
         }
         if (!limitationActive) {
             erreurs.add("billetplus.limitation.active ne peut pas valoir false en production");
+        }
+        if (clePaiement == null || clePaiement.isBlank()) {
+            erreurs.add("UNITECHPAY_API_KEY est obligatoire en production (paiement et signature des webhooks)");
         }
         return erreurs;
     }
