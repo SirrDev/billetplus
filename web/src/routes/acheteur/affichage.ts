@@ -1,6 +1,7 @@
 import type { EventSummary, PosterVariant } from '@/design-system';
 import { ApiError } from '@/shared/api/httpClient';
 import type { EvenementPublic } from './api';
+import type { CommandeLocale } from './commandesLocales';
 
 const AFFICHES: ReadonlyArray<PosterVariant> = ['sunset', 'rings', 'bars'];
 
@@ -22,6 +23,17 @@ export function versResume(evenement: EvenementPublic): EventSummary {
     startsAt: new Date(evenement.debuteLe),
     venue: evenement.venueNom,
     poster: afficheDe(evenement.id),
+  };
+}
+
+/** Une commande gardée sur l'appareil, au format des cartes d'événement (Mes billets). */
+export function resumeLocal(commande: CommandeLocale): EventSummary {
+  return {
+    id: commande.id,
+    title: commande.titre,
+    startsAt: new Date(commande.debuteLe),
+    venue: commande.venueNom,
+    poster: afficheDe(commande.eventId),
   };
 }
 

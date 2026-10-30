@@ -81,6 +81,7 @@ export function EvenementOrganisateurPage() {
   if (erreur) {
     return (
       <Screen withNav>
+        <NavigationOrganisateur />
         <TopBar title="Événement" backTo="/organisateur" backLabel="Retour à mes événements" />
         <EmptyState
           icon={erreur.introuvable ? 'search' : 'wifiOff'}
@@ -88,16 +89,15 @@ export function EvenementOrganisateurPage() {
           description={erreur.introuvable ? "Cet événement n'existe pas ou ne vous appartient pas." : erreur.message}
           actions={<ButtonLink to="/organisateur">Mes événements</ButtonLink>}
         />
-        <NavigationOrganisateur />
       </Screen>
     );
   }
   if (!evenement) {
     return (
       <Screen withNav>
+        <NavigationOrganisateur />
         <TopBar title="Événement" backTo="/organisateur" backLabel="Retour à mes événements" />
         <Notice icon="clock">Chargement…</Notice>
-        <NavigationOrganisateur />
       </Screen>
     );
   }
@@ -105,8 +105,9 @@ export function EvenementOrganisateurPage() {
   const modifiable = evenement.status === 'BROUILLON' || evenement.status === 'PUBLIE';
   return (
     <Screen withNav>
+      <NavigationOrganisateur />
       <TopBar title={evenement.titre} backTo="/organisateur" backLabel="Retour à mes événements" />
-      <div className={m.pile}>
+      <div className={`${m.pile} ${m.apresTitre}`}>
         <div className={m.ligneActions}>
           <BadgeStatut statut={evenement.status} />
           <span className={m.muet}>
@@ -169,7 +170,6 @@ export function EvenementOrganisateurPage() {
           {onglet === 'agents' ? <Agents eventId={evenement.id} /> : null}
         </div>
       </div>
-      <NavigationOrganisateur />
     </Screen>
   );
 }

@@ -11,10 +11,12 @@ import {
   TicketCategoryRow,
   TopBar,
   isValidSnMobile,
+  buyerNavItems,
 } from '@/design-system';
 import { creerCommande, lireCategories, lireEvenement, type CategorieBillet, type Evenement } from '../api';
 import { enregistrerCommande } from '../commandesLocales';
 import { messageErreur } from '../affichage';
+import { NavigationSite } from '@/shared/ui/EnTete';
 import m from '@/shared/ui/miseEnPage.module.css';
 
 /** Plafond du backend : 20 places par catégorie et par commande (Order.QUANTITE_MAX_PAR_CATEGORIE). */
@@ -85,6 +87,7 @@ export function ChoisirBilletsPage() {
   if (erreurChargement) {
     return (
       <Screen>
+        <NavigationSite liens={buyerNavItems} libelle="Navigation principale" barreMobile={false} />
         <TopBar title="Vos billets" backTo={`/evenements/${id}`} backLabel="Retour à l'événement" />
         <EmptyState
           icon="wifiOff"
@@ -98,13 +101,14 @@ export function ChoisirBilletsPage() {
 
   return (
     <Screen withActionBar>
+      <NavigationSite liens={buyerNavItems} libelle="Navigation principale" barreMobile={false} />
       <TopBar
         title="Vos billets"
         subtitle={evenement?.titre}
         backTo={`/evenements/${id}`}
         backLabel="Retour à l'événement"
       />
-      <form onSubmit={reserver} noValidate className={m.deuxColonnes}>
+      <form onSubmit={reserver} noValidate className={`${m.deuxColonnes} ${m.apresTitre}`}>
         <div className={m.pile}>
           {categories.map((categorie) => (
             <TicketCategoryRow

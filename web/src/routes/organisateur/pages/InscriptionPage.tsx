@@ -36,53 +36,59 @@ export function InscriptionPage() {
 
   return (
     <Screen>
-      <TopBar title="Créer un compte organisateur" backTo="/organisateur/connexion" backLabel="Retour à la connexion" />
-      <form className={m.formulaire} onSubmit={soumettre} noValidate>
-        <TextField
-          label="Nom complet ou structure"
-          value={nomComplet}
-          onChange={(e) => setNomComplet(e.target.value)}
-          required
-          maxLength={255}
-          autoComplete="name"
+      <div className={m.carteCentree}>
+        <TopBar
+          title="Créer un compte organisateur"
+          backTo="/organisateur/connexion"
+          backLabel="Retour à la connexion"
         />
-        <TextField
-          label="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          maxLength={255}
-          autoComplete="email"
-        />
-        <TextField
-          label="Mot de passe"
-          type="password"
-          hint="8 caractères au minimum."
-          error={motDePasse && !motDePasseValide ? 'Entre 8 et 72 caractères.' : undefined}
-          value={motDePasse}
-          onChange={(e) => setMotDePasse(e.target.value)}
-          required
-          maxLength={72}
-          autoComplete="new-password"
-        />
-        {erreur ? (
-          <Notice tone="danger" role="alert" icon="warning">
-            {erreur}
-          </Notice>
-        ) : null}
-        <Button
-          type="submit"
-          fullWidth
-          loading={envoi}
-          disabled={!nomComplet.trim() || !email.trim() || !motDePasseValide}
-        >
-          Créer mon compte
-        </Button>
-        <p className={`${m.texte} ${m.muet}`}>
-          Déjà inscrit ? <Link to="/organisateur/connexion">Se connecter</Link>
-        </p>
-      </form>
+        <form className={`${m.formulaire} ${m.apresTitre}`} onSubmit={soumettre} noValidate>
+          <TextField
+            label="Nom complet ou structure"
+            value={nomComplet}
+            onChange={(e) => setNomComplet(e.target.value)}
+            required
+            maxLength={255}
+            autoComplete="name"
+          />
+          <TextField
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            maxLength={255}
+            autoComplete="email"
+          />
+          <TextField
+            label="Mot de passe"
+            type="password"
+            hint="8 caractères au minimum."
+            error={motDePasse && !motDePasseValide ? 'Entre 8 et 72 caractères.' : undefined}
+            value={motDePasse}
+            onChange={(e) => setMotDePasse(e.target.value)}
+            required
+            maxLength={72}
+            autoComplete="new-password"
+          />
+          {erreur ? (
+            <Notice tone="danger" role="alert" icon="warning">
+              {erreur}
+            </Notice>
+          ) : null}
+          <Button
+            type="submit"
+            fullWidth
+            loading={envoi}
+            disabled={!nomComplet.trim() || !email.trim() || !motDePasseValide}
+          >
+            Créer mon compte
+          </Button>
+          <p className={`${m.texte} ${m.muet}`}>
+            Déjà inscrit ? <Link to="/organisateur/connexion">Se connecter</Link>
+          </p>
+        </form>
+      </div>
     </Screen>
   );
 }

@@ -66,31 +66,6 @@
   font-weight: 700;
 }
 
-/*
- * Ordinateur : la navigation basse devient une barre en haut de l'écran, avec des
- * onglets côte à côte (icône et libellé sur une ligne), alignés à droite.
- */
-@media (min-width: 1024px) {
-  .bottomNav {
-    top: 0;
-    bottom: auto;
-    justify-content: flex-end;
-    gap: 8px;
-    min-height: var(--bp-topnav-h);
-    padding: 0 var(--bp-gutter);
-    border-top: 0;
-    border-bottom: 1px solid var(--bp-border);
-  }
-
-  .navItem {
-    flex: 0 0 auto;
-    flex-direction: row;
-    gap: 8px;
-    padding: 0 16px;
-    font-size: 15px;
-  }
-}
-
 /* Onglets segmentés */
 .segmented {
   display: flex;
