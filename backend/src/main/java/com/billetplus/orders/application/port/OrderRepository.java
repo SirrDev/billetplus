@@ -4,6 +4,7 @@ import com.billetplus.orders.domain.NumeroTelephone;
 import com.billetplus.orders.domain.Order;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,4 +29,10 @@ public interface OrderRepository {
      * dans leur délai à {@code maintenant} (limite par téléphone, ADR 0006).
      */
     long compterEnAttente(NumeroTelephone telephone, UUID eventId, Instant maintenant);
+
+    /** Commande dont le paiement porte cette référence de passerelle (unique, V9). */
+    Optional<Order> findByReferencePaiement(String reference);
+
+    /** Commandes PAYEE_SANS_BILLET, à rembourser à la main (décision B), les plus anciennes d'abord. */
+    List<Order> findPayeesSansBillet(int limite);
 }

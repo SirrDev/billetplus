@@ -198,8 +198,8 @@ public class Order {
     /**
      * Paiement reçu, mais billets impossibles à émettre : la commande est à
      * rembourser à la main (décision B, ADR 0006). Possible depuis une commande en
-     * attente ou déjà expirée (paiement tardif) : un paiement reçu ne doit jamais
-     * être perdu.
+     * attente, expirée (paiement tardif) ou annulée (webhooks reçus dans le désordre) :
+     * un paiement reçu ne doit jamais être perdu.
      *
      * @throws TransitionCommandeInterditeException depuis tout autre statut
      */
@@ -207,7 +207,8 @@ public class Order {
         if (motif == null) {
             throw new IllegalArgumentException("Le motif est obligatoire");
         }
-        if (status != OrderStatus.EN_ATTENTE_PAIEMENT && status != OrderStatus.EXPIREE) {
+        if (status != OrderStatus.EN_ATTENTE_PAIEMENT && status != OrderStatus.EXPIREE
+            && status != OrderStatus.ANNULEE) {
             throw new TransitionCommandeInterditeException("Cette commande n'attend plus de paiement");
         }
         status = OrderStatus.PAYEE_SANS_BILLET;

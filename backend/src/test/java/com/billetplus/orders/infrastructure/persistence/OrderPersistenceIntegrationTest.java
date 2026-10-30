@@ -49,7 +49,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(JpaOrderRepositoryAdapter.class)
+@Import({JpaOrderRepositoryAdapter.class, JdbcDelaiAttenteVerrous.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Testcontainers(disabledWithoutDocker = true)
 class OrderPersistenceIntegrationTest {
@@ -71,6 +71,8 @@ class OrderPersistenceIntegrationTest {
     private JpaOrderRepositoryAdapter commandes;
     @Autowired
     private JdbcTemplate jdbc;
+    @Autowired
+    private JdbcDelaiAttenteVerrous delaiAttenteVerrous;
     @Autowired
     private PlatformTransactionManager transactionManager;
 
@@ -202,6 +204,53 @@ class OrderPersistenceIntegrationTest {
         assertThatThrownBy(() -> jdbc.update("UPDATE orders SET paiement_moyen = 'CARTE', paiement_reference = 'r', "
                 + "paiement_transaction_id = 1, paiement_url = 'https://p', paiement_ouvert_le = now() WHERE id = ?", id))
             .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void une_commande_se_retrouve_par_la_reference_de_son_paiement() {
+        Order commande = nouvelle().commande();
+        String reference = "wave_" + UUID.randomUUID();
+        commande.ouvrirPaiement(new Paiement(MoyenPaiement.WAVE, reference, 18, "https://pay.wave.com/c/1",
+            MAINTENANT.plusSeconds(5)), Duration.ofSeconds(60));
+        enregistrer(commande);
+
+        // Hors transaction : les lignes doivent venir avec (EntityGraph).
+        Order trouvee = commandes.findByReferencePaiement(reference).orElseThrow();
+        assertThat(trouvee.getId()).isEqualTo(commande.getId());
+        assertThat(trouvee.getLignes()).hasSize(2);
+        assertThat(commandes.findByReferencePaiement("wave_inconnue")).isEmpty();
+    }
+
+    @Test
+    void les_commandes_a_rembourser_sont_listees_des_plus_anciennes_aux_plus_recentes() {
+        Order ancienne = nouvelle().commande();
+        Order recente = nouvelle().commande();
+        Order payee = nouvelle().commande();
+        ancienne.marquerPayeeSansBillet(MotifSansBillet.MONTANT_INCORRECT, MAINTENANT.plusSeconds(1));
+        recente.marquerPayeeSansBillet(MotifSansBillet.PAIEMENT_APRES_ANNULATION, MAINTENANT.plusSeconds(2));
+        payee.marquerPayee(MAINTENANT.plusSeconds(3));
+        enregistrer(recente);
+        enregistrer(ancienne);
+        enregistrer(payee);
+
+        List<UUID> ids = commandes.findPayeesSansBillet(500).stream().map(Order::getId).toList();
+        assertThat(ids).containsSubsequence(ancienne.getId(), recente.getId()).doesNotContain(payee.getId());
+        // Les deux motifs ajoutés par V10 sont acceptés par la base ; un motif inconnu, non.
+        UUID id = UUID.randomUUID();
+        assertThatThrownBy(() -> insererCommande(id, "+221771234567", "PAYEE_SANS_BILLET", MAINTENANT, "AUTRE_CHOSE"))
+            .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void le_delai_d_attente_des_verrous_ne_vaut_que_pour_la_transaction_courante() {
+        String dansLaTransaction = enTransaction(() -> {
+            delaiAttenteVerrous.appliquer(Duration.ofSeconds(5));
+            return jdbc.queryForObject("SHOW lock_timeout", String.class);
+        });
+        assertThat(dansLaTransaction).isEqualTo("5s");
+        assertThat(jdbc.queryForObject("SHOW lock_timeout", String.class)).isEqualTo("0");
+        assertThatThrownBy(() -> delaiAttenteVerrous.appliquer(Duration.ofSeconds(5)))
+            .isInstanceOf(IllegalTransactionStateException.class);
     }
 
     @Test

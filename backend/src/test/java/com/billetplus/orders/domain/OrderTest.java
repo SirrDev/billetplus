@@ -174,14 +174,20 @@ class OrderTest {
     }
 
     @Test
-    void une_commande_annulee_ne_peut_plus_etre_payee_meme_sans_billet() {
+    void une_commande_annulee_ne_peut_plus_etre_payee_mais_un_paiement_tardif_y_est_conserve() {
         Order commande = enAttente();
         commande.annuler();
 
         assertThat(commande.getStatus()).isEqualTo(OrderStatus.ANNULEE);
-        assertThatThrownBy(() -> commande.marquerPayeeSansBillet(MotifSansBillet.VENTE_FERMEE, MAINTENANT))
+        assertThatThrownBy(() -> commande.marquerPayee(MAINTENANT))
             .isInstanceOf(TransitionCommandeInterditeException.class);
         assertThatThrownBy(commande::annuler).isInstanceOf(TransitionCommandeInterditeException.class);
+
+        // Webhook « payé » arrivé après « expiré » : l'argent reçu doit rester visible.
+        commande.marquerPayeeSansBillet(MotifSansBillet.PAIEMENT_APRES_ANNULATION, MAINTENANT);
+        assertThat(commande.getStatus()).isEqualTo(OrderStatus.PAYEE_SANS_BILLET);
+        assertThatThrownBy(() -> commande.marquerPayeeSansBillet(MotifSansBillet.VENTE_FERMEE, MAINTENANT))
+            .isInstanceOf(TransitionCommandeInterditeException.class);
     }
 
     @Test
