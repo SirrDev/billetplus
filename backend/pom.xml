@@ -82,6 +82,11 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-redis</artifactId>
     </dependency>
+    <!-- Sonde de santé /actuator/health (PostgreSQL et Redis), seule exposée : voir application.yml -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
 
     <!-- Documentation API (OpenAPI) -->
     <dependency>
