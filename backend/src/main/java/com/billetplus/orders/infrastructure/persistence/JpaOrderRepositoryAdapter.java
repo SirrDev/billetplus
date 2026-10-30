@@ -75,4 +75,15 @@ class JpaOrderRepositoryAdapter implements OrderRepository {
         return springRepo.findByStatusOrderByPayeeLeAsc(OrderStatus.PAYEE_SANS_BILLET, PageRequest.of(0, limite))
             .stream().map(OrderMapper::versDomaine).toList();
     }
+
+    @Override
+    public List<UUID> evenementsAvecCommandesPayees() {
+        return springRepo.evenementsAvecStatut(OrderStatus.PAYEE);
+    }
+
+    @Override
+    public List<Order> findPayeesDeLEvenement(UUID eventId, int limite) {
+        return springRepo.findByEventIdAndStatusOrderByPayeeLeAsc(eventId, OrderStatus.PAYEE, PageRequest.of(0, limite))
+            .stream().map(OrderMapper::versDomaine).toList();
+    }
 }

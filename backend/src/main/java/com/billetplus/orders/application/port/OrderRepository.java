@@ -35,4 +35,10 @@ public interface OrderRepository {
 
     /** Commandes PAYEE_SANS_BILLET, à rembourser à la main (décision B), les plus anciennes d'abord. */
     List<Order> findPayeesSansBillet(int limite);
+
+    /** Événements qui ont au moins une commande PAYEE. */
+    List<UUID> evenementsAvecCommandesPayees();
+
+    /** Commandes PAYEE d'un événement, les plus anciennes d'abord. */
+    List<Order> findPayeesDeLEvenement(UUID eventId, int limite);
 }

@@ -99,6 +99,16 @@ class ConfirmerPaiementUseCaseTest {
         public List<Order> findPayeesSansBillet(int limite) {
             return commandes.values().stream().filter(o -> o.getStatus() == OrderStatus.PAYEE_SANS_BILLET).toList();
         }
+
+        @Override
+        public List<UUID> evenementsAvecCommandesPayees() {
+            return List.of();
+        }
+
+        @Override
+        public List<Order> findPayeesDeLEvenement(UUID eventId, int limite) {
+            return List.of();
+        }
     }
 
     /** Gestionnaire de transactions qui restaure le dépôt en cas d'annulation. */

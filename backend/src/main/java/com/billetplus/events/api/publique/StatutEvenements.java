@@ -37,4 +37,10 @@ public interface StatutEvenements {
      * ValidateTicketScanUseCase). Faux pour un identifiant absent ou inconnu.
      */
     boolean estAgentAffecte(UUID eventId, UUID agentId);
+
+    /**
+     * Vrai si l'événement existe et est annulé : ses commandes payées sont à
+     * rembourser (décision B). Faux pour un identifiant absent ou inconnu.
+     */
+    boolean estAnnule(UUID eventId);
 }

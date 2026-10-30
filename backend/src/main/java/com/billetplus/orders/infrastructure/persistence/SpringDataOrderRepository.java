@@ -4,6 +4,8 @@ import com.billetplus.orders.domain.OrderStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
@@ -31,4 +33,12 @@ interface SpringDataOrderRepository extends JpaRepository<OrderJpaEntity, UUID> 
 
     @EntityGraph(attributePaths = "lignes")
     List<OrderJpaEntity> findByStatusOrderByPayeeLeAsc(OrderStatus status, Pageable pageable);
+
+    @Query(
+        "select distinct o.eventId from OrderJpaEntity o where o.status = :status")
+    List<UUID> evenementsAvecStatut(@Param("status") OrderStatus status);
+
+    /** Servie par idx_orders_event_id_status (V8). */
+    @EntityGraph(attributePaths = "lignes")
+    List<OrderJpaEntity> findByEventIdAndStatusOrderByPayeeLeAsc(UUID eventId, OrderStatus status, Pageable pageable);
 }
