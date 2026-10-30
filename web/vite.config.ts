@@ -10,7 +10,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg'],
+      includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       workbox: {
         // pem : clé PUBLIQUE de vérification des QR, utile au scanner hors ligne (ADR 0004).
         // Les sous-ensembles vietnamien, cyrillique et grec des polices ne servent pas : hors précache.
@@ -43,7 +43,14 @@ export default defineConfig({
         start_url: '/',
         background_color: '#FFFFFF',
         theme_color: '#5B3DF5',
-        icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
+        // PNG exigés par Android et Chrome pour l'installation (générés par scripts/generer-icones.mjs) ;
+        // « maskable » : dessin dans la zone sûre, que le système peut rogner en cercle.
+        icons: [
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+        ],
       },
     }),
   ],
