@@ -15,6 +15,7 @@ export {
 } from './Billetterie';
 export { Bouton, BoutonLien } from './Bouton';
 export { Cadre } from './Cadre';
+export { CompteursControle, EcranControle, PanneauVerdict, Viseur } from './Controle';
 export { CarteEvenement, EvenementALaUne, GrilleEvenements, type ResumeEvenement } from './CarteEvenement';
 export { ChampRecherche, ChampTelephone, ChampTexte, ChoixCartes, type OptionCarte } from './Formulaire';
 export { Icone, type NomIcone } from './Icone';
