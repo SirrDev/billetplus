@@ -33,15 +33,15 @@ import java.util.UUID;
  * cette classe ne fait qu'orchestrer.
  *
  * {@code @Transactional} est indispensable : l'enregistrement de l'émission,
- * la réservation et les sauvegardes forment une seule unité atomique (ADR 0003).
- * C'est aussi ce qui rend effectif le verrouillage optimiste de la catégorie
- * (voir {@link TicketCategoryRepository}) : deux émissions concurrentes sur la
- * même catégorie ne peuvent pas toutes deux valider leur réservation.
+ * les billets et la vente du quota forment une seule unité atomique (ADR 0003).
  *
- * Pas de nouvelle tentative automatique ici : appelé dans la transaction de
- * confirmation de paiement (module orders), un conflit de version marque
- * cette transaction comme à annuler. La relance appartient à la frontière la
- * plus extérieure (traitement du webhook, ou Wave qui renvoie sa notification).
+ * Le quota est vendu par une requête SQL atomique
+ * ({@link TicketCategoryRepository#consommerQuota}), et non par un save() sous
+ * verrou de version : la mesure n° 16 (ChargeConfirmationsIntegrationTest) a
+ * montré que 40 confirmations simultanées sur une catégorie en perdaient la
+ * moitié en conflits de version, même après 3 tentatives. Les émissions
+ * concurrentes s'attendent désormais sur le verrou de la ligne, tenu le moins
+ * longtemps possible (requête en dernier).
  */
 @Service
 public class IssueTicketUseCase {
@@ -120,16 +120,26 @@ public class IssueTicketUseCase {
         // commande attend ici la fin de celui-ci, puis échoue s'il a été validé.
         issuanceRepository.enregistrer(orderId, categoryId, quantite);
 
-        // Lève QuotaDepasseException sans modifier la catégorie ; la transaction
-        // est alors annulée, registre d'émission compris.
+        // Refus rapide, par la règle du domaine, sur l'état lu : il ne peut que
+        // sous-estimer les ventes (quota_vendu ne fait que croître pendant la vente),
+        // donc un refus ici est toujours fondé. L'acceptation, elle, est décidée
+        // par la requête atomique ci-dessous.
+        int restantLu = category.quotaRestant();
         category.reserver(quantite);
-        categoryRepository.save(category);
 
         List<IssuedTicket> emis = new ArrayList<>(quantite);
         for (int i = 0; i < quantite; i++) {
             Ticket ticket = ticketRepository.save(new Ticket(category.getEventId(), categoryId, orderId));
             String qrContent = qrSigner.sign(ticket.getId(), ticket.getEventId(), ticket.getEmisLe());
             emis.add(new IssuedTicket(ticket, qrContent));
+        }
+
+        // En DERNIER : le verrou de la ligne de la catégorie n'est tenu que de cette
+        // requête à la validation, pas pendant l'insertion et la signature des billets.
+        // Quota épuisé par une émission concurrente : la transaction est annulée,
+        // billets et registre d'émission compris (mesure n° 16, ADR 0003).
+        if (!categoryRepository.consommerQuota(categoryId, quantite)) {
+            throw new QuotaDepasseException(categoryId, quantite, restantLu);
         }
 
         libererLaReservationApresValidation(categoryId, orderId);

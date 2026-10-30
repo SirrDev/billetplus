@@ -60,4 +60,14 @@ class JpaTicketCategoryRepositoryAdapter implements TicketCategoryRepository {
             .orElseGet(() -> TicketCategoryMapper.versNouvelleEntite(category));
         return TicketCategoryMapper.versDomaine(springRepo.save(entity));
     }
+
+    /**
+     * MANDATORY : hors transaction, le verrou de ligne serait relâché aussitôt, et
+     * l'émission (billets, registre) ne serait plus atomique avec la vente.
+     */
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public boolean consommerQuota(UUID categoryId, int quantite) {
+        return springRepo.consommerQuota(categoryId, quantite) == 1;
+    }
 }
