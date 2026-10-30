@@ -21,25 +21,26 @@ Toutes les valeurs sont des variables `--bp-*` dans `web/src/styles/tokens.css` 
 |---|---|---|
 | `styles/` | `tokens.css`, `global.css` (remise à zéro, focus visible, `prefers-reduced-motion`) | seul style global |
 | `ui/` | composants réutilisables, CSS Modules | point d'entrée **unique** `@/ui` (`ui/index.ts`) |
-| `commun/` | `http.ts` (client API, `ApiError`, `messageErreur`), `format.ts` (FCFA, dates de Dakar, mobile +221) | aucune page |
+| `commun/` | `http.ts` (client API, `ApiError`, `messageErreur`, option `authentifie`), `format.ts` (FCFA, dates de Dakar, mobile +221), `session.ts` et `auth.ts` (jetons, session), `FournisseurSession.tsx` (`FournisseurSession`, garde `ExigerRole`), `cacheHorsLigne.ts` (règle du service worker) | ne dépend d'aucun espace (ESLint) ; peut utiliser `@/ui` |
 | `espaces/<espace>/` | `api.ts` (contrats = DTO Java), stockage local, `pages/`, `index.ts` | ne s'importe que par son `index.ts` (ESLint `no-restricted-imports`) |
 
-Espaces livrés : **acheteur**. À venir : organisateur (`/organisateur/...`), contrôle d'entrée (`/scanner/...`) ; ajouter alors leur règle `isolerEspace(...)` dans `web/.eslintrc.cjs`.
+Espaces livrés : **acheteur** (sans compte) et **organisateur** (`/organisateur/...`). À venir : contrôle d'entrée (`/scanner/...`) ; ajouter alors sa règle `isolerEspace('scanner')` dans `web/.eslintrc.cjs`. `src/ui` et `src/commun` n'importent jamais un espace : une règle ESLint l'interdit.
 
 ## 3. Composants (`@/ui`)
 
 | Fichier | Composants |
 |---|---|
-| `Cadre.tsx` | `Cadre` (en-tête, contenu centré, navigation ; `etroit`, `sansNav`, `fondGris`) |
+| `Cadre.tsx` | `Cadre` (en-tête, contenu centré, navigation ; `etroit`, `sansNav`, `fondGris`, `liens`, `accueil`, `actions`) |
 | `Bouton.tsx` | `Bouton`, `BoutonLien` (une navigation reste un `<a>`) |
 | `CarteEvenement.tsx` | `GrilleEvenements`, `CarteEvenement`, `EvenementALaUne` |
-| `Formulaire.tsx` | `ChampRecherche`, `ChampTelephone` (+221, mise en forme), `ChoixCartes` (radios natifs) |
+| `Formulaire.tsx` | `ChampTexte` (libellé, aide, erreur, multiligne), `ChampRecherche`, `ChampTelephone` (+221, mise en forme), `ChoixCartes` (radios natifs) |
+| `Pilotage.tsx` | `Indicateurs`, `Indicateur` (avec barre de remplissage `progressbar`), `Pastille` (icône + texte), `Tableau` (`caption`, `th scope`, défile sur mobile) |
 | `Billetterie.tsx` | `Panneau`, `BarreAction`, `SelecteurQuantite`, `LigneCategorie`, `Recapitulatif`, `CompteARebours`, `PasseBillet` |
 | `Retour.tsx` | `Avis`, `EtatVide`, `Chargement` |
 | `Affiche.tsx`, `Icone.tsx` | visuels décoratifs (`aria-hidden`) |
-| `outils.ts` | `motifDe`, `codeBillet`, `useCompteARebours`, `navAcheteur` |
+| `outils.ts` | `motifDe`, `codeBillet`, `useCompteARebours`, `navAcheteur`, `navOrganisateur` |
 
-Règle pour tout composant **ajouté** : il vit dans le fichier de son groupe, est exporté par `ui/index.ts`, et a un test de comportement **et** de nom accessible dans `ui/ui.test.tsx`. Aujourd'hui, seuls `SelecteurQuantite`, `ChampTelephone`, `ChoixCartes`, `PasseBillet` et `Cadre` y sont testés directement ; les autres sont couverts par le test du parcours acheteur (`espaces/acheteur/parcours.test.tsx`). Fonctions et constantes vont dans un `.ts` (rechargement à chaud de Vite).
+Règle pour tout composant **ajouté** : il vit dans le fichier de son groupe, est exporté par `ui/index.ts`, et a un test de comportement **et** de nom accessible dans `ui/ui.test.tsx`. Aujourd'hui, seuls `SelecteurQuantite`, `ChampTelephone`, `ChoixCartes`, `PasseBillet` et `Cadre` y sont testés directement ; les autres sont couverts par les tests de parcours (`espaces/acheteur/parcours.test.tsx`, `espaces/organisateur/organisateur.test.tsx`). Fonctions et constantes vont dans un `.ts` (rechargement à chaud de Vite).
 
 ## 4. Adaptatif
 
@@ -53,7 +54,7 @@ Mobile d'abord ; `@media (min-width: 720px)` (tablette) puis `1024px` (ordinateu
 
 ## 5. Règles de conception
 
-- **Argent : le backend fait foi.** Les composants affichent, ne calculent pas. `formatFcfa` lève une erreur sur un montant non entier. Avant création de la commande, le récapitulatif est un **« Total estimé »** (prix unitaires du backend × quantités) ; le montant ferme est `montantTotalFcfa` de la commande. Ni stock (volontairement caché à l'acheteur, voir `TicketCategoryDto`), ni frais, ni genre, ni prix « dès » : le backend ne les expose pas.
+- **Argent : le backend fait foi.** Les composants affichent, ne calculent pas. `formatFcfa` lève une erreur sur un montant non entier. Avant création de la commande, le récapitulatif est un **« Total estimé »** (prix unitaires du backend × quantités) ; le montant ferme est `montantTotalFcfa` de la commande. Ni stock (volontairement caché à l'acheteur, voir `TicketCategoryDto`), ni frais, ni genre, ni prix « dès » : le backend ne les expose pas. Côté organisateur, recettes, vendus, disponibles et entrées viennent du tableau de bord du backend ; seul `quotaTotal` des catégories est additionné, pour la barre de remplissage.
 - **Jeton de commande (ADR 0006).** Vérifier le stockage (`verifierStockage`) **avant** `POST /api/orders`, enregistrer le jeton dans IndexedDB **avant** toute redirection, ne le transmettre que dans l'en-tête `X-Jeton-Commande`, jamais dans une URL, un state de navigation ou un cache du service worker.
 - **Paiement (ADR 0007).** Redirection uniquement vers un lien `https:` renvoyé par le backend (`allerPayer`). Après retour, `/commandes/:id` suit le statut toutes les 4 s.
 - **QR (ADR 0004).** `PasseBillet` dessine la chaîne signée Ed25519 du backend telle quelle ; aucun secret côté client.
@@ -63,8 +64,17 @@ Mobile d'abord ; `@media (min-width: 720px)` (tablette) puis `1024px` (ordinateu
 ## 6. Service worker
 
 - Précache (`globPatterns`) : HTML, JS, CSS, SVG/PNG/ICO, polices `woff2` (sauf sous-ensembles vietnamien, cyrillique, grec), clé **publique** `keys/ed25519_public.pem` (pour le futur scanner hors ligne).
-- Cache d'exécution : `NetworkFirst` sur tout chemin commençant par `/api/events` (catégories comprises : « disponible » peut être périmé hors ligne, la création de commande revalide). **À restreindre aux routes publiques** avant l'espace organisateur (`/api/events/mine` est authentifié et Workbox ignore l'en-tête `Authorization`) : TODO dans `web/vite.config.ts`.
+- Cache d'exécution `evenements-publics` (`NetworkFirst`) : uniquement `GET /api/events`, `/api/events/{uuid}` et `/api/events/{uuid}/categories`, **sans en-tête `Authorization`** (`estLecturePubliqueEvenements`, testée). Workbox ignore `Authorization` dans sa clé de cache : une réponse d'organisateur (`/mine`, quotas, tableau de bord) ne doit jamais y entrer. « disponible » peut être périmé hors ligne : la création de commande revalide.
+- **Piège :** en mode `generateSW`, Workbox recopie le TEXTE de la fonction `urlPattern` dans `dist/sw.js`. Elle doit rester autonome (aucun import ni variable extérieure), sinon `ReferenceError` dans le service worker. Un test la reconstruit depuis son seul texte ; après un changement, vérifier `dist/sw.js`.
 - Jamais de cache sur `/api/orders` (réponses `no-store` côté backend) : les billets hors ligne viennent d'IndexedDB.
+
+## 6 bis. Session (organisateur, puis agent de contrôle)
+
+- Jetons dans `localStorage` (clé `billetplus.session`) : jeton d'accès 15 min, de rafraîchissement 7 jours. Limite assumée au MVP : lisibles par un script injecté (XSS) ; React échappe le contenu de l'API et la CSP du déploiement doit interdire les scripts tiers. Un cookie httpOnly demanderait un changement du backend.
+- `http(chemin, { authentifie: true })` ajoute le Bearer ; les routes publiques et celles de l'acheteur n'en envoient jamais.
+- **Renouvellement préventif** : le backend ignore un jeton expiré et sert alors la vue ANONYME sur les routes publiques (404 pour un brouillon), jamais 401. Le client lit donc `exp` (sans vérifier la signature) et renouvelle à moins de 30 s de l'échéance. Sur 401 : un seul rafraîchissement partagé, puis rejeu. Refus du backend : session fermée ; coupure réseau : session gardée.
+- La garde `ExigerRole` n'évite qu'un écran inutile : le backend reste seul juge (`@PreAuthorize`). Le client ne choisit jamais son rôle ni l'organisateur d'un événement. Un événement publié d'un autre organisateur (route publique, 200) s'affiche « introuvable » dans l'espace organisateur, comme un brouillon (404).
+- Déconnexion propagée aux autres onglets (événement `storage`).
 
 ## 7. Commandes (PowerShell, depuis `C:\Users\bague\Desktop\billetplus\web`)
 
