@@ -253,3 +253,11 @@
 .avantage .infoIcone {
   background: var(--bp-white);
 }
+
+/* Bouton du billet PDF, avec son état annoncé et son éventuelle erreur. */
+.actionPdf {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}

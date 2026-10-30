@@ -24,6 +24,7 @@ import {
   type MoyenPaiement,
 } from '../api';
 import { enregistrerBillets, lireCommandeLocale, type CommandeLocale } from '../commandesLocales';
+import { BoutonBilletsPdf } from './BoutonBilletsPdf';
 import { ChoixMoyen, Etapes } from './paiement';
 import { allerPayer, nomDuMoyen } from './paiementOutils';
 import s from './pages.module.css';
@@ -213,6 +214,13 @@ export function CommandePage() {
                     dans « Mes billets ».
                   </p>
                 </Avis>
+                <BoutonBilletsPdf
+                  billets={billetsAffiches}
+                  titre={locale.titre}
+                  debuteLe={locale.debuteLe}
+                  lieu={locale.lieu}
+                  commandeId={locale.id}
+                />
                 <div className={s.billets}>
                   {billetsAffiches.map((b) => (
                     <PasseBillet
