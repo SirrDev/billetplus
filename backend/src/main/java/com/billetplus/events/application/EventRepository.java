@@ -19,4 +19,11 @@ public interface EventRepository {
      * (sans tenir compte de la casse ; null ou vide : tous).
      */
     PageEvenements rechercherPublies(String recherche, java.time.Instant maintenant, int page, int taille);
+
+    /**
+     * Événements PUBLIÉS auxquels l'agent est affecté et qui restent à contrôler : début
+     * après {@code debutApres}, ou fin encore à venir à {@code maintenant}. Du plus proche
+     * au plus lointain ; le lieu est chargé (lu hors transaction par le DTO).
+     */
+    java.util.List<Event> findAffectesA(UUID agentId, java.time.Instant debutApres, java.time.Instant maintenant);
 }
