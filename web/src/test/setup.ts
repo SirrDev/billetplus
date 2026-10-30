@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { etc } from '@noble/ed25519';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
 
 /*
@@ -13,6 +13,13 @@ import { afterEach, beforeEach, vi } from 'vitest';
 etc.sha512Async = async (...messages: Uint8Array[]) =>
   // concatBytes alloue toujours un ArrayBuffer ordinaire (jamais un SharedArrayBuffer).
   new Uint8Array(await globalThis.crypto.subtle.digest('SHA-512', etc.concatBytes(...messages) as Uint8Array<ArrayBuffer>));
+
+/*
+ * Délai des findBy / waitFor : 1 s par défaut. Les parcours de bout en bout (connexion puis
+ * liste, signature Ed25519) le dépassaient parfois dans la suite complète sous Node 20 (CI),
+ * alors qu'ils passaient seuls : 3 s évitent un échec au hasard sans masquer un vrai défaut.
+ */
+configure({ asyncUtilTimeout: 3000 });
 
 beforeEach(() => {
   // jsdom n'implémente pas le défilement (App remonte en haut à chaque page).
