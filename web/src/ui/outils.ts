@@ -45,3 +45,9 @@ export const navAcheteur: ReadonlyArray<LienNav> = [
   { vers: '/', libelle: 'Découvrir', icone: 'boussole', exact: true },
   { vers: '/billets', libelle: 'Mes billets', icone: 'billet' },
 ];
+
+export const navOrganisateur: ReadonlyArray<LienNav> = [
+  { vers: '/organisateur', libelle: 'Mes événements', icone: 'calendrier', exact: true },
+  { vers: '/organisateur/evenements/nouveau', libelle: 'Nouvel événement', icone: 'plus' },
+  { vers: '/organisateur/equipe', libelle: 'Équipe', icone: 'bouclier' },
+];
