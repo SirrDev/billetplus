@@ -24,7 +24,9 @@ Toutes les valeurs sont des variables `--bp-*` dans `web/src/styles/tokens.css` 
 | `commun/` | `http.ts` (client API, `ApiError`, `messageErreur`, option `authentifie`), `format.ts` (FCFA, dates de Dakar, mobile +221), `session.ts` et `auth.ts` (jetons, session), `FournisseurSession.tsx` (`FournisseurSession`, garde `ExigerRole`), `cacheHorsLigne.ts` (règle du service worker) | ne dépend d'aucun espace (ESLint) ; peut utiliser `@/ui` |
 | `espaces/<espace>/` | `api.ts` (contrats = DTO Java), stockage local, `pages/`, `index.ts` | ne s'importe que par son `index.ts` (ESLint `no-restricted-imports`) |
 
-Espaces livrés : **acheteur** (sans compte) et **organisateur** (`/organisateur/...`). À venir : contrôle d'entrée (`/scanner/...`) ; ajouter alors sa règle `isolerEspace('scanner')` dans `web/.eslintrc.cjs`. `src/ui` et `src/commun` n'importent jamais un espace : une règle ESLint l'interdit.
+Espaces livrés : **acheteur** (sans compte), **organisateur** (`/organisateur/...`) et **contrôle d'entrée** (`/scanner`, `/scanner/connexion`, `/scanner/evenements/:id`, dossier `espaces/controle`, règle `isolerEspace('controle')`). Le contrôle est **chargé à la demande** (`React.lazy` dans `App.tsx`) : `jsqr` et `@noble/ed25519` ne pèsent pas sur le bundle de l'acheteur. `src/ui` et `src/commun` n'importent jamais un espace : une règle ESLint l'interdit.
+
+Dépendances propres au contrôle : `@noble/ed25519` (vérification des QR avec la clé publique seule) et `jsqr` (décodage caméra, tous navigateurs, y compris Safari iOS sans `BarcodeDetector`).
 
 ## 3. Composants (`@/ui`)
 
@@ -37,7 +39,8 @@ Espaces livrés : **acheteur** (sans compte) et **organisateur** (`/organisateur
 | `Pilotage.tsx` | `Indicateurs`, `Indicateur` (avec barre de remplissage `progressbar`), `Pastille` (icône + texte), `Tableau` (`caption`, `th scope`, défile sur mobile) |
 | `Billetterie.tsx` | `Panneau`, `BarreAction`, `SelecteurQuantite`, `LigneCategorie`, `Recapitulatif`, `CompteARebours`, `PasseBillet` |
 | `Retour.tsx` | `Avis`, `EtatVide`, `Chargement` |
-| `Affiche.tsx`, `Icone.tsx` | visuels décoratifs (`aria-hidden`) |
+| `Controle.tsx` | `EcranControle` (fond sombre), `Viseur` (cadre de la caméra), `PanneauVerdict` (icône + « Laisser entrer » / « Refuser l'entrée », `aria-live="assertive"`, mention « Contrôle sans réseau »), `CompteursControle` |
+| `Affiche.tsx`, `Icone.tsx` | visuels décoratifs (`aria-hidden`) ; icônes `retour` et `suivant` |
 | `outils.ts` | `motifDe`, `codeBillet`, `useCompteARebours`, `navAcheteur`, `navOrganisateur` |
 
 Règle pour tout composant **ajouté** : il vit dans le fichier de son groupe, est exporté par `ui/index.ts`, et a un test de comportement **et** de nom accessible dans `ui/ui.test.tsx`. Aujourd'hui, seuls `SelecteurQuantite`, `ChampTelephone`, `ChoixCartes`, `PasseBillet` et `Cadre` y sont testés directement ; les autres sont couverts par les tests de parcours (`espaces/acheteur/parcours.test.tsx`, `espaces/organisateur/organisateur.test.tsx`). Fonctions et constantes vont dans un `.ts` (rechargement à chaud de Vite).
@@ -63,7 +66,7 @@ Mobile d'abord ; `@media (min-width: 720px)` (tablette) puis `1024px` (ordinateu
 
 ## 6. Service worker
 
-- Précache (`globPatterns`) : HTML, JS, CSS, SVG/PNG/ICO, polices `woff2` (sauf sous-ensembles vietnamien, cyrillique, grec), clé **publique** `keys/ed25519_public.pem` (pour le futur scanner hors ligne).
+- Précache (`globPatterns`) : HTML, JS, CSS, SVG/PNG/ICO, polices `woff2` (sauf sous-ensembles vietnamien, cyrillique, grec), clé **publique** `keys/ed25519_public.pem` (vérification hors ligne du scanner), et le morceau JS du contrôle chargé à la demande : le scanner s'ouvre sans réseau après une première visite. **Rotation de clé** : republier la PWA ; d'ici là, un appareil à l'ancienne clé refuse tous les billets hors ligne (échec sûr). La clé livrée doit être celle de `billetplus.security.qr-signing.public-key-path` en production (point de la checklist de déploiement).
 - Cache d'exécution `evenements-publics` (`NetworkFirst`) : uniquement `GET /api/events`, `/api/events/{uuid}` et `/api/events/{uuid}/categories`, **sans en-tête `Authorization`** (`estLecturePubliqueEvenements`, testée). Workbox ignore `Authorization` dans sa clé de cache : une réponse d'organisateur (`/mine`, quotas, tableau de bord) ne doit jamais y entrer. « disponible » peut être périmé hors ligne : la création de commande revalide.
 - **Piège :** en mode `generateSW`, Workbox recopie le TEXTE de la fonction `urlPattern` dans `dist/sw.js`. Elle doit rester autonome (aucun import ni variable extérieure), sinon `ReferenceError` dans le service worker. Un test la reconstruit depuis son seul texte ; après un changement, vérifier `dist/sw.js`.
 - Jamais de cache sur `/api/orders` (réponses `no-store` côté backend) : les billets hors ligne viennent d'IndexedDB.
@@ -75,6 +78,16 @@ Mobile d'abord ; `@media (min-width: 720px)` (tablette) puis `1024px` (ordinateu
 - **Renouvellement préventif** : le backend ignore un jeton expiré et sert alors la vue ANONYME sur les routes publiques (404 pour un brouillon), jamais 401. Le client lit donc `exp` (sans vérifier la signature) et renouvelle à moins de 30 s de l'échéance. Sur 401 : un seul rafraîchissement partagé, puis rejeu. Refus du backend : session fermée ; coupure réseau : session gardée.
 - La garde `ExigerRole` n'évite qu'un écran inutile : le backend reste seul juge (`@PreAuthorize`). Le client ne choisit jamais son rôle ni l'organisateur d'un événement. Un événement publié d'un autre organisateur (route publique, 200) s'affiche « introuvable » dans l'espace organisateur, comme un brouillon (404).
 - Déconnexion propagée aux autres onglets (événement `storage`).
+- Profil (id, e-mail, nom, rôle ; rien de secret) mémorisé à la connexion (`billetplus.profil`) : sans réseau, la session reste ouverte avec ce profil, pour que le scanner se rouvre le jour J. Un jeton **refusé** par le backend ferme toujours la session. Routes `/scanner` : rôles `AGENT` et `ORGANISATEUR`.
+
+## 6 ter. Contrôle d'entrée (ADR 0004)
+
+- **Format du QR** (`Ed25519QRSigner`) : `{"tid":…,"eid":…,"iat":…}.<signature hex>`, coupé au **premier** point comme le backend ; signature sur les octets UTF-8 du JSON. Vérification **stricte RFC 8032** (`zip215: false`), alignée sur la JCA ; en-tête DER de la clé contrôlé (OID Ed25519). Un test vérifie un QR signé par la JCA du JDK.
+- **Décision** (`espaces/controle/decision.ts`) : le serveur fait foi quand il répond (`POST /api/events/{id}/scans`, délai 5 s) ; **un 403 n'est jamais contourné** par le hors-ligne. Réseau absent, délai dépassé, 429 ou 5xx : signature vérifiée sur l'appareil, billet d'un autre événement refusé (`eid` signé), billet déjà entré **par cet appareil** refusé, sinon entrée acceptée et mise en file.
+- **Limite assumée (à dire aux équipes)** : hors ligne, un billet annulé, remboursé ou déjà passé à une **autre** porte ne peut pas être détecté ; l'affectation de l'agent n'est pas vérifiée non plus. Le serveur le signale à la synchronisation (doublons et refus affichés « à signaler au responsable »). Écran : bandeau « Sans réseau » et mention « Contrôle sans réseau » sur chaque verdict.
+- **Mémoire de l'appareil** (`fileHorsLigne.ts`, IndexedDB `billetplus-controle` v1) : `scans` (entrées à envoyer) et `vus` (billets entrés ici). Une seule synchronisation à la fois par événement (sinon faux doublons) ; refus définitifs (4xx) retirés de la file ; réseau, 401, 429 et 5xx gardent la file. La déconnexion **efface** cette mémoire (QR = jetons porteurs), après avertissement s'il reste des entrées non envoyées ; après un 403, l'agent peut effacer les entrées qui ne seront jamais acceptées.
+- **Caméra** (`useLecteurQr.ts`) : caméra arrière, jsQR toutes les 200 ms, pistes arrêtées au démontage (y compris sur l'écran « non affecté »). Saisie « douchette » (lecteur qui tape le contenu puis Entrée), bornée à 1024 caractères.
+- **Choix de l'événement** : le backend n'expose pas les affectations d'un agent. L'agent cherche parmi les événements publiés, le serveur tranche (403) ; l'organisateur voit ses événements publiés (`/events/mine`). Évolution proposée : route `GET /api/events/affectes` (rôle AGENT) dans le module `events`.
 
 ## 7. Commandes (PowerShell, depuis `C:\Users\bague\Desktop\billetplus\web`)
 

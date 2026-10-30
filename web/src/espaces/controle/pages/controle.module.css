@@ -1,0 +1,164 @@
+.pile {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.surtitre {
+  color: var(--bp-ink-2);
+  font-size: 14px;
+}
+
+.titrePage {
+  font-size: 28px;
+}
+
+.texte {
+  color: var(--bp-ink-2);
+}
+
+.formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.connexion {
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.liste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ligne {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 12px 16px;
+  border-radius: var(--bp-radius-l);
+  background: var(--bp-white);
+  color: var(--bp-ink);
+  text-decoration: none;
+  border: 1px solid var(--bp-line);
+}
+
+.ligne:hover {
+  border-color: var(--bp-line-strong);
+  color: var(--bp-ink);
+}
+
+.ligneCorps {
+  flex: 1;
+  min-width: 0;
+}
+
+.ligneTitre {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.ligneDetail {
+  color: var(--bp-ink-2);
+  font-size: 14px;
+}
+
+/* Écran de contrôle : viseur et verdict côte à côte dès la tablette en paysage. */
+.controle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+@media (min-width: 900px) {
+  .controle {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.enTeteSombre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.enTeteSombre p {
+  color: #a9adba;
+  font-size: 13px;
+}
+
+.enTeteSombre h1 {
+  color: var(--bp-white);
+  font-size: 22px;
+}
+
+.etatReseau {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #22252e;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.enLigne {
+  color: #8ee6b8;
+}
+
+.horsLigne {
+  color: var(--bp-amber-light);
+}
+
+/* Saisie par douchette (lecteur qui « tape » le contenu puis Entrée) ou collage. */
+.douchette {
+  display: flex;
+  gap: 8px;
+}
+
+.douchette label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.douchette input {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  border-radius: var(--bp-radius-m);
+  border: 1px solid #3a3e4b;
+  background: #17191f;
+  color: var(--bp-white);
+  padding: 0 14px;
+  font-size: 16px;
+}
+
+.douchette input::placeholder {
+  color: #a9adba;
+}
+
+.douchette button {
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: var(--bp-radius-m);
+  border: 1px solid #3a3e4b;
+  background: transparent;
+  color: var(--bp-white);
+  font-weight: 600;
+  cursor: pointer;
+}

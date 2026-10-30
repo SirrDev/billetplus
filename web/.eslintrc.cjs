@@ -25,7 +25,10 @@ module.exports = {
     plugins: ['react-refresh'],
     rules: {
         'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
-        'no-restricted-imports': ['error', { patterns: [isolerEspace('acheteur'), isolerEspace('organisateur')] }],
+        'no-restricted-imports': [
+            'error',
+            { patterns: [isolerEspace('acheteur'), isolerEspace('organisateur'), isolerEspace('controle')] },
+        ],
     },
     overrides: [
         {
