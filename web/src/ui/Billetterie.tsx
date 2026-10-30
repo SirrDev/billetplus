@@ -130,8 +130,20 @@ export interface LigneRecap {
   montantFcfa: number;
 }
 
-/** Affiche des montants, n'en calcule aucun : le total est fourni par l'appelant. */
-export function Recapitulatif({ lignes, totalFcfa }: { lignes: ReadonlyArray<LigneRecap>; totalFcfa: number }) {
+/**
+ * Affiche des montants, n'en calcule aucun : le total est fourni par l'appelant.
+ * libelleTotal « Total estimé » avant la création de la commande (le montant ferme est
+ * celui que renvoie le backend).
+ */
+export function Recapitulatif({
+  lignes,
+  totalFcfa,
+  libelleTotal = 'Total',
+}: {
+  lignes: ReadonlyArray<LigneRecap>;
+  totalFcfa: number;
+  libelleTotal?: string;
+}) {
   return (
     <dl className={s.recap}>
       {lignes.map((l) => (
@@ -141,7 +153,7 @@ export function Recapitulatif({ lignes, totalFcfa }: { lignes: ReadonlyArray<Lig
         </div>
       ))}
       <div className={`${s.recapLigne} ${s.recapTotal}`}>
-        <dt>Total</dt>
+        <dt>{libelleTotal}</dt>
         <dd>{formatFcfa(totalFcfa)}</dd>
       </div>
     </dl>

@@ -41,8 +41,20 @@ async function messageDErreur(reponse: Response): Promise<string> {
   return `Erreur ${reponse.status}`;
 }
 
+/**
+ * Erreur levée par le client lui-même, dont le message est écrit pour l'utilisateur
+ * (lien de paiement refusé, stockage local en échec...) : affichée telle quelle.
+ */
+export class ErreurAffichable extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ErreurAffichable';
+  }
+}
+
 /** Message lisible d'une erreur d'appel : celui du backend, ou un message de repli. */
 export function messageErreur(erreur: unknown): string {
+  if (erreur instanceof ErreurAffichable) return erreur.message;
   if (erreur instanceof ApiError) {
     if (erreur.status === 429) return 'Trop de demandes : patientez une minute avant de réessayer.';
     if (erreur.status >= 500) return 'Le service est momentanément indisponible. Réessayez dans un instant.';

@@ -2,14 +2,16 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { Routage } from '@/App';
-import type { CommandeLocale } from './commandesLocales';
+import { enregistrerCommande, type CommandeLocale } from './commandesLocales';
 
 /*
  * Parcours d'achat de bout en bout, avec un backend simulé au niveau de fetch.
  * IndexedDB n'existe pas dans jsdom : le stockage local est remplacé par une Map.
  */
 const stockage = new Map<string, CommandeLocale>();
+const verifierStockage = vi.fn(async () => undefined);
 vi.mock('./commandesLocales', () => ({
+  verifierStockage: () => verifierStockage(),
   enregistrerCommande: vi.fn(async (c: CommandeLocale) => void stockage.set(c.id, c)),
   lireCommandeLocale: vi.fn(async (id: string) => stockage.get(id)),
   listerCommandesLocales: vi.fn(async () => [...stockage.values()]),
@@ -80,6 +82,8 @@ const espaces = (t: string | null) => (t ?? '').replace(/\s/g, ' ');
 beforeEach(() => {
   stockage.clear();
   allerPayer.mockReset();
+  verifierStockage.mockReset();
+  verifierStockage.mockResolvedValue(undefined);
 });
 
 describe('Découvrir', () => {
@@ -125,7 +129,9 @@ describe('Achat', () => {
     // Écran de paiement
     expect(await screen.findByRole('heading', { name: 'Paiement' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('radio', { name: /Orange Money/ }));
-    const payer = screen.getByRole('button', { name: /Payer 10.000 FCFA avec Orange Money/ });
+    const payer = screen.getByRole('button', { name: 'Payer avec Orange Money' });
+    // Avant création, le montant n'est qu'un aperçu : il est présenté comme tel.
+    expect(espaces(screen.getByText('Total estimé').nextElementSibling?.textContent ?? '')).toBe('10 000 FCFA');
 
     await userEvent.type(screen.getByLabelText('Numéro de mobile'), '33 12');
     await userEvent.click(payer);
@@ -164,6 +170,39 @@ describe('Achat', () => {
     await userEvent.click(screen.getByRole('button', { name: /Payer/ }));
     expect(await screen.findByText('Places insuffisantes')).toBeInTheDocument();
     expect(stockage.size).toBe(0);
+    expect(allerPayer).not.toHaveBeenCalled();
+  });
+
+  it("ne crée aucune commande si l'appareil ne peut pas garder le jeton", async () => {
+    verifierStockage.mockRejectedValue(new Error('QuotaExceededError'));
+    const appels = backend({ 'GET /api/events/e1/categories': () => CATEGORIES, 'GET /api/events/e1': () => EVENEMENT });
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/evenements/e1/paiement', state: { quantites: { std: 1 } } }]}>
+        <Routage />
+      </MemoryRouter>,
+    );
+    await userEvent.type(await screen.findByLabelText('Numéro de mobile'), '771234567');
+    await userEvent.click(screen.getByRole('button', { name: /Payer/ }));
+    expect(await screen.findByText(/ne peut pas enregistrer vos billets/)).toBeInTheDocument();
+    expect(appels.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
+  });
+
+  it("n'ouvre aucun paiement si la commande créée n'a pas pu être enregistrée", async () => {
+    vi.mocked(enregistrerCommande).mockRejectedValueOnce(new Error('QuotaExceededError'));
+    const appels = backend({
+      'GET /api/events/e1/categories': () => CATEGORIES,
+      'GET /api/events/e1': () => EVENEMENT,
+      'POST /api/orders': () => ({ commande: COMMANDE, jetonAcces: 'jeton-secret' }),
+    });
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/evenements/e1/paiement', state: { quantites: { std: 1 } } }]}>
+        <Routage />
+      </MemoryRouter>,
+    );
+    await userEvent.type(await screen.findByLabelText('Numéro de mobile'), '771234567');
+    await userEvent.click(screen.getByRole('button', { name: /Payer/ }));
+    expect(await screen.findByText(/aucun paiement n'a été demandé/)).toBeInTheDocument();
+    expect(appels.mock.calls.some(([url]) => String(url).endsWith('/paiement'))).toBe(false);
     expect(allerPayer).not.toHaveBeenCalled();
   });
 
@@ -221,6 +260,7 @@ describe('Commande', () => {
     expect(await screen.findByRole('heading', { name: 'Finaliser le paiement' })).toBeInTheDocument();
     expect(screen.getByRole('timer')).toBeInTheDocument();
     expect(await screen.findByText('2 × Standard')).toBeInTheDocument();
+    // Après création, c'est le montant ferme du backend (montantTotalFcfa) qui s'affiche.
     await userEvent.click(screen.getByRole('button', { name: /Payer 10.000 FCFA avec Wave/ }));
     await waitFor(() => expect(allerPayer).toHaveBeenCalledWith('https://pay.test/w'));
   });

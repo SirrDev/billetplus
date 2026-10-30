@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { estMobileSenegalais, formatDateCourte, formatFcfa, versE164 } from '@/commun/format';
+import { estMobileSenegalais, formatDateCourte, versE164 } from '@/commun/format';
 import { messageErreur } from '@/commun/http';
 import { Avis, Bouton, Cadre, ChampTelephone, Chargement, Panneau, Recapitulatif } from '@/ui';
 import { creerCommande, ouvrirPaiement, type MoyenPaiement } from '../api';
-import { enregistrerCommande } from '../commandesLocales';
+import { enregistrerCommande, verifierStockage } from '../commandesLocales';
 import { ChoixMoyen, Etapes } from './paiement';
 import { allerPayer, nomDuMoyen } from './paiementOutils';
 import { apercuTotal, nombreDePlaces, useEvenement, type EtatNavigationPaiement } from './useEvenement';
@@ -57,17 +57,34 @@ export function PaiementPage() {
     setErreurTelephone(undefined);
     setEnvoi(true);
 
-    let commandeId: string;
-    let jeton: string;
+    // Sans stockage local, le jeton serait perdu : ne pas créer (ni bloquer de places).
     try {
-      const creee = await creerCommande(
+      await verifierStockage();
+    } catch {
+      setErreur(
+        "Ce navigateur ne peut pas enregistrer vos billets (mémoire pleine ou stockage bloqué). Libérez de l'espace ou ouvrez Billet+ dans une fenêtre normale pour acheter.",
+      );
+      setEnvoi(false);
+      return;
+    }
+
+    let creee: Awaited<ReturnType<typeof creerCommande>>;
+    try {
+      creee = await creerCommande(
         evenement.id,
         versE164(telephone),
         lignes.map((l) => ({ categoryId: l.categorie.id, quantite: l.quantite })),
       );
-      commandeId = creee.commande.id;
-      jeton = creee.jetonAcces;
-      // Le jeton n'est remis qu'ici, une seule fois : l'enregistrer AVANT toute autre étape.
+    } catch (erreurCreation) {
+      setErreur(messageErreur(erreurCreation));
+      setEnvoi(false);
+      return;
+    }
+    const commandeId = creee.commande.id;
+    const jeton = creee.jetonAcces;
+
+    // Le jeton n'est remis qu'ici, une seule fois : l'enregistrer AVANT toute autre étape.
+    try {
       await enregistrerCommande({
         id: commandeId,
         jeton,
@@ -77,8 +94,11 @@ export function PaiementPage() {
         lieu: evenement.venueNom,
         creeLe: creee.commande.creeLe,
       });
-    } catch (erreurCreation) {
-      setErreur(messageErreur(erreurCreation));
+    } catch {
+      // Cas résiduel (quota atteint entre la vérification et l'écriture) : le dire tel quel.
+      setErreur(
+        "Votre commande a été créée mais ce navigateur n'a pas pu l'enregistrer : aucun paiement n'a été demandé. Les places seront libérées automatiquement dans quelques minutes ; libérez de l'espace puis recommencez.",
+      );
       setEnvoi(false);
       return;
     }
@@ -119,7 +139,7 @@ export function PaiementPage() {
                 </Avis>
               )}
               <Bouton type="submit" grand pleineLargeur disabled={envoi}>
-                {envoi ? 'Redirection vers le paiement…' : `Payer ${formatFcfa(total)} avec ${nomDuMoyen(moyen)}`}
+                {envoi ? 'Redirection vers le paiement…' : `Payer avec ${nomDuMoyen(moyen)}`}
               </Bouton>
             </form>
           </Panneau>
@@ -135,7 +155,9 @@ export function PaiementPage() {
                   montantFcfa: l.categorie.prixFcfa * l.quantite,
                 }))}
                 totalFcfa={total}
+                libelleTotal="Total estimé"
               />
+              <p className={s.note}>Le montant définitif est confirmé à la création de la commande.</p>
             </Panneau>
           </aside>
         </div>

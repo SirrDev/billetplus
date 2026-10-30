@@ -33,6 +33,24 @@ function ouvrir(): Promise<IDBPDatabase> {
   return base;
 }
 
+/**
+ * Vérifie que l'appareil peut garder une commande AVANT de la créer : sans stockage
+ * (navigation privée stricte, quota plein), le jeton serait perdu et les places
+ * resteraient bloquées jusqu'à expiration. Lève une erreur si l'écriture échoue.
+ */
+export async function verifierStockage(): Promise<void> {
+  const db = await ouvrir();
+  const transaction = db.transaction(MAGASIN, 'readwrite');
+  // Écriture puis suppression d'une clé témoin dans la même transaction (atomique : aucune
+  // trace même si l'onglet se ferme). Attendues ensemble : un rejet n'est jamais orphelin.
+  // Limite connue : une navigation privée à stockage en mémoire passe ce contrôle.
+  await Promise.all([
+    transaction.store.put({ id: '__verification__' }),
+    transaction.store.delete('__verification__'),
+    transaction.done,
+  ]);
+}
+
 export async function enregistrerCommande(commande: CommandeLocale): Promise<void> {
   await (await ouvrir()).put(MAGASIN, commande);
 }
