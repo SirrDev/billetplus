@@ -2,6 +2,7 @@ import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { estLecturePubliqueEvenements } from './src/commun/cacheHorsLigne';
 
 // PWA unique pour les trois espaces : voir docs/architecture/adr/0004-pwa-vs-react-native.md.
 export default defineConfig({
@@ -17,14 +18,15 @@ export default defineConfig({
         globIgnores: ['**/*-vietnamese-*.woff2', '**/*-cyrillic-*.woff2', '**/*-greek-*.woff2'],
         // Jamais de cache sur les commandes et les billets : réponses no-store, jeton en en-tête.
         // Les billets hors ligne viennent d'IndexedDB (espaces/acheteur/commandesLocales.ts).
-        // TODO avant l'espace organisateur : restreindre aux routes PUBLIQUES (/api/events,
-        // /api/events/{id}, /api/events/{id}/categories). /api/events/mine est authentifié et
-        // Workbox ignore l'en-tête Authorization : la réponse d'un organisateur serait servie à un autre.
+        // Lectures PUBLIQUES des événements seulement, jamais une requête authentifiée :
+        // règle et justification dans src/commun/cacheHorsLigne.ts (testée).
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.pathname.startsWith('/api/events'),
+            // Fonction passée telle quelle : Workbox recopie son corps dans sw.js.
+            urlPattern: estLecturePubliqueEvenements,
             handler: 'NetworkFirst',
-            options: { cacheName: 'evenements', networkTimeoutSeconds: 4 },
+            // Nom neuf : l'ancien cache « evenements » (règle plus large) n'est plus relu.
+            options: { cacheName: 'evenements-publics', networkTimeoutSeconds: 4 },
           },
         ],
       },
