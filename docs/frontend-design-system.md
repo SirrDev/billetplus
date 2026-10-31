@@ -24,7 +24,7 @@ Toutes les valeurs sont des variables `--bp-*` dans `web/src/styles/tokens.css` 
 | `commun/` | `http.ts` (client API, `ApiError`, `messageErreur`, option `authentifie`), `format.ts` (FCFA, dates de Dakar, mobile +221), `session.ts` et `auth.ts` (jetons, session), `FournisseurSession.tsx` (`FournisseurSession`, garde `ExigerRole`), `cacheHorsLigne.ts` (règle du service worker) | ne dépend d'aucun espace (ESLint) ; peut utiliser `@/ui` |
 | `espaces/<espace>/` | `api.ts` (contrats = DTO Java), stockage local, `pages/`, `index.ts` | ne s'importe que par son `index.ts` (ESLint `no-restricted-imports`) |
 
-Espaces livrés : **acheteur** (sans compte), **organisateur** (`/organisateur/...`) et **contrôle d'entrée** (`/scanner`, `/scanner/connexion`, `/scanner/evenements/:id`, dossier `espaces/controle`, règle `isolerEspace('controle')`). Le contrôle est **chargé à la demande** (`React.lazy` dans `App.tsx`) : `jsqr` et `@noble/ed25519` ne pèsent pas sur le bundle de l'acheteur. `src/ui` et `src/commun` n'importent jamais un espace : une règle ESLint l'interdit.
+Espaces livrés : **acheteur** (sans compte, avec `/aide`), **organisateur** (`/organisateur/...`, dont `/organisateur/compte`), **contrôle d'entrée** (`/scanner`, `/scanner/connexion`, `/scanner/evenements/:id`, dossier `espaces/controle`) et **administration** (`/admin/connexion`, `/admin`, dossier `espaces/admin`) ; une règle `isolerEspace(...)` par espace. Toute adresse inconnue affiche `commun/PageIntrouvable` (retour adapté à l'espace), jamais une redirection silencieuse. Le contrôle et l'administration sont **chargés à la demande** (`React.lazy` dans `App.tsx`) : `jsqr` et `@noble/ed25519` ne pèsent pas sur le bundle de l'acheteur. `src/ui` et `src/commun` n'importent jamais un espace : une règle ESLint l'interdit.
 
 Dépendances propres au contrôle : `@noble/ed25519` (vérification des QR avec la clé publique seule) et `jsqr` (décodage caméra, tous navigateurs, y compris Safari iOS sans `BarcodeDetector`).
 
@@ -32,7 +32,7 @@ Dépendances propres au contrôle : `@noble/ed25519` (vérification des QR avec 
 
 | Fichier | Composants |
 |---|---|
-| `Cadre.tsx` | `Cadre` (en-tête, contenu centré, navigation ; `etroit`, `sansNav`, `fondGris`, `liens`, `accueil`, `actions`) |
+| `Cadre.tsx` | `Cadre` (en-tête, contenu centré, navigation ; `etroit`, `sansNav`, `fondGris`, `liens`, `accueil`, `actions`, `bandeauHorsLigne`). Bandeau « hors connexion » sous l'en-tête, dans une région `role="status"` toujours présente ; désactivé dans le scanner, qui affiche son propre état. Liens avec `libelleCourt` : libellé court dans la barre basse du téléphone, libellé complet dès 720 px et toujours comme nom accessible |
 | `Bouton.tsx` | `Bouton`, `BoutonLien` (une navigation reste un `<a>`) |
 | `CarteEvenement.tsx` | `GrilleEvenements`, `CarteEvenement`, `EvenementALaUne` |
 | `Formulaire.tsx` | `ChampTexte` (libellé, aide, erreur, multiligne), `ChampRecherche`, `ChampTelephone` (+221, mise en forme), `ChoixCartes` (radios natifs) |
@@ -40,8 +40,8 @@ Dépendances propres au contrôle : `@noble/ed25519` (vérification des QR avec 
 | `Billetterie.tsx` | `Panneau`, `BarreAction`, `SelecteurQuantite`, `LigneCategorie`, `Recapitulatif`, `CompteARebours`, `PasseBillet` |
 | `Retour.tsx` | `Avis`, `EtatVide`, `Chargement` |
 | `Controle.tsx` | `EcranControle` (fond sombre), `Viseur` (cadre de la caméra), `PanneauVerdict` (icône + « Laisser entrer » / « Refuser l'entrée », `aria-live="assertive"`, mention « Contrôle sans réseau »), `CompteursControle` |
-| `Affiche.tsx`, `Icone.tsx` | visuels décoratifs (`aria-hidden`) ; icônes `retour` et `suivant` |
-| `outils.ts` | `motifDe`, `codeBillet`, `useCompteARebours`, `navAcheteur`, `navOrganisateur` |
+| `Affiche.tsx`, `Icone.tsx` | visuels décoratifs (`aria-hidden`) ; icônes dont `retour`, `suivant`, `aide`, `compte`, `copier`, `telecharger` |
+| `outils.ts` | `motifDe`, `codeBillet`, `useCompteARebours`, `useEnLigne`, `navAcheteur` (3 entrées), `navOrganisateur` (4 entrées, libellés courts) |
 
 Règle pour tout composant **ajouté** : il vit dans le fichier de son groupe, est exporté par `ui/index.ts`, et a un test de comportement **et** de nom accessible dans `ui/ui.test.tsx`. Aujourd'hui, seuls `SelecteurQuantite`, `ChampTelephone`, `ChoixCartes`, `PasseBillet` et `Cadre` y sont testés directement ; les autres sont couverts par les tests de parcours (`espaces/acheteur/parcours.test.tsx`, `espaces/organisateur/organisateur.test.tsx`). Fonctions et constantes vont dans un `.ts` (rechargement à chaud de Vite).
 
@@ -89,6 +89,14 @@ Mobile d'abord ; `@media (min-width: 720px)` (tablette) puis `1024px` (ordinateu
 - **Mémoire de l'appareil** (`fileHorsLigne.ts`, IndexedDB `billetplus-controle` v1) : `scans` (entrées à envoyer) et `vus` (billets entrés ici). Une seule synchronisation à la fois par événement (sinon faux doublons) ; refus définitifs (4xx) retirés de la file ; réseau, 401, 429 et 5xx gardent la file. La déconnexion **efface** cette mémoire (QR = jetons porteurs), après avertissement s'il reste des entrées non envoyées ; après un 403, l'agent peut effacer les entrées qui ne seront jamais acceptées.
 - **Caméra** (`useLecteurQr.ts`) : caméra arrière, jsQR toutes les 200 ms, pistes arrêtées au démontage (y compris sur l'écran « non affecté »). Saisie « douchette » (lecteur qui tape le contenu puis Entrée), bornée à 1024 caractères.
 - **Choix de l'événement** : l'agent voit les événements auxquels il est affecté (`GET /api/events/affectes`, rôle AGENT : publiés, début dans les 24 dernières heures ou à venir, ou fin encore à venir) ; l'organisateur voit ses événements publiés (`/events/mine`). La liste ne donne aucun droit : la route de scan revérifie l'affectation (403). Route authentifiée, donc hors cache du service worker : la **dernière liste reçue** est gardée dans `localStorage` (`billetplus.controle.evenements`, rattachée au compte) pour rouvrir le scanner sans réseau, et effacée à toute fin de session.
+
+## 6 quater. Administration (remboursements manuels, décision B)
+
+- Connexion `/admin/connexion` réservée au rôle `ADMIN` (compte créé hors API par les variables d'environnement du backend, `PremierAdminInitializer`) ; un autre rôle est refusé et ses jetons effacés. Pas de barre de navigation : un seul écran.
+- `/admin` lit `GET /api/admin/commandes-a-rembourser` (payées sans billet, ou payées pour un événement annulé) : événement, motif lisible (`MOTIFS` ; un motif inconnu reste affiché tel quel), téléphone, moyen, référence, montant ; total des montants du backend. **Lecture seule** : aucun remboursement n'est déclenché par l'application.
+- Ordinateur et tablette : tableau ; **téléphone : une carte par commande** (c'est là que se font les remboursements Wave et Orange Money). Copie du téléphone et de la référence en un geste, retour « Copié » / « Copie impossible » dans une région live hors du bouton.
+- Export CSV (`remboursements.ts`) : `;` et BOM UTF-8 (Excel en français), formules neutralisées (`= + - @` préfixés d'une apostrophe), téléphone au format national (un `+` en tête serait pris pour une formule). Données personnelles : avertissement affiché, jamais en cache ni en stockage local.
+- Plafond de 500 commandes côté serveur, sans pagination : un avis le signale.
 
 ## 7. Commandes (PowerShell, depuis `C:\Users\bague\Desktop\billetplus\web`)
 
