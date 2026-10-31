@@ -2,7 +2,16 @@ import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { ExigerRole, FournisseurSession } from '@/commun/FournisseurSession';
 import { PageIntrouvable } from '@/commun/PageIntrouvable';
-import { AidePage, CommandePage, DecouvrirPage, EvenementPage, MesBilletsPage, PaiementPage } from '@/espaces/acheteur';
+import {
+  AidePage,
+  BilletRecuPage,
+  CommandePage,
+  DecouvrirPage,
+  EvenementPage,
+  MesBilletsPage,
+  PaiementPage,
+  TransfertBilletPage,
+} from '@/espaces/acheteur';
 import {
   ComptePage,
   ConnexionPage,
@@ -81,7 +90,9 @@ export function Routage() {
         <Route path="/evenements/:id" element={<EvenementPage />} />
         <Route path="/evenements/:id/paiement" element={<PaiementPage />} />
         <Route path="/commandes/:id" element={<CommandePage />} />
+        <Route path="/commandes/:id/billets/:ticketId/transfert" element={<TransfertBilletPage />} />
         <Route path="/billets" element={<MesBilletsPage />} />
+        <Route path="/billets/recu/:ticketId" element={<BilletRecuPage />} />
         <Route path="/aide" element={<AidePage />} />
 
         <Route path="/organisateur/connexion" element={<ConnexionPage />} />

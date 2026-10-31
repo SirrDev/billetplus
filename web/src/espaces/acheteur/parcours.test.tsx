@@ -19,6 +19,7 @@ vi.mock('./commandesLocales', () => ({
     const c = stockage.get(id);
     if (c) stockage.set(id, { ...c, billets });
   }),
+  listerBilletsRecus: vi.fn(async () => []),
 }));
 
 /* Le générateur PDF est testé à part (billetPdf.test.ts) : ici, seul ce qu'on lui transmet compte. */

@@ -1,5 +1,5 @@
 import { openDB, type IDBPDatabase } from 'idb';
-import type { Billet } from './api';
+import type { Billet, BilletRecu } from './api';
 
 /**
  * Commandes de l'acheteur, gardées SUR SON APPAREIL (IndexedDB, ADR 0004).
@@ -17,17 +17,41 @@ export interface CommandeLocale {
   creeLe: string;
   /** Derniers billets reçus : affichables hors ligne à l'entrée. */
   billets?: Billet[];
+  /**
+   * Liens des billets transférés (ADR 0008), par billet : le jeton du destinataire n'est
+   * remis qu'une fois ; le garder ici permet de renvoyer le lien s'il s'est perdu.
+   */
+  liensTransfert?: Record<string, string>;
+}
+
+/**
+ * Billet reçu par transfert, gardé sur l'appareil du destinataire (affichable hors
+ * ligne). Le jeton et le mobile sont les deux facteurs qui l'ouvrent : comme le jeton
+ * d'une commande, ils ne quittent pas l'appareil.
+ */
+export interface BilletRecuLocal {
+  id: string;
+  jeton: string;
+  telephone: string;
+  titre: string;
+  debuteLe: string;
+  lieu: string;
+  recuLe: string;
+  billet: BilletRecu;
 }
 
 const BASE = 'billetplus-acheteur';
 const MAGASIN = 'commandes';
+const RECUS = 'billetsRecus';
 
 let base: Promise<IDBPDatabase> | undefined;
 
 function ouvrir(): Promise<IDBPDatabase> {
-  base ??= openDB(BASE, 1, {
-    upgrade(db) {
-      db.createObjectStore(MAGASIN, { keyPath: 'id' });
+  // Version 2 : billets reçus par transfert. Les commandes de la version 1 sont gardées.
+  base ??= openDB(BASE, 2, {
+    upgrade(db, ancienneVersion) {
+      if (ancienneVersion < 1) db.createObjectStore(MAGASIN, { keyPath: 'id' });
+      if (ancienneVersion < 2) db.createObjectStore(RECUS, { keyPath: 'id' });
     },
   });
   return base;
@@ -68,4 +92,34 @@ export async function listerCommandesLocales(): Promise<CommandeLocale[]> {
 export async function enregistrerBillets(id: string, billets: Billet[]): Promise<void> {
   const commande = await lireCommandeLocale(id);
   if (commande) await enregistrerCommande({ ...commande, billets });
+}
+
+/**
+ * Enregistre le lien d'un billet transféré et retire son QR des billets gardés : l'ancien
+ * QR n'est plus valable, il ne doit plus s'afficher, même hors ligne.
+ */
+export async function enregistrerTransfert(id: string, ticketId: string, lien: string, transfereA: string): Promise<void> {
+  const commande = await lireCommandeLocale(id);
+  if (!commande) return;
+  await enregistrerCommande({
+    ...commande,
+    liensTransfert: { ...commande.liensTransfert, [ticketId]: lien },
+    billets: commande.billets?.map((b) =>
+      b.id === ticketId ? { ...b, statut: 'TRANSFERE' as const, qr: null, transfereA } : b,
+    ),
+  });
+}
+
+export async function enregistrerBilletRecu(billet: BilletRecuLocal): Promise<void> {
+  await (await ouvrir()).put(RECUS, billet);
+}
+
+export async function lireBilletRecu(id: string): Promise<BilletRecuLocal | undefined> {
+  return (await ouvrir()).get(RECUS, id) as Promise<BilletRecuLocal | undefined>;
+}
+
+/** Les plus récents d'abord. */
+export async function listerBilletsRecus(): Promise<BilletRecuLocal[]> {
+  const tous = (await (await ouvrir()).getAll(RECUS)) as BilletRecuLocal[];
+  return tous.sort((a, b) => b.recuLe.localeCompare(a.recuLe));
 }
