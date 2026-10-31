@@ -1,4 +1,5 @@
 /* Espace organisateur : seules ces pages sortent du dossier (règle ESLint no-restricted-imports). */
+export { ComptePage } from './pages/ComptePage';
 export { ConnexionPage } from './pages/ConnexionPage';
 export { EquipePage } from './pages/EquipePage';
 export { EvenementOrganisateurPage } from './pages/EvenementOrganisateurPage';
