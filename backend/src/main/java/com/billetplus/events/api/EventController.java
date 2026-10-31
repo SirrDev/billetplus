@@ -4,6 +4,7 @@ import com.billetplus.events.api.dto.CreateEventRequest;
 import com.billetplus.events.api.dto.EvenementPublicDto;
 import com.billetplus.events.api.dto.EventDto;
 import com.billetplus.events.api.dto.PageEvenementsPublicsDto;
+import com.billetplus.events.api.dto.UpdateEventRequest;
 import com.billetplus.events.application.AffectationAgentService;
 import com.billetplus.events.application.EvenementsAControlerService;
 import com.billetplus.events.application.EventService;
@@ -93,6 +94,20 @@ public class EventController {
         UUID organizerId = (UUID) auth.getPrincipal();
         List<EventDto> events = eventService.listMine(organizerId).stream().map(EventDto::from).toList();
         return ResponseEntity.ok(events);
+    }
+
+    /**
+     * Modifie un de SES événements : brouillon entièrement, publié pour le titre et la
+     * description seulement (dates changées → 409), annulé ou terminé → 409.
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ORGANISATEUR')")
+    public ResponseEntity<EventDto> modifier(@PathVariable UUID id, @Valid @RequestBody UpdateEventRequest request,
+                                             Authentication auth) {
+        UUID requestingUserId = (UUID) auth.getPrincipal();
+        Event event = eventService.modifier(id, request.titre(), request.description(),
+            request.debuteLe(), request.termineLe(), requestingUserId);
+        return ResponseEntity.ok(EventDto.from(event));
     }
 
     @PostMapping("/{id}/publier")

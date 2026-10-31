@@ -81,6 +81,19 @@ public class EventService {
     }
 
     /**
+     * Modifie un de SES événements (règles de statut dans {@link Event#modifier}).
+     * Même contrôle de propriété que publier / annuler.
+     */
+    @Transactional
+    public Event modifier(UUID eventId, String titre, String description, Instant debuteLe,
+                          Instant termineLe, UUID requestingUserId) {
+        Event event = get(eventId);
+        verifierProprietaire(event, requestingUserId);
+        event.modifier(titre, description, debuteLe, termineLe);
+        return eventRepository.save(event);
+    }
+
+    /**
      * Publie {@link EvenementAnnule} dans la même transaction (ADR 0005) : les
      * modules qui écoutent (tickets annule les billets) agissent avant la
      * validation. Si l'un d'eux échoue, l'annulation de l'événement est annulée

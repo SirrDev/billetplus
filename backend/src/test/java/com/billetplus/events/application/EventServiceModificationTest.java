@@ -1,0 +1,80 @@
+package com.billetplus.events.application;
+
+import com.billetplus.events.domain.Event;
+import com.billetplus.events.domain.Venue;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.access.AccessDeniedException;
+
+import java.time.Instant;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+/** EventService#modifier : contrôle de propriété, identique à publier / annuler. */
+@ExtendWith(MockitoExtension.class)
+class EventServiceModificationTest {
+
+    private static final Instant DEBUT = Instant.parse("2026-12-05T20:00:00Z");
+
+    @Mock
+    private EventRepository eventRepository;
+    @Mock
+    private VenueRepository venueRepository;
+    @Mock
+    private ApplicationEventPublisher publisher;
+
+    private EventService service() {
+        return new EventService(eventRepository, venueRepository, publisher);
+    }
+
+    private Event brouillonDe(UUID proprietaire) {
+        return new Event("Concert", null, DEBUT, null, new Venue("Sorano", "Dakar", null, null), proprietaire);
+    }
+
+    @Test
+    void l_organisateur_modifie_son_evenement_et_il_est_enregistre() {
+        UUID orga = UUID.randomUUID();
+        Event event = brouillonDe(orga);
+        when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+        when(eventRepository.save(event)).thenReturn(event);
+
+        Event resultat = service().modifier(event.getId(), "Nouveau", "Desc", DEBUT, null, orga);
+
+        assertThat(resultat.getTitre()).isEqualTo("Nouveau");
+        verify(eventRepository).save(event);
+    }
+
+    @Test
+    void le_brouillon_d_un_autre_repond_introuvable() {
+        Event event = brouillonDe(UUID.randomUUID());
+        when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+
+        assertThatThrownBy(() -> service().modifier(event.getId(), "Pirate", null, DEBUT, null, UUID.randomUUID()))
+            .isInstanceOf(NoSuchElementException.class);
+        assertThat(event.getTitre()).isEqualTo("Concert");
+        verify(eventRepository, never()).save(any());
+    }
+
+    @Test
+    void l_evenement_publie_d_un_autre_est_refuse() {
+        Event event = brouillonDe(UUID.randomUUID());
+        event.publier();
+        when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+
+        assertThatThrownBy(() -> service().modifier(event.getId(), "Pirate", null, DEBUT, null, UUID.randomUUID()))
+            .isInstanceOf(AccessDeniedException.class);
+        assertThat(event.getTitre()).isEqualTo("Concert");
+        verify(eventRepository, never()).save(any());
+    }
+}
