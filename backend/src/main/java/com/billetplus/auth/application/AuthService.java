@@ -80,6 +80,33 @@ public class AuthService {
     }
 
     /**
+     * Change le mot de passe du compte du jeton, après vérification de l'actuel.
+     *
+     * Mot de passe actuel faux → IllegalArgumentException (400) et non
+     * BadCredentialsException (401) : un 401 ferait croire au client que sa session a
+     * expiré (il tenterait un rafraîchissement, puis effacerait ses jetons).
+     *
+     * Limite assumée au MVP (même que {@link #refresh}) : les jetons déjà émis restent
+     * valides jusqu'à leur expiration (15 min pour l'accès, 7 jours pour le
+     * rafraîchissement). Changer de mot de passe ne déconnecte pas les autres appareils.
+     *
+     * @throws java.util.NoSuchElementException si le compte n'existe plus (404)
+     * @throws IllegalArgumentException si l'actuel est faux ou si le nouveau est identique (400)
+     */
+    @Transactional
+    public void changerMotDePasse(UUID userId, String motDePasseActuel, String nouveauMotDePasse) {
+        User user = getCurrentUser(userId);
+        if (!passwordEncoder.matches(motDePasseActuel, user.getMotDePasseHash())) {
+            throw new IllegalArgumentException("Le mot de passe actuel est incorrect");
+        }
+        if (nouveauMotDePasse.equals(motDePasseActuel)) {
+            throw new IllegalArgumentException("Le nouveau mot de passe doit être différent de l'actuel");
+        }
+        user.changerMotDePasse(passwordEncoder.encode(nouveauMotDePasse));
+        userRepository.save(user);
+    }
+
+    /**
      * Inscription publique (route accessible sans jeton) : le seul rôle qu'un
      * visiteur anonyme peut obtenir est ORGANISATEUR.
      *
