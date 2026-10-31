@@ -1,13 +1,15 @@
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/commun/auth';
+import { FormulaireMotDePasse } from '@/commun/FormulaireMotDePasse';
 import { Avis, Bouton, BoutonLien, Icone, Panneau } from '@/ui';
 import { CadreOrganisateur } from './CadreOrganisateur';
 import s from './organisateur.module.css';
 
 /**
  * Compte de l'organisateur : identité lue dans /auth/me (jamais modifiable par le client,
- * le rôle est fixé par le backend). Aucune route ne permet encore de changer le mot de
- * passe ou le nom : l'écran le dit au lieu de proposer un formulaire sans effet.
+ * le rôle est fixé par le backend). Le mot de passe se change ici ; aucune route ne permet
+ * encore de changer le nom ou l'e-mail : l'écran le dit au lieu de proposer un formulaire
+ * sans effet.
  */
 export function ComptePage() {
   const { session, deconnexion } = useSession();
@@ -44,10 +46,13 @@ export function ComptePage() {
           </dl>
           <Avis>
             <p>
-              Le changement de nom, d'e-mail ou de mot de passe n'est pas encore disponible en ligne. Gardez votre mot de
-              passe pour vous seul.
+              Le changement de nom ou d'e-mail n'est pas encore disponible en ligne.
             </p>
           </Avis>
+        </Panneau>
+
+        <Panneau titre="Mot de passe" id="mot-de-passe">
+          <FormulaireMotDePasse />
         </Panneau>
 
         <Panneau titre="Raccourcis" id="raccourcis">

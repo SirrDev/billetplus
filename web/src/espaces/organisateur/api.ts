@@ -110,6 +110,21 @@ export function creerEvenement(corps: {
   return http<EvenementOrganisateur>('/events', { ...avecJeton, method: 'POST', body: JSON.stringify(corps) });
 }
 
+/**
+ * PUT /events/{id} : brouillon entièrement modifiable ; publié, titre et description
+ * seulement (les dates renvoyées doivent être celles reçues, sinon 409).
+ */
+export function modifierEvenement(
+  id: string,
+  corps: { titre: string; description: string | null; debuteLe: string; termineLe: string | null },
+): Promise<EvenementOrganisateur> {
+  return http<EvenementOrganisateur>(`/events/${encodeURIComponent(id)}`, {
+    ...avecJeton,
+    method: 'PUT',
+    body: JSON.stringify(corps),
+  });
+}
+
 export function publier(id: string): Promise<EvenementOrganisateur> {
   return http<EvenementOrganisateur>(`/events/${encodeURIComponent(id)}/publier`, { ...avecJeton, method: 'POST' });
 }

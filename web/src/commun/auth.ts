@@ -34,6 +34,18 @@ export function sInscrire(email: string, motDePasse: string, nomComplet: string)
   return http<void>('/auth/register', { method: 'POST', body: JSON.stringify({ email, motDePasse, nomComplet }) });
 }
 
+/**
+ * POST /auth/mot-de-passe (tout rôle connecté) : 204. Mot de passe actuel faux : 400
+ * (et non 401, qui déclencherait le rafraîchissement de session).
+ */
+export function changerMotDePasse(motDePasseActuel: string, nouveauMotDePasse: string): Promise<void> {
+  return http<void>('/auth/mot-de-passe', {
+    authentifie: true,
+    method: 'POST',
+    body: JSON.stringify({ motDePasseActuel, nouveauMotDePasse }),
+  });
+}
+
 export function lireMoi(): Promise<Utilisateur> {
   return http<Utilisateur>('/auth/me', { authentifie: true });
 }

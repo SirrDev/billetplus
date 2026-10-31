@@ -7,6 +7,7 @@ import {
   formatHeure,
   formatMobile,
   heureDakarVersInstant,
+  instantVersHeureDakar,
   majusculeInitiale,
   versE164,
 } from './format';
@@ -38,6 +39,13 @@ describe('dates', () => {
     expect(heureDakarVersInstant('2026-02-31T10:00')).toBeNull();
     expect(heureDakarVersInstant('2026-11-14')).toBeNull();
     expect(heureDakarVersInstant('')).toBeNull();
+  });
+
+  it("préremplit un champ de date à l'heure de Dakar, aller-retour sans décalage", () => {
+    expect(instantVersHeureDakar('2026-11-14T21:00:00Z')).toBe('2026-11-14T21:00');
+    expect(instantVersHeureDakar('2026-11-14T21:00:00.123456Z')).toBe('2026-11-14T21:00');
+    expect(heureDakarVersInstant(instantVersHeureDakar('2026-11-14T21:00:00Z'))).toBe('2026-11-14T21:00:00Z');
+    expect(instantVersHeureDakar('pas une date')).toBe('');
   });
 
   it('ne met de majuscule qu’à la première lettre, pas aux mois', () => {

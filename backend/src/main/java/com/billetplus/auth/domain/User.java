@@ -74,6 +74,17 @@ public class User {
         return agent;
     }
 
+    /**
+     * Remplace le hash du mot de passe. Le contrôle de l'ancien mot de passe et le
+     * hachage sont faits par AuthService : l'entité ne connaît pas l'encodeur.
+     */
+    public void changerMotDePasse(String nouveauHash) {
+        if (nouveauHash == null || nouveauHash.isBlank()) {
+            throw new IllegalArgumentException("Le mot de passe est obligatoire");
+        }
+        this.motDePasseHash = nouveauHash;
+    }
+
     public UUID getCreePar() {
         return creePar;
     }

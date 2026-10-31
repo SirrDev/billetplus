@@ -50,6 +50,19 @@ public class AuthController {
         return ResponseEntity.created(java.net.URI.create("/api/users/" + user.getId())).build();
     }
 
+    /**
+     * Change le mot de passe du compte du jeton (tout rôle). 204 sans corps ; actuel
+     * faux → 400 (voir AuthService#changerMotDePasse). Débit limité par compte
+     * (application.yml, règle changement-mot-de-passe) contre l'essai d'un jeton volé.
+     */
+    @PostMapping("/mot-de-passe")
+    public ResponseEntity<Void> changerMotDePasse(@Valid @RequestBody ChangerMotDePasseRequest request,
+                                                  Authentication authentication) {
+        UUID userId = (UUID) authentication.getPrincipal();
+        authService.changerMotDePasse(userId, request.motDePasseActuel(), request.nouveauMotDePasse());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/me")
     public ResponseEntity<MeResponse> me(Authentication authentication) {
         UUID userId = (UUID) authentication.getPrincipal();
