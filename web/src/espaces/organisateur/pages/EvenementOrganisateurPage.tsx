@@ -45,6 +45,7 @@ const COLONNES: ReadonlyArray<ColonneTableau<LigneTableauDeBord>> = [
   { titre: 'En paiement', cellule: (l) => l.enCoursDePaiement, nombre: true },
   { titre: 'Disponibles', cellule: (l) => l.disponibles, nombre: true },
   { titre: 'Entrés', cellule: (l) => l.scannes, nombre: true },
+  { titre: 'Annulés', cellule: (l) => l.annules, nombre: true },
   { titre: 'Recettes', cellule: (l) => formatFcfa(l.chiffreAffairesFcfa), nombre: true },
 ];
 

@@ -96,8 +96,32 @@ export function lireEvenement(id: string): Promise<EvenementOrganisateur> {
   return http<EvenementOrganisateur>(`/events/${encodeURIComponent(id)}`, avecJeton);
 }
 
-export function creerLieu(nom: string, adresse: string): Promise<Lieu> {
-  return http<Lieu>('/venues', { ...avecJeton, method: 'POST', body: JSON.stringify({ nom, adresse }) });
+/** Coordonnées facultatives (CreateVenueRequest : latitude -90..90, longitude -180..180). */
+export function creerLieu(
+  nom: string,
+  adresse: string,
+  coordonnees: { latitude: number; longitude: number } | null = null,
+): Promise<Lieu> {
+  return http<Lieu>('/venues', {
+    ...avecJeton,
+    method: 'POST',
+    body: JSON.stringify({ nom, adresse, latitude: coordonnees?.latitude ?? null, longitude: coordonnees?.longitude ?? null }),
+  });
+}
+
+/**
+ * Lit des coordonnées saisies ou copiées depuis une carte : « 14.6928, -17.4467 » (virgule
+ * décimale française tolérée si les deux nombres sont séparés par un espace ou un « ; »).
+ * null si la saisie est illisible ou hors des bornes du backend.
+ */
+export function lireCoordonnees(saisie: string): { latitude: number; longitude: number } | null {
+  // Deux nombres (décimale « . » ou « , »), séparés par une virgule, un point-virgule ou des espaces.
+  const m = /^\s*(-?\d+(?:[.,]\d+)?)\s*(?:[,;]\s*|\s+)(-?\d+(?:[.,]\d+)?)\s*$/.exec(saisie);
+  if (!m) return null;
+  const latitude = Number(m[1]!.replace(',', '.'));
+  const longitude = Number(m[2]!.replace(',', '.'));
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
+  return { latitude, longitude };
 }
 
 export function creerEvenement(corps: {
