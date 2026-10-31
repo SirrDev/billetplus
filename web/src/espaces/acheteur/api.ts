@@ -41,6 +41,15 @@ export interface Evenement {
   creeLe: string;
 }
 
+/** VenueDto (route publique GET /venues/{id}) : l'adresse n'est pas dans EventDto. */
+export interface LieuPublic {
+  id: string;
+  nom: string;
+  adresse: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
 /** TicketCategoryDto, vue acheteur : « disponible », jamais le stock. */
 export interface CategorieBillet {
   id: string;
@@ -121,6 +130,22 @@ export function rechercherEvenements(q: string, page = 0, taille = 12): Promise<
 
 export function lireEvenement(id: string): Promise<Evenement> {
   return http<Evenement>(`/events/${encodeURIComponent(id)}`);
+}
+
+export function lireLieu(id: string): Promise<LieuPublic> {
+  return http<LieuPublic>(`/venues/${encodeURIComponent(id)}`);
+}
+
+/**
+ * Lien vers une carte : par les coordonnées du lieu si l'organisateur les a données,
+ * sinon par son adresse. Lien sortant, aucune donnée de l'acheteur.
+ */
+export function lienCarte(lieu: Pick<LieuPublic, 'nom' | 'adresse' | 'latitude' | 'longitude'>): string {
+  const cible =
+    lieu.latitude !== null && lieu.longitude !== null
+      ? `${lieu.latitude},${lieu.longitude}`
+      : `${lieu.nom}, ${lieu.adresse}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cible)}`;
 }
 
 export function lireCategories(eventId: string): Promise<CategorieBillet[]> {

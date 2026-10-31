@@ -42,6 +42,10 @@ export function PaiementPage() {
   }
 
   const { evenement, categories } = chargement;
+  // Annulé ou terminé entre le choix des places et le paiement : la page de l'événement l'explique.
+  if (evenement.status !== 'PUBLIE') {
+    return <Navigate to={`/evenements/${evenement.id}`} replace />;
+  }
   const lignes = categories
     .filter((c) => (quantites[c.id] ?? 0) > 0)
     .map((c) => ({ categorie: c, quantite: quantites[c.id] ?? 0 }));

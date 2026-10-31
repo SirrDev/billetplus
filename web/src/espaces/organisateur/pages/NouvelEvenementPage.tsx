@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { heureDakarVersInstant } from '@/commun/format';
 import { messageErreur } from '@/commun/http';
 import { Avis, Bouton, ChampTexte, Panneau } from '@/ui';
-import { creerEvenement, creerLieu, LIMITES } from '../api';
+import { creerEvenement, creerLieu, LIMITES, lireCoordonnees } from '../api';
 import { CadreOrganisateur } from './CadreOrganisateur';
 import s from './organisateur.module.css';
 
 interface Erreurs {
   debut?: string;
   fin?: string;
+  coordonnees?: string;
 }
 
 /**
@@ -24,6 +25,7 @@ export function NouvelEvenementPage() {
   const [fin, setFin] = useState('');
   const [lieuNom, setLieuNom] = useState('');
   const [lieuAdresse, setLieuAdresse] = useState('');
+  const [coordonnees, setCoordonnees] = useState('');
   const [erreurs, setErreurs] = useState<Erreurs>({});
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
@@ -37,12 +39,14 @@ export function NouvelEvenementPage() {
     if (!debuteLe) nouvelles.debut = 'Indiquez la date et l’heure de début.';
     if (fin && !termineLe) nouvelles.fin = 'Date de fin invalide.';
     if (debuteLe && termineLe && termineLe < debuteLe) nouvelles.fin = 'La fin ne peut pas précéder le début.';
+    const gps = coordonnees.trim() ? lireCoordonnees(coordonnees) : null;
+    if (coordonnees.trim() && !gps) nouvelles.coordonnees = 'Format attendu : latitude, longitude (par exemple 14.6928, -17.4467).';
     setErreurs(nouvelles);
     if (Object.keys(nouvelles).length > 0 || !debuteLe) return;
 
     setEnvoi(true);
     try {
-      const lieu = await creerLieu(lieuNom.trim(), lieuAdresse.trim());
+      const lieu = await creerLieu(lieuNom.trim(), lieuAdresse.trim(), gps);
       const evenement = await creerEvenement({
         titre: titre.trim(),
         description: description.trim() || null,
@@ -105,6 +109,14 @@ export function NouvelEvenementPage() {
               requis
               maxLength={LIMITES.lieuAdresse}
               autoComplete="street-address"
+            />
+            <ChampTexte
+              libelle="Coordonnées GPS"
+              valeur={coordonnees}
+              onChange={setCoordonnees}
+              maxLength={60}
+              aide="Pour le lien « Voir sur la carte » des acheteurs. Dans Google Maps, un appui long sur le lieu affiche ses coordonnées : copiez-les ici."
+              erreur={erreurs.coordonnees}
             />
           </Panneau>
 

@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react';
 import { ApiError, messageErreur } from '@/commun/http';
-import { lireCategories, lireEvenement, type CategorieBillet, type Evenement } from '../api';
+import { lireCategories, lireEvenement, lireLieu, type CategorieBillet, type Evenement, type LieuPublic } from '../api';
 
 export type EtatEvenement =
   | { etat: 'chargement' }
   | { etat: 'introuvable' }
   | { etat: 'erreur'; message: string }
-  | { etat: 'pret'; evenement: Evenement; categories: CategorieBillet[] };
+  | { etat: 'pret'; evenement: Evenement; categories: CategorieBillet[]; lieu: LieuPublic | null };
 
 /**
- * Événement et catégories, chargés ensemble. Un brouillon non visible répond 404
- * comme un identifiant inconnu (getVisible côté backend) : même écran « introuvable ».
+ * Événement, puis ses catégories et son lieu. Un brouillon non visible répond 404 comme
+ * un identifiant inconnu (getVisible côté backend) : même écran « introuvable ».
+ *
+ * Un événement annulé ou terminé reste visible (l'acheteur doit pouvoir constater une
+ * annulation), mais ses catégories répondent 404 (vente fermée) : elles ne sont donc
+ * demandées que pour un événement publié. Le lieu (adresse, coordonnées) est un
+ * complément : son échec n'empêche pas l'affichage.
  */
 export function useEvenement(id: string | undefined): EtatEvenement & { reessayer: () => void } {
   const [resultat, setResultat] = useState<EtatEvenement>({ etat: 'chargement' });
@@ -23,8 +28,14 @@ export function useEvenement(id: string | undefined): EtatEvenement & { reessaye
     }
     let annule = false;
     setResultat({ etat: 'chargement' });
-    Promise.all([lireEvenement(id), lireCategories(id)])
-      .then(([evenement, categories]) => !annule && setResultat({ etat: 'pret', evenement, categories }))
+    lireEvenement(id)
+      .then(async (evenement) => {
+        const [categories, lieu] = await Promise.all([
+          evenement.status === 'PUBLIE' ? lireCategories(id) : Promise.resolve([]),
+          lireLieu(evenement.venueId).catch(() => null),
+        ]);
+        if (!annule) setResultat({ etat: 'pret', evenement, categories, lieu });
+      })
       .catch((e: unknown) => {
         if (annule) return;
         if (e instanceof ApiError && e.status === 404) setResultat({ etat: 'introuvable' });

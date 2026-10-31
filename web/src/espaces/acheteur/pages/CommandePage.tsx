@@ -208,6 +208,17 @@ export function CommandePage() {
               <p className={s.surtitre}>{payee ? 'Paiement confirmé' : 'Billets enregistrés'}</p>
               <h1 className={s.titrePage}>Vos billets</h1>
             </div>
+            {billetsAffiches?.some((b) => b.statut === 'ANNULE') && (
+              // Un billet n'est annulé que par l'annulation de son événement (CancelEventTicketsUseCase) :
+              // la commande payée rejoint alors la liste des remboursements de l'administrateur.
+              <Avis ton="danger" icone="croix">
+                <p>
+                  <strong>Événement annulé.</strong> Vos billets ne sont plus valables. Votre paiement
+                  {commande ? ` de ${formatFcfa(commande.montantTotalFcfa)}` : ''} est remboursé par l'équipe Billet+,
+                  sur le numéro qui a payé, par le même moyen de paiement.
+                </p>
+              </Avis>
+            )}
             {billetsAffiches ? (
               <>
                 <Avis ton="succes" icone="cadenas">
