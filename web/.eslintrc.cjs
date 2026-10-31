@@ -27,7 +27,7 @@ module.exports = {
         'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
         'no-restricted-imports': [
             'error',
-            { patterns: [isolerEspace('acheteur'), isolerEspace('organisateur'), isolerEspace('controle')] },
+            { patterns: [isolerEspace('acheteur'), isolerEspace('organisateur'), isolerEspace('controle'), isolerEspace('admin')] },
         ],
     },
     overrides: [
