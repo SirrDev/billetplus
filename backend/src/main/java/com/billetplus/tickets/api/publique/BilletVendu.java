@@ -16,7 +16,11 @@ public interface BilletVendu {
 
     String categoryNom();
 
-    /** EMIS, SCANNE, ANNULE ou REMBOURSE. */
+    /**
+     * EMIS, SCANNE, ANNULE ou REMBOURSE ; TRANSFERE pour un billet cédé à un autre
+     * mobile (ADR 0008), quel que soit son statut depuis : ce qu'en fait le
+     * destinataire ne regarde plus l'acheteur.
+     */
     String statut();
 
     /**
@@ -25,4 +29,10 @@ public interface BilletVendu {
      * C'est un jeton porteur : ne jamais le journaliser.
      */
     Optional<String> qr();
+
+    /**
+     * Mobile du destinataire, masqué (« 77 ••• •• 67 »), si le billet est transféré.
+     * Masqué : le jeton de la commande, qui donne accès à cette vue, peut circuler.
+     */
+    Optional<String> transfereA();
 }

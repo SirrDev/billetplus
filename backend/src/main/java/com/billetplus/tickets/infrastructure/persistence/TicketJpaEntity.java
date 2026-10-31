@@ -42,6 +42,18 @@ class TicketJpaEntity {
 
     private Instant scanneLe;
 
+    /** Date signée dans le QR en vigueur (V12, ADR 0008). */
+    @Column(nullable = false)
+    private Instant qrSigneLe;
+
+    @Column(name = "transfere_a", length = 13)
+    private String transfereA;
+
+    @Column(name = "transfert_jeton_empreinte", length = 64)
+    private String empreinteJetonTransfert;
+
+    private Instant transfereLe;
+
     /**
      * Verrouillage optimiste (deux scans simultanés du même billet), absent du
      * domaine. Wrapper null à la création : persist au lieu de merge.
@@ -55,7 +67,7 @@ class TicketJpaEntity {
     }
 
     TicketJpaEntity(UUID id, UUID eventId, UUID categoryId, UUID orderId,
-                    TicketStatus status, Instant emisLe, Instant scanneLe) {
+                    TicketStatus status, Instant emisLe, Instant scanneLe, Instant qrSigneLe) {
         this.id = id;
         this.eventId = eventId;
         this.categoryId = categoryId;
@@ -63,6 +75,7 @@ class TicketJpaEntity {
         this.status = status;
         this.emisLe = emisLe;
         this.scanneLe = scanneLe;
+        this.qrSigneLe = qrSigneLe;
     }
 
     UUID getId() {
@@ -99,6 +112,29 @@ class TicketJpaEntity {
 
     void setScanneLe(Instant scanneLe) {
         this.scanneLe = scanneLe;
+    }
+
+    Instant getQrSigneLe() {
+        return qrSigneLe;
+    }
+
+    String getTransfereA() {
+        return transfereA;
+    }
+
+    String getEmpreinteJetonTransfert() {
+        return empreinteJetonTransfert;
+    }
+
+    Instant getTransfereLe() {
+        return transfereLe;
+    }
+
+    void transfert(Instant qrSigneLe, String transfereA, String empreinteJetonTransfert, Instant transfereLe) {
+        this.qrSigneLe = qrSigneLe;
+        this.transfereA = transfereA;
+        this.empreinteJetonTransfert = empreinteJetonTransfert;
+        this.transfereLe = transfereLe;
     }
 
     Long getVersion() {

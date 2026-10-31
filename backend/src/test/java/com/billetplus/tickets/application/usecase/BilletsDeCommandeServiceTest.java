@@ -61,6 +61,31 @@ class BilletsDeCommandeServiceTest {
         verify(signataire, never()).sign(scanne.getId(), evenement, EMIS_LE);
     }
 
+    /**
+     * Contrat de BilletVendu avec orders (ADR 0008) : un billet transféré est exposé
+     * TRANSFERE, sans QR, avec le mobile masqué, même si le destinataire l'a scanné depuis.
+     */
+    @Test
+    void un_billet_transfere_est_expose_transfere_sans_qr_avec_le_numero_masque() {
+        Ticket transfere = billet(TicketStatus.EMIS);
+        transfere.transfererA("+221781234567", "a".repeat(64));
+        Ticket transfereEtScanne = billet(TicketStatus.EMIS);
+        transfereEtScanne.transfererA("+221771234500", "b".repeat(64));
+        transfereEtScanne.marquerCommeScanne();
+        when(tickets.findByOrderId(commande)).thenReturn(List.of(transfere, transfereEtScanne));
+        when(categories.findById(vip.getId())).thenReturn(Optional.of(vip));
+
+        List<BilletVendu> billets = service.billetsDe(commande);
+
+        assertThat(billets).allSatisfy(b -> {
+            assertThat(b.statut()).isEqualTo("TRANSFERE");
+            assertThat(b.qr()).isEmpty();
+        });
+        assertThat(billets).extracting(b -> b.transfereA().orElseThrow())
+            .containsExactlyInAnyOrder("78 ••• •• 67", "77 ••• •• 00");
+        verify(signataire, never()).sign(any(), any(), any());
+    }
+
     @Test
     void les_billets_sont_tries_par_categorie_puis_identifiant() {
         TicketCategory standard = new TicketCategory(evenement, "Standard", Money.ofFcfa(5000), 10);
