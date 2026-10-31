@@ -1,16 +1,23 @@
 import { useEffect, useState } from 'react';
 import { BoutonLien, Cadre, CarteEvenement, Chargement, EtatVide, GrilleEvenements } from '@/ui';
-import { listerCommandesLocales, type CommandeLocale } from '../commandesLocales';
+import { listerBilletsRecus, listerCommandesLocales, type BilletRecuLocal, type CommandeLocale } from '../commandesLocales';
 import s from './pages.module.css';
 
-/** Les commandes de CET appareil : sans compte, il n'y a rien à demander au serveur. */
+/**
+ * Les commandes et les billets reçus par transfert de CET appareil : sans compte, il n'y
+ * a rien à demander au serveur.
+ */
 export function MesBilletsPage() {
   const [commandes, setCommandes] = useState<CommandeLocale[] | null>(null);
+  const [recus, setRecus] = useState<BilletRecuLocal[]>([]);
 
   useEffect(() => {
     listerCommandesLocales()
       .then(setCommandes)
       .catch(() => setCommandes([]));
+    listerBilletsRecus()
+      .then(setRecus)
+      .catch(() => setRecus([]));
   }, []);
 
   const maintenant = Date.now();
@@ -27,7 +34,7 @@ export function MesBilletsPage() {
 
         {commandes === null && <Chargement />}
 
-        {commandes?.length === 0 && (
+        {commandes?.length === 0 && recus.length === 0 && (
           <EtatVide
             titre="Aucun billet pour l'instant"
             texte="Les billets achetés depuis ce téléphone ou ce navigateur apparaîtront ici, même sans connexion."
@@ -45,6 +52,23 @@ export function MesBilletsPage() {
               />
             ))}
           </GrilleEvenements>
+        )}
+
+        {recus.length > 0 && (
+          <section className={s.pile} aria-labelledby="titre-recus">
+            <h2 id="titre-recus" className={s.titreSection}>
+              Reçus par transfert
+            </h2>
+            <GrilleEvenements libelle="Billets reçus par transfert">
+              {recus.map((r) => (
+                <CarteEvenement
+                  key={r.id}
+                  evenement={{ id: r.billet.eventId, titre: r.titre, debuteLe: r.debuteLe, lieu: r.lieu }}
+                  vers={`/billets/recu/${r.id}`}
+                />
+              ))}
+            </GrilleEvenements>
+          </section>
         )}
 
         {passees.length > 0 && (

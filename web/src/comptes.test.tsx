@@ -6,6 +6,10 @@ import { effacerJetons, enregistrerJetons, lireJetons } from '@/commun/session';
 
 /* Changement de mot de passe : organisateur, agent de contrôle et administrateur. */
 
+// Trois mots de passe tapés caractère par caractère : près de 5 s sous charge (Node 20,
+// suite complète). Même marge que les autres parcours longs (HANDOFF, section 10, n° 53).
+vi.setConfig({ testTimeout: 15_000 });
+
 const COMPTES = {
   ORGANISATEUR: { id: 'o1', email: 'orga@test.sn', nomComplet: 'Sunu Events', role: 'ORGANISATEUR' },
   AGENT: { id: 'a1', email: 'agent@test.sn', nomComplet: 'Awa Agent', role: 'AGENT' },

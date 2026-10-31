@@ -233,6 +233,22 @@ export function CommandePage() {
                       sousTitre={sousTitre}
                       qr={b.qr}
                       statut={b.statut}
+                      mention={
+                        b.statut === 'TRANSFERE'
+                          ? `Transféré au ${b.transfereA ?? 'destinataire'} : ce billet n'est plus valable sur cet appareil.`
+                          : undefined
+                      }
+                      action={
+                        (b.statut === 'EMIS' && b.qr && !horsLigne) ||
+                        (b.statut === 'TRANSFERE' && locale.liensTransfert?.[b.id]) ? (
+                          <BoutonLien
+                            to={`/commandes/${locale.id}/billets/${b.id}/transfert`}
+                            variante="secondaire"
+                          >
+                            {b.statut === 'TRANSFERE' ? 'Renvoyer le lien' : 'Transférer ce billet'}
+                          </BoutonLien>
+                        ) : undefined
+                      }
                     />
                   ))}
                 </div>

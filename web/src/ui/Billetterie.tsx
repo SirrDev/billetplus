@@ -193,17 +193,29 @@ export function PasseBillet({
   sousTitre,
   qr,
   statut,
+  mention,
+  action,
 }: {
   id: string;
   categorie: string;
   titre: string;
   sousTitre: string;
   qr: string | null;
-  statut: 'EMIS' | 'SCANNE' | 'ANNULE' | 'REMBOURSE';
+  statut: 'EMIS' | 'SCANNE' | 'ANNULE' | 'REMBOURSE' | 'TRANSFERE';
+  /** Remplace la consigne sous le code (par exemple le destinataire d'un transfert). */
+  mention?: string;
+  /** Action propre au billet (transférer, renvoyer le lien), sous la consigne. */
+  action?: ReactNode;
 }) {
   const code = codeBillet(id);
   const valide = statut === 'EMIS' && qr !== null;
-  const libelleStatut = { EMIS: 'Valide', SCANNE: 'Déjà utilisé', ANNULE: 'Annulé', REMBOURSE: 'Remboursé' }[statut];
+  const libelleStatut = {
+    EMIS: 'Valide',
+    SCANNE: 'Déjà utilisé',
+    ANNULE: 'Annulé',
+    REMBOURSE: 'Remboursé',
+    TRANSFERE: 'Transféré',
+  }[statut];
   return (
     <article className={s.passe} aria-label={`Billet ${categorie}, ${titre}, ${code}`}>
       <div className={s.passeHaut}>
@@ -233,10 +245,12 @@ export function PasseBillet({
         ) : null}
         <p className={s.code}>{code}</p>
         <p className={s.consigne}>
-          {valide
-            ? "Présentez ce code à l'entrée, luminosité de l'écran au maximum."
-            : "Ce billet ne permet plus d'entrer."}
+          {mention ??
+            (valide
+              ? "Présentez ce code à l'entrée, luminosité de l'écran au maximum."
+              : "Ce billet ne permet plus d'entrer.")}
         </p>
+        {action}
       </div>
     </article>
   );

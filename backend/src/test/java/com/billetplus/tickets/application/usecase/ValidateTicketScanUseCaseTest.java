@@ -158,6 +158,22 @@ class ValidateTicketScanUseCaseTest {
         verify(ticketRepository, never()).save(any());
     }
 
+    /** ADR 0008 : après un transfert, le QR resté chez l'expéditeur est refusé, le nouveau accepté. */
+    @Test
+    void refuse_le_qr_d_avant_le_transfert_et_accepte_le_nouveau() {
+        Ticket ticket = billet(TicketStatus.EMIS, null);
+        ticket.transfererA("+221781234567", "a".repeat(64));
+        when(ticketRepository.findById(ticket.getId())).thenReturn(Optional.of(ticket));
+
+        when(qrSigner.verify(QR)).thenReturn(QrVerificationResult.valide(ticket.getId(), eventId, IAT_DU_QR));
+        assertThat(useCase().execute(QR, eventId)).isEqualTo(ResultatScan.invalide());
+        verify(ticketRepository, never()).save(any());
+
+        Instant nouvelIat = ticket.getQrSigneLe().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
+        when(qrSigner.verify(QR)).thenReturn(QrVerificationResult.valide(ticket.getId(), eventId, nouvelIat));
+        assertThat(useCase().execute(QR, eventId).issue()).isEqualTo(Issue.ACCEPTE);
+    }
+
     /** Toutes les causes d'invalidité donnent exactement la même réponse : aucun indice pour un faussaire. */
     @Test
     void un_qr_invalide_ne_porte_aucune_donnee_quelle_qu_en_soit_la_cause() {

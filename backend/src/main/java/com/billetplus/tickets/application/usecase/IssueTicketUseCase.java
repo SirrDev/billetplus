@@ -130,7 +130,7 @@ public class IssueTicketUseCase {
         List<IssuedTicket> emis = new ArrayList<>(quantite);
         for (int i = 0; i < quantite; i++) {
             Ticket ticket = ticketRepository.save(new Ticket(category.getEventId(), categoryId, orderId));
-            String qrContent = qrSigner.sign(ticket.getId(), ticket.getEventId(), ticket.getEmisLe());
+            String qrContent = qrSigner.sign(ticket.getId(), ticket.getEventId(), ticket.getQrSigneLe());
             emis.add(new IssuedTicket(ticket, qrContent));
         }
 

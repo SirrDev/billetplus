@@ -85,10 +85,23 @@ export interface LienPaiement {
   expireLe: string;
 }
 
-/** BilletDto : qr seulement pour un billet encore valable (EMIS). */
+/**
+ * BilletDto : qr seulement pour un billet encore valable (EMIS). TRANSFERE : cédé à un
+ * autre mobile (ADR 0008), sans QR ; transfereA porte alors ce mobile, masqué.
+ */
 export interface Billet {
   id: string;
   categoryId: string;
+  categorie: string;
+  statut: 'EMIS' | 'SCANNE' | 'ANNULE' | 'REMBOURSE' | 'TRANSFERE';
+  qr: string | null;
+  transfereA?: string | null;
+}
+
+/** BilletTransfereDto : billet reçu par transfert, vu par son destinataire. */
+export interface BilletRecu {
+  id: string;
+  eventId: string;
   categorie: string;
   statut: 'EMIS' | 'SCANNE' | 'ANNULE' | 'REMBOURSE';
   qr: string | null;
@@ -140,4 +153,40 @@ export function ouvrirPaiement(id: string, jeton: string, moyen: MoyenPaiement):
 /** 409 tant que la commande n'est pas payée : l'appelant réessaie. */
 export function lireBillets(id: string, jeton: string): Promise<Billet[]> {
   return http<Billet[]>(`/orders/${encodeURIComponent(id)}/billets`, { headers: { [EN_TETE_JETON]: jeton } });
+}
+
+/**
+ * Transfère un billet (ADR 0008), définitif. Renvoie le jeton du destinataire, remis
+ * UNE SEULE FOIS : l'appelant l'enregistre avant toute autre chose.
+ */
+export function transfererBillet(
+  orderId: string,
+  jeton: string,
+  ticketId: string,
+  telephone: string,
+): Promise<{ ticketId: string; jeton: string }> {
+  return http<{ ticketId: string; jeton: string }>(
+    `/orders/${encodeURIComponent(orderId)}/billets/${encodeURIComponent(ticketId)}/transfert`,
+    { method: 'POST', headers: { [EN_TETE_JETON]: jeton }, body: JSON.stringify({ telephone }) },
+  );
+}
+
+/** BilletTransfereController.EN_TETE_JETON : jamais dans l'URL. */
+const EN_TETE_JETON_BILLET = 'X-Jeton-Billet';
+
+/** Le destinataire ouvre son billet : jeton du lien ET son mobile (+2217XXXXXXXX). 404 si l'un est faux. */
+export function consulterBilletRecu(ticketId: string, jeton: string, telephoneE164: string): Promise<BilletRecu> {
+  return http<BilletRecu>(`/billets/${encodeURIComponent(ticketId)}/consultation`, {
+    method: 'POST',
+    headers: { [EN_TETE_JETON_BILLET]: jeton },
+    body: JSON.stringify({ telephone: telephoneE164 }),
+  });
+}
+
+/**
+ * Lien à envoyer au destinataire. Le jeton est dans le fragment (#) : le navigateur ne
+ * l'envoie jamais au serveur, il ne finit donc dans aucun journal.
+ */
+export function lienBilletRecu(origine: string, ticketId: string, jeton: string): string {
+  return `${origine}/billets/recu/${encodeURIComponent(ticketId)}#${jeton}`;
 }

@@ -102,14 +102,20 @@ public class ValidateTicketScanUseCase {
         }
         Ticket ticket = trouve.get();
 
-        // Le QR signe emisLe à la MILLISECONDE (champ iat), la base le garde à la
-        // microseconde : comparer après troncature, sinon tout billet légitime
-        // serait refusé.
+        // Le QR signe la date du QR en vigueur à la MILLISECONDE (champ iat), la base
+        // la garde à la microseconde : comparer après troncature, sinon tout billet
+        // légitime serait refusé. Après un transfert (ADR 0008), cette date change :
+        // l'ancien QR, resté chez l'expéditeur, tombe ici et est refusé.
         boolean coherent = ticket.getEventId().equals(qr.eventId())
-            && ticket.getEmisLe().truncatedTo(ChronoUnit.MILLIS).equals(qr.issuedAt());
+            && ticket.getQrSigneLe().truncatedTo(ChronoUnit.MILLIS).equals(qr.issuedAt());
         if (!coherent) {
             // Une signature authentique sur des données qui ne correspondent pas à
-            // la base : clé privée compromise ou défaut d'émission. À investiguer.
+            // la base : QR d'avant un transfert, sinon clé privée compromise ou défaut
+            // d'émission. À investiguer si le billet n'est pas transféré.
+            if (ticket.estTransfere()) {
+                LOG.warn("QR remplacé par un transfert présenté pour le billet {}", ticket.getId());
+                return ResultatScan.invalide();
+            }
             LOG.error("QR à signature valide mais incohérent avec la base pour le billet {}", ticket.getId());
             return ResultatScan.invalide();
         }

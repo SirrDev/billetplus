@@ -19,15 +19,19 @@ import java.util.UUID;
 
 /**
  * Implémentation du port public {@link BilletsDeCommande} (ADR 0005). Le QR est
- * recalculé avec les mêmes données qu'à l'émission (identifiant, événement,
- * emisLe) : le contrôle d'entrée l'accepte comme l'original.
+ * recalculé avec les mêmes données qu'à l'émission (identifiant, événement, date du
+ * QR en vigueur) : le contrôle d'entrée l'accepte comme l'original.
  */
 @Service
 class BilletsDeCommandeService implements BilletsDeCommande {
 
-    private record Billet(UUID id, UUID categoryId, String categoryNom, String statut, Optional<String> qr)
+    private record Billet(UUID id, UUID categoryId, String categoryNom, String statut, Optional<String> qr,
+                          Optional<String> transfereA)
         implements BilletVendu {
     }
+
+    /** Statut exposé à l'acheteur pour un billet transféré (ADR 0008). */
+    static final String TRANSFERE = "TRANSFERE";
 
     private final TicketRepository ticketRepository;
     private final TicketCategoryRepository categoryRepository;
@@ -52,11 +56,19 @@ class BilletsDeCommandeService implements BilletsDeCommande {
                 ticket.getId(),
                 ticket.getCategoryId(),
                 nomsDesCategories.computeIfAbsent(ticket.getCategoryId(), this::nomDe),
-                ticket.getStatus().name(),
-                ticket.getStatus() == TicketStatus.EMIS
-                    ? Optional.of(qrSigner.sign(ticket.getId(), ticket.getEventId(), ticket.getEmisLe()))
-                    : Optional.empty()))
+                ticket.estTransfere() ? TRANSFERE : ticket.getStatus().name(),
+                // Un billet transféré n'a plus de QR pour l'acheteur : il appartient au destinataire.
+                ticket.getStatus() == TicketStatus.EMIS && !ticket.estTransfere()
+                    ? Optional.of(qrSigner.sign(ticket.getId(), ticket.getEventId(), ticket.getQrSigneLe()))
+                    : Optional.empty(),
+                Optional.ofNullable(ticket.getTransfereA()).map(BilletsDeCommandeService::masquer)))
             .toList();
+    }
+
+    /** +221771234567 -> « 77 ••• •• 67 ». */
+    static String masquer(String telephoneE164) {
+        String national = telephoneE164.substring(4);
+        return national.substring(0, 2) + " ••• •• " + national.substring(7);
     }
 
     private String nomDe(UUID categoryId) {

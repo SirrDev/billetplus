@@ -5,11 +5,14 @@ import com.billetplus.orders.api.dto.CommandeCreeeResponse;
 import com.billetplus.orders.api.dto.CommandeDto;
 import com.billetplus.orders.api.dto.CreateOrderRequest;
 import com.billetplus.orders.api.dto.LienPaiementDto;
+import com.billetplus.orders.api.dto.BilletTransfereResponse;
 import com.billetplus.orders.api.dto.OuvrirPaiementRequest;
+import com.billetplus.orders.api.dto.TransfererBilletRequest;
 import com.billetplus.orders.application.usecase.ConsulterBilletsUseCase;
 import com.billetplus.orders.application.usecase.ConsulterCommandeUseCase;
 import com.billetplus.orders.application.usecase.CreateOrderUseCase;
 import com.billetplus.orders.application.usecase.OuvrirPaiementUseCase;
+import com.billetplus.orders.application.usecase.TransfererBilletUseCase;
 import com.billetplus.orders.domain.Order;
 import jakarta.validation.Valid;
 import org.springframework.http.CacheControl;
@@ -38,13 +41,16 @@ public class OrderController {
     private final ConsulterCommandeUseCase consulterCommande;
     private final OuvrirPaiementUseCase ouvrirPaiement;
     private final ConsulterBilletsUseCase consulterBillets;
+    private final TransfererBilletUseCase transfererBillet;
 
     public OrderController(CreateOrderUseCase createOrder, ConsulterCommandeUseCase consulterCommande,
-                           OuvrirPaiementUseCase ouvrirPaiement, ConsulterBilletsUseCase consulterBillets) {
+                           OuvrirPaiementUseCase ouvrirPaiement, ConsulterBilletsUseCase consulterBillets,
+                           TransfererBilletUseCase transfererBillet) {
         this.createOrder = createOrder;
         this.consulterCommande = consulterCommande;
         this.ouvrirPaiement = ouvrirPaiement;
         this.consulterBillets = consulterBillets;
+        this.transfererBillet = transfererBillet;
     }
 
     @PostMapping
@@ -77,6 +83,22 @@ public class OrderController {
         return ResponseEntity.ok()
             .cacheControl(CacheControl.noStore())
             .body(consulterBillets.execute(id, jeton).stream().map(BilletDto::from).toList());
+    }
+
+    /**
+     * Transfère un billet de la commande à un autre mobile (ADR 0008) : définitif. Renvoie
+     * le jeton du destinataire, une seule fois. 404 sans le bon jeton de commande ou pour
+     * un billet d'une autre commande, 400 pour un mobile invalide, 409 si le billet est
+     * déjà transféré, plus valable, ou si l'événement n'est plus en vente.
+     */
+    @PostMapping("/{id}/billets/{ticketId}/transfert")
+    public ResponseEntity<BilletTransfereResponse> transferer(@PathVariable UUID id, @PathVariable UUID ticketId,
+                                                              @RequestHeader(name = EN_TETE_JETON, required = false) String jeton,
+                                                              @Valid @RequestBody TransfererBilletRequest request) {
+        String jetonDestinataire = transfererBillet.execute(id, jeton, ticketId, request.telephone());
+        return ResponseEntity.ok()
+            .cacheControl(CacheControl.noStore())
+            .body(new BilletTransfereResponse(ticketId, jetonDestinataire));
     }
 
     /**
