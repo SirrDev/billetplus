@@ -75,6 +75,15 @@ export function heureDakarVersInstant(valeurLocale: string): string | null {
   return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 16) !== valeurLocale ? null : instant;
 }
 
+/**
+ * Inverse de heureDakarVersInstant : instant ISO -> valeur d'un champ datetime-local à
+ * l'heure de Dakar (UTC+0 toute l'année), à la minute. Chaîne vide si la date est invalide.
+ */
+export function instantVersHeureDakar(instant: string): string {
+  const date = new Date(instant);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 16);
+}
+
 /** 582 -> « 09:42 » ; jamais négatif. */
 export function formatCompteARebours(secondes: number): string {
   const s = Math.max(0, Math.floor(secondes));

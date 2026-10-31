@@ -267,6 +267,111 @@ describe('Création et gestion d’un événement', () => {
   });
 });
 
+describe('Modification d’un événement', () => {
+  const routesPage = (evenement: object) => ({
+    'GET /api/auth/me': () => ORGANISATEUR,
+    [`GET /api/events/${EVENEMENT.id}`]: () => evenement,
+    [`GET /api/events/${EVENEMENT.id}/categories`]: () => [],
+    [`GET /api/events/${EVENEMENT.id}/tableau-de-bord`]: () => TABLEAU_VIDE,
+    'GET /api/agents': () => [],
+  });
+
+  it('modifie un brouillon, dates comprises, puis revient à la page de l’événement', async () => {
+    connecte();
+    let actuel: Record<string, unknown> = { ...EVENEMENT, termineLe: '2099-11-15T02:00:00Z' };
+    const appels = backend({
+      ...routesPage(actuel),
+      [`GET /api/events/${EVENEMENT.id}`]: () => actuel,
+      [`PUT /api/events/${EVENEMENT.id}`]: (init) => {
+        actuel = { ...actuel, ...(corpsDe(init) as object) };
+        return actuel;
+      },
+    });
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}`);
+    await userEvent.click(await screen.findByRole('link', { name: 'Modifier' }));
+
+    const titre = await screen.findByLabelText('Titre');
+    expect(titre).toHaveValue('Nuit du Mbalax');
+    expect(screen.getByLabelText('Début')).toHaveValue('2099-11-14T21:00');
+    expect(screen.getByLabelText(/^Fin/)).toHaveValue('2099-11-15T02:00');
+    await userEvent.clear(titre);
+    await userEvent.type(titre, 'Grande nuit du Mbalax');
+    fireEvent.change(screen.getByLabelText('Début'), { target: { value: '2099-11-21T21:00' } });
+    fireEvent.change(screen.getByLabelText(/^Fin/), { target: { value: '' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Grande nuit du Mbalax' })).toBeInTheDocument();
+    expect(screen.getByText('Modifications enregistrées.')).toBeInTheDocument();
+    const envoi = appels.mock.calls.find(([, i]) => i?.method === 'PUT');
+    expect(corpsDe(envoi?.[1])).toEqual({
+      titre: 'Grande nuit du Mbalax',
+      description: 'Une nuit de mbalax live.',
+      debuteLe: '2099-11-21T21:00:00Z',
+      termineLe: null,
+    });
+    expect(jetonDe(envoi?.[1])).toBe('Bearer acces');
+  });
+
+  it('refuse une fin avant le début sans rien envoyer', async () => {
+    connecte();
+    const appels = backend(routesPage(EVENEMENT));
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}/modifier`);
+    fireEvent.change(await screen.findByLabelText(/^Fin/), { target: { value: '2099-11-14T20:00' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    expect(await screen.findByText('La fin ne peut pas précéder le début.')).toBeInTheDocument();
+    expect(appels.mock.calls.some(([, i]) => i?.method === 'PUT')).toBe(false);
+  });
+
+  it('pour un événement publié, affiche les dates sans champ et les renvoie telles que reçues', async () => {
+    connecte();
+    const publie = { ...EVENEMENT, status: 'PUBLIE', debuteLe: '2099-11-14T21:00:00.123456Z' };
+    const appels = backend({
+      ...routesPage(publie),
+      [`PUT /api/events/${EVENEMENT.id}`]: (init) => ({ ...publie, ...(corpsDe(init) as object) }),
+    });
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}/modifier`);
+    expect(await screen.findByText(/ses dates ne changent plus/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Début')).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(/^Description/), ' Complet à 22 h.');
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await waitFor(() => expect(appels.mock.calls.some(([, i]) => i?.method === 'PUT')).toBe(true));
+    const envoi = appels.mock.calls.find(([, i]) => i?.method === 'PUT');
+    expect(corpsDe(envoi?.[1])).toMatchObject({
+      description: 'Une nuit de mbalax live. Complet à 22 h.',
+      debuteLe: '2099-11-14T21:00:00.123456Z',
+      termineLe: null,
+    });
+  });
+
+  it('affiche le refus du serveur', async () => {
+    connecte();
+    backend({
+      ...routesPage({ ...EVENEMENT, status: 'PUBLIE' }),
+      [`PUT /api/events/${EVENEMENT.id}`]: () => erreur(409, "Les dates d'un événement publié ne peuvent plus changer"),
+    });
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}/modifier`);
+    await userEvent.click(await screen.findByRole('button', { name: 'Enregistrer' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent("Les dates d'un événement publié ne peuvent plus changer");
+  });
+
+  it('ne propose aucun formulaire pour un événement annulé', async () => {
+    connecte();
+    backend(routesPage({ ...EVENEMENT, status: 'ANNULE' }));
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}/modifier`);
+    expect(await screen.findByText(/annulé : il ne peut plus être modifié/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Enregistrer' })).not.toBeInTheDocument();
+  });
+
+  it('ne montre pas le lien Modifier sur un événement annulé', async () => {
+    connecte();
+    backend(routesPage({ ...EVENEMENT, status: 'ANNULE' }));
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}`);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Nuit du Mbalax' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Modifier' })).not.toBeInTheDocument();
+  });
+});
+
 describe('Équipe', () => {
   it("crée un compte d'agent et l'ajoute à la liste", async () => {
     connecte();

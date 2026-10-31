@@ -80,6 +80,11 @@ export function ChoixEvenementPage() {
         <div>
           <p className={s.surtitre}>Connecté : {utilisateur?.nomComplet}</p>
           <h1 className={s.titrePage}>Événement à contrôler</h1>
+          {!organisateur && (
+            <p className={s.texte} style={{ marginTop: 8 }}>
+              <Link to="/scanner/compte">Mon compte et mot de passe</Link>
+            </p>
+          )}
         </div>
         {horsLigne && (
           <Avis ton="attention" icone="horsLigne">

@@ -4,6 +4,7 @@ import { messageErreur } from '@/commun/http';
 import {
   Avis,
   Bouton,
+  BoutonLien,
   Chargement,
   EtatVide,
   Icone,
@@ -137,12 +138,18 @@ export function RemboursementsPage() {
             <p className={s.surtitre}>Administration Billet+</p>
             <h1 className={s.titrePage}>Remboursements</h1>
           </div>
-          {commandes && commandes.length > 0 && (
-            <Bouton variante="secondaire" onClick={exporter}>
-              <Icone nom="telecharger" />
-              Exporter en CSV
-            </Bouton>
-          )}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            {commandes && commandes.length > 0 && (
+              <Bouton variante="secondaire" onClick={exporter}>
+                <Icone nom="telecharger" />
+                Exporter en CSV
+              </Bouton>
+            )}
+            <BoutonLien to="/admin/compte" variante="secondaire">
+              <Icone nom="compte" />
+              Mon compte
+            </BoutonLien>
+          </div>
         </div>
 
         <Avis>

@@ -61,14 +61,16 @@ describe('Page introuvable', () => {
 });
 
 describe("Compte de l'organisateur", () => {
-  it('affiche son identité, sans formulaire sans effet', async () => {
+  it('affiche son identité et le formulaire de mot de passe, sans champ pour le nom ni l’e-mail', async () => {
     enregistrerJetons({ accessToken: 'a', refreshToken: 'r' });
     ouvrir('/organisateur/compte');
     expect(await screen.findByRole('heading', { level: 1, name: 'Mon compte' })).toBeInTheDocument();
     expect(screen.getByText('Sunu Events')).toBeInTheDocument();
     expect(screen.getByText('orga@test.sn')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Mon compte' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.queryByLabelText(/mot de passe/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Mot de passe actuel')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/e-mail/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/changement de nom ou d'e-mail n'est pas encore disponible/)).toBeInTheDocument();
   });
 });
 

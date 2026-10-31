@@ -56,7 +56,9 @@ type EtatPage =
 
 export function EvenementOrganisateurPage() {
   const { id } = useParams();
-  const vientDEtreCree = (useLocation().state as { cree?: boolean } | null)?.cree === true;
+  const etatNavigation = useLocation().state as { cree?: boolean; modifie?: boolean } | null;
+  const vientDEtreCree = etatNavigation?.cree === true;
+  const vientDEtreModifie = etatNavigation?.modifie === true;
   const [donnees, setDonnees] = useState<EtatPage>({ etat: 'chargement' });
   const [tableau, setTableau] = useState<TableauDeBord | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -179,6 +181,11 @@ export function EvenementOrganisateurPage() {
                 Publier
               </Bouton>
             )}
+            {(evenement.status === 'BROUILLON' || evenement.status === 'PUBLIE') && (
+              <BoutonLien to={`/organisateur/evenements/${evenement.id}/modifier`} variante="secondaire">
+                Modifier
+              </BoutonLien>
+            )}
             {(evenement.status === 'BROUILLON' || evenement.status === 'PUBLIE') && !confirmerAnnulation && (
               <Bouton variante="secondaire" onClick={() => setConfirmerAnnulation(true)} disabled={action}>
                 Annuler l'événement
@@ -195,6 +202,11 @@ export function EvenementOrganisateurPage() {
         {evenement.status === 'BROUILLON' && categories.length === 0 && !vientDEtreCree && (
           <Avis>
             <p>Ajoutez au moins une catégorie de billets pour pouvoir publier.</p>
+          </Avis>
+        )}
+        {vientDEtreModifie && !message && (
+          <Avis ton="succes">
+            <p>Modifications enregistrées.</p>
           </Avis>
         )}
         {message && (

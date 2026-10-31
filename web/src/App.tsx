@@ -10,6 +10,7 @@ import {
   EvenementOrganisateurPage,
   InscriptionPage,
   MesEvenementsPage,
+  ModifierEvenementPage,
   NouvelEvenementPage,
 } from '@/espaces/organisateur';
 import { Cadre, Chargement } from '@/ui';
@@ -21,11 +22,13 @@ import { Cadre, Chargement } from '@/ui';
  */
 const espaceControle = () => import('@/espaces/controle');
 const ChoixEvenementPage = lazy(() => espaceControle().then((m) => ({ default: m.ChoixEvenementPage })));
+const CompteControlePage = lazy(() => espaceControle().then((m) => ({ default: m.CompteControlePage })));
 const ConnexionControlePage = lazy(() => espaceControle().then((m) => ({ default: m.ConnexionControlePage })));
 const ControlePage = lazy(() => espaceControle().then((m) => ({ default: m.ControlePage })));
 
 /* Administration chargée à la demande, comme le contrôle : aucun acheteur n'en a besoin. */
 const espaceAdmin = () => import('@/espaces/admin');
+const CompteAdminPage = lazy(() => espaceAdmin().then((m) => ({ default: m.CompteAdminPage })));
 const ConnexionAdminPage = lazy(() => espaceAdmin().then((m) => ({ default: m.ConnexionAdminPage })));
 const RemboursementsPage = lazy(() => espaceAdmin().then((m) => ({ default: m.RemboursementsPage })));
 
@@ -86,6 +89,7 @@ export function Routage() {
         <Route path="/organisateur" element={organisateur(<MesEvenementsPage />)} />
         <Route path="/organisateur/evenements/nouveau" element={organisateur(<NouvelEvenementPage />)} />
         <Route path="/organisateur/evenements/:id" element={organisateur(<EvenementOrganisateurPage />)} />
+        <Route path="/organisateur/evenements/:id/modifier" element={organisateur(<ModifierEvenementPage />)} />
         <Route path="/organisateur/equipe" element={organisateur(<EquipePage />)} />
         <Route path="/organisateur/compte" element={organisateur(<ComptePage />)} />
 
@@ -98,6 +102,7 @@ export function Routage() {
           }
         />
         <Route path="/scanner" element={controle(<ChoixEvenementPage />)} />
+        <Route path="/scanner/compte" element={controle(<CompteControlePage />)} />
         <Route path="/scanner/evenements/:id" element={controle(<ControlePage />)} />
 
         <Route
@@ -109,6 +114,7 @@ export function Routage() {
           }
         />
         <Route path="/admin" element={admin(<RemboursementsPage />)} />
+        <Route path="/admin/compte" element={admin(<CompteAdminPage />)} />
 
         <Route path="*" element={<PageIntrouvable />} />
       </Routes>
