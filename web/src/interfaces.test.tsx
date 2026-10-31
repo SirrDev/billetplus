@@ -45,6 +45,35 @@ describe('Aide', () => {
   });
 });
 
+describe('Entrée des organisateurs', () => {
+  it("est proposée depuis l'accueil : en-tête et invitation", async () => {
+    ouvrir('/');
+    expect(await screen.findByRole('heading', { name: 'Vous organisez un événement ?' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Organisateurs' })).toHaveAttribute('href', '/organisateur');
+    expect(screen.getByRole('link', { name: 'Créer mon compte organisateur' })).toHaveAttribute(
+      'href',
+      '/organisateur/inscription',
+    );
+    expect(screen.getByRole('link', { name: 'Se connecter' })).toHaveAttribute('href', '/organisateur/connexion');
+    expect(screen.getByRole('link', { name: 'Vendre ses billets avec Billet+' })).toHaveAttribute(
+      'href',
+      '/organisateur/inscription',
+    );
+  });
+
+  it("n'apparaît ni sur les connexions des équipes ni dans l'espace organisateur", async () => {
+    const { unmount } = ouvrir('/scanner/connexion');
+    expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Organisateurs' })).not.toBeInTheDocument();
+    unmount();
+
+    enregistrerJetons({ accessToken: 'a', refreshToken: 'r' });
+    ouvrir('/organisateur/compte');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Mon compte' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Organisateurs' })).not.toBeInTheDocument();
+  });
+});
+
 describe('Page introuvable', () => {
   it('le dit clairement au lieu de rediriger en silence', async () => {
     ouvrir('/adresse-qui-n-existe-pas');

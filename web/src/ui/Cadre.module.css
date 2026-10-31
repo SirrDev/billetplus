@@ -61,6 +61,30 @@
   gap: 8px;
 }
 
+/* Entrée de l'espace organisateur, dans l'en-tête public : discrète, mais visible aussi sur
+   mobile (le pied de page y est masqué). Cible de 44 px. */
+.lienOrganisateurs {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 16px;
+  border: 1px solid var(--bp-line);
+  border-radius: 999px;
+  color: var(--bp-ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.lienOrganisateurs:hover {
+  border-color: var(--bp-ink-2);
+}
+
+.piedInterieur a {
+  color: var(--bp-ink-2);
+}
+
 /* Bandeau hors connexion : ambre, texte foncé (contraste 10,4), icône + texte. */
 .horsLigne {
   display: flex;

@@ -37,6 +37,10 @@ export function Cadre({
   bandeauHorsLigne = true,
 }: CadreProps) {
   const enLigne = useEnLigne();
+  // Espace public de l'acheteur : seule entrée visible vers l'espace organisateur (le contrôle
+  // et l'administration n'ont pas de lien public : leur adresse est donnée aux équipes). Jamais
+  // sur un écran sans navigation : connexions des équipes, paiement en cours.
+  const espacePublic = liens === navAcheteur && !sansNav;
   const style = {
     '--nb-liens': liens.length,
     '--fond': fondGris ? 'var(--bp-surface)' : undefined,
@@ -76,7 +80,17 @@ export function Cadre({
               ))}
             </nav>
           )}
-          {actions && <div className={s.actions}>{actions}</div>}
+          {actions ? (
+            <div className={s.actions}>{actions}</div>
+          ) : (
+            espacePublic && (
+              <div className={s.actions}>
+                <Link to="/organisateur" className={s.lienOrganisateurs}>
+                  Organisateurs
+                </Link>
+              </div>
+            )
+          )}
         </div>
       </header>
       {/* Région live toujours présente : un role=status inséré à la volée est mal annoncé. */}
@@ -96,6 +110,7 @@ export function Cadre({
       <footer className={s.pied}>
         <div className={s.piedInterieur}>
           <span>Billet+ · Billetterie événementielle, Dakar</span>
+          {espacePublic && <Link to="/organisateur/inscription">Vendre ses billets avec Billet+</Link>}
           <span>Paiement Wave et Orange Money</span>
         </div>
       </footer>

@@ -244,6 +244,35 @@
   }
 }
 
+/* Accueil : invitation des organisateurs, avant les atouts. */
+.organisateurs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid var(--bp-line);
+  border-radius: var(--bp-radius-l);
+}
+
+.organisateursActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (min-width: 1024px) {
+  .organisateurs {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+  }
+
+  .organisateursActions {
+    flex: none;
+  }
+}
+
 .avantage {
   display: flex;
   gap: 14px;
