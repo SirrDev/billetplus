@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Icone } from './Icone';
-import { navAcheteur, type LienNav } from './outils';
+import { navAcheteur, useEnLigne, type LienNav } from './outils';
 import s from './Cadre.module.css';
 
 interface CadreProps {
@@ -17,6 +17,8 @@ interface CadreProps {
   accueil?: string;
   /** Actions de l'en-tête, à droite (déconnexion de l'organisateur). */
   actions?: ReactNode;
+  /** Bandeau « hors connexion » sous l'en-tête (désactivé là où l'écran l'affiche lui-même : scanner). */
+  bandeauHorsLigne?: boolean;
 }
 
 /**
@@ -24,7 +26,17 @@ interface CadreProps {
  * La navigation est le même <nav> à toutes les tailles ; seul le CSS la déplace
  * (barre basse sur mobile, en-tête dès 720 px) : même ordre de tabulation partout.
  */
-export function Cadre({ children, etroit, sansNav, fondGris, liens = navAcheteur, accueil = '/', actions }: CadreProps) {
+export function Cadre({
+  children,
+  etroit,
+  sansNav,
+  fondGris,
+  liens = navAcheteur,
+  accueil = '/',
+  actions,
+  bandeauHorsLigne = true,
+}: CadreProps) {
+  const enLigne = useEnLigne();
   const style = {
     '--nb-liens': liens.length,
     '--fond': fondGris ? 'var(--bp-surface)' : undefined,
@@ -49,7 +61,17 @@ export function Cadre({ children, etroit, sansNav, fondGris, liens = navAcheteur
               {liens.map((l) => (
                 <NavLink key={l.vers} to={l.vers} end={l.exact} className={s.lien}>
                   <Icone nom={l.icone} taille={22} />
-                  {l.libelle}
+                  {l.libelleCourt ? (
+                    <>
+                      {/* Nom accessible : toujours le libellé complet ; le court n'est qu'un affichage mobile. */}
+                      <span className={s.libelleLong}>{l.libelle}</span>
+                      <span className={s.libelleCourt} aria-hidden="true">
+                        {l.libelleCourt}
+                      </span>
+                    </>
+                  ) : (
+                    l.libelle
+                  )}
                 </NavLink>
               ))}
             </nav>
@@ -57,6 +79,17 @@ export function Cadre({ children, etroit, sansNav, fondGris, liens = navAcheteur
           {actions && <div className={s.actions}>{actions}</div>}
         </div>
       </header>
+      {/* Région live toujours présente : un role=status inséré à la volée est mal annoncé. */}
+      {bandeauHorsLigne && (
+        <div role="status" className={enLigne ? undefined : s.horsLigne}>
+          {!enLigne && (
+            <>
+              <Icone nom="horsLigne" taille={16} />
+              Hors connexion : vous voyez les dernières données reçues sur cet appareil.
+            </>
+          )}
+        </div>
+      )}
       <main id="contenu" tabIndex={-1} className={[s.principal, etroit && s.etroit].filter(Boolean).join(' ')}>
         {children}
       </main>

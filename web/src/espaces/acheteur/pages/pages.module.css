@@ -261,3 +261,83 @@
   align-items: flex-start;
   gap: 8px;
 }
+
+/* Aide : rubriques en cartes, questions dépliables (<details> natifs). */
+.aide {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+@media (min-width: 1024px) {
+  .aide {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+.aideRubrique {
+  background: var(--bp-white);
+  border: 1px solid var(--bp-line);
+  border-radius: var(--bp-radius-l);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.aideTitre {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+
+.question {
+  border-top: 1px solid var(--bp-line);
+}
+
+.question summary {
+  min-height: 48px;
+  padding: 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  border-radius: var(--bp-radius-s);
+}
+
+.question summary::-webkit-details-marker {
+  display: none;
+}
+
+.question summary::after {
+  content: '+';
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--bp-accent-soft);
+  color: var(--bp-accent-ink);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.question[open] summary::after {
+  content: '−';
+}
+
+.reponse {
+  padding: 0 0 14px;
+  color: var(--bp-ink-2);
+  line-height: 1.6;
+}
+
+.lienAide {
+  margin-top: 10px;
+}

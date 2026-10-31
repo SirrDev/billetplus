@@ -200,7 +200,8 @@ describe('Contrôle', () => {
     });
     ouvrir(`/scanner/evenements/${id}`);
     expect(await screen.findByRole('heading', { name: 'Nuit du Mbalax' })).toBeInTheDocument();
-    expect(screen.getByText(/Caméra indisponible/)).toBeInTheDocument();
+    // Posé par un effet du lecteur caméra, indépendant de l'arrivée du titre : à attendre, pas à supposer.
+    expect(await screen.findByText(/Caméra indisponible/)).toBeInTheDocument();
 
     const qr = await qrSigne(id, 't1');
     await presenter(qr);

@@ -1,8 +1,10 @@
 import { lazy, Suspense, useEffect, type ReactNode } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { ExigerRole, FournisseurSession } from '@/commun/FournisseurSession';
-import { CommandePage, DecouvrirPage, EvenementPage, MesBilletsPage, PaiementPage } from '@/espaces/acheteur';
+import { PageIntrouvable } from '@/commun/PageIntrouvable';
+import { AidePage, CommandePage, DecouvrirPage, EvenementPage, MesBilletsPage, PaiementPage } from '@/espaces/acheteur';
 import {
+  ComptePage,
   ConnexionPage,
   EquipePage,
   EvenementOrganisateurPage,
@@ -21,6 +23,11 @@ const espaceControle = () => import('@/espaces/controle');
 const ChoixEvenementPage = lazy(() => espaceControle().then((m) => ({ default: m.ChoixEvenementPage })));
 const ConnexionControlePage = lazy(() => espaceControle().then((m) => ({ default: m.ConnexionControlePage })));
 const ControlePage = lazy(() => espaceControle().then((m) => ({ default: m.ControlePage })));
+
+/* Administration chargée à la demande, comme le contrôle : aucun acheteur n'en a besoin. */
+const espaceAdmin = () => import('@/espaces/admin');
+const ConnexionAdminPage = lazy(() => espaceAdmin().then((m) => ({ default: m.ConnexionAdminPage })));
+const RemboursementsPage = lazy(() => espaceAdmin().then((m) => ({ default: m.RemboursementsPage })));
 
 const enChargement = (
   <Cadre sansNav>
@@ -43,6 +50,13 @@ const organisateur = (page: ReactNode) => (
   </ExigerRole>
 );
 
+/** Administration : rôle ADMIN (compte créé hors API), écran chargé à la demande. */
+const admin = (page: ReactNode) => (
+  <ExigerRole roles={['ADMIN']} connexion="/admin/connexion">
+    <Suspense fallback={enChargement}>{page}</Suspense>
+  </ExigerRole>
+);
+
 /** Contrôle d'entrée : agent ou organisateur (ScanController : hasAnyRole AGENT, ORGANISATEUR). */
 const controle = (page: ReactNode) => (
   <ExigerRole roles={['AGENT', 'ORGANISATEUR']} connexion="/scanner/connexion">
@@ -52,7 +66,7 @@ const controle = (page: ReactNode) => (
 
 /**
  * Routes de la PWA (ADR 0004) : acheteur (sans compte), organisateur (/organisateur/...),
- * contrôle d'entrée (/scanner/...).
+ * contrôle d'entrée (/scanner/...), administration (/admin : remboursements manuels).
  * /commandes/:id est l'adresse de retour de la passerelle (UNITECHPAY_URL_RETOUR_SUCCES).
  */
 export function Routage() {
@@ -65,6 +79,7 @@ export function Routage() {
         <Route path="/evenements/:id/paiement" element={<PaiementPage />} />
         <Route path="/commandes/:id" element={<CommandePage />} />
         <Route path="/billets" element={<MesBilletsPage />} />
+        <Route path="/aide" element={<AidePage />} />
 
         <Route path="/organisateur/connexion" element={<ConnexionPage />} />
         <Route path="/organisateur/inscription" element={<InscriptionPage />} />
@@ -72,6 +87,7 @@ export function Routage() {
         <Route path="/organisateur/evenements/nouveau" element={organisateur(<NouvelEvenementPage />)} />
         <Route path="/organisateur/evenements/:id" element={organisateur(<EvenementOrganisateurPage />)} />
         <Route path="/organisateur/equipe" element={organisateur(<EquipePage />)} />
+        <Route path="/organisateur/compte" element={organisateur(<ComptePage />)} />
 
         <Route
           path="/scanner/connexion"
@@ -84,7 +100,17 @@ export function Routage() {
         <Route path="/scanner" element={controle(<ChoixEvenementPage />)} />
         <Route path="/scanner/evenements/:id" element={controle(<ControlePage />)} />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route
+          path="/admin/connexion"
+          element={
+            <Suspense fallback={enChargement}>
+              <ConnexionAdminPage />
+            </Suspense>
+          }
+        />
+        <Route path="/admin" element={admin(<RemboursementsPage />)} />
+
+        <Route path="*" element={<PageIntrouvable />} />
       </Routes>
     </FournisseurSession>
   );
