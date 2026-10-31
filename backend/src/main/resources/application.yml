@@ -100,6 +100,8 @@ billetplus:
       - { nom: scan,               methode: POST, chemin: /api/events/*/scans,     cle: COMPTE, limite: 120, fenetre: 1m }
       - { nom: creation-agent,     methode: POST, chemin: /api/agents,             cle: COMPTE, limite: 30,  fenetre: 1h }
       - { nom: evenements-affectes, methode: GET, chemin: /api/events/affectes,    cle: COMPTE, limite: 60,  fenetre: 1m }
+      - { nom: transfert-billet,   methode: POST, chemin: /api/orders/*/billets/*/transfert, cle: IP, limite: 10, fenetre: 10m }
+      - { nom: billet-recu,        methode: POST, chemin: /api/billets/*/consultation, cle: IP, limite: 30, fenetre: 10m }
       - { nom: changement-mot-de-passe, methode: POST, chemin: /api/auth/mot-de-passe, cle: COMPTE, limite: 5, fenetre: 15m }
       - { nom: modification-evenement, methode: PUT, chemin: /api/events/*,        cle: COMPTE, limite: 60,  fenetre: 1m }
 

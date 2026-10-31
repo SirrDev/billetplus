@@ -56,6 +56,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/orders").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/orders/*", "/api/orders/*/billets").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/orders/*/paiement").permitAll()
+                        // Transfert d'un billet (ADR 0008) : l'acheteur s'authentifie par le jeton de
+                        // sa commande, le destinataire par le jeton reçu ET son mobile. Contrôlés par
+                        // les cas d'usage, comme pour les commandes.
+                        .requestMatchers(HttpMethod.POST, "/api/orders/*/billets/*/transfert").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/billets/*/consultation").permitAll()
                         // Webhook de la passerelle : authentifié par la signature HMAC du corps (ADR 0007).
                         .requestMatchers(HttpMethod.POST, "/api/paiements/unitechpay/webhook").permitAll()
                         .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
