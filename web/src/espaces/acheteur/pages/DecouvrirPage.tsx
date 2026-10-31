@@ -3,6 +3,7 @@ import { messageErreur } from '@/commun/http';
 import {
   Avis,
   Bouton,
+  BoutonLien,
   Cadre,
   CarteEvenement,
   ChampRecherche,
@@ -143,6 +144,24 @@ export function DecouvrirPage() {
             </Bouton>
           </div>
         )}
+
+        <section className={s.organisateurs} aria-labelledby="titre-organisateurs">
+          <div>
+            <h2 id="titre-organisateurs" className={s.titreSection}>
+              Vous organisez un événement ?
+            </h2>
+            <p className={s.infoDetail}>
+              Vendez vos billets avec Billet+ : paiement Wave et Orange Money, billets à QR code infalsifiable, tableau de
+              bord des ventes et contrôle d'entrée, même sans réseau.
+            </p>
+          </div>
+          <div className={s.organisateursActions}>
+            <BoutonLien to="/organisateur/inscription">Créer mon compte organisateur</BoutonLien>
+            <BoutonLien to="/organisateur/connexion" variante="secondaire">
+              Se connecter
+            </BoutonLien>
+          </div>
+        </section>
 
         <section className={s.avantages} aria-label="Pourquoi Billet+">
           {AVANTAGES.map((a) => (
