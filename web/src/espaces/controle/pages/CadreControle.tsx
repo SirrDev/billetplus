@@ -30,6 +30,7 @@ export function CadreControle({ children }: { children: ReactNode }) {
     <Cadre
       sansNav
       fondGris
+      bandeauHorsLigne={false}
       accueil="/scanner"
       actions={
         <Bouton variante="secondaire" onClick={() => void demanderDeconnexion()}>

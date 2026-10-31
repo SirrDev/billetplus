@@ -19,6 +19,10 @@ const TRACES = {
   carte: <><rect x="2" y="6" width="20" height="13" rx="3" /><path d="M2 10h20" /></>,
   horsLigne: <path d="M2 8.5a15 15 0 0120 0M5 12a10 10 0 0114 0M8.5 15.5a5 5 0 017 0M12 19h.01M3 3l18 18" />,
   plus: <path d="M12 5v14M5 12h14" />,
+  aide: <><circle cx="12" cy="12" r="9" /><path d="M9.5 9.5a2.5 2.5 0 114 2c-1 .6-1.5 1.2-1.5 2.5" /><path d="M12 17h.01" /></>,
+  compte: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0116 0" /></>,
+  copier: <><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 012-2h10" /></>,
+  telecharger: <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />,
   moins: <path d="M5 12h14" />,
 } as const;
 

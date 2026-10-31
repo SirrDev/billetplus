@@ -37,6 +37,8 @@ export interface LienNav {
   vers: string;
   libelle: string;
   icone: NomIcone;
+  /** Libellé affiché dans la barre basse du téléphone, si le libellé complet y est trop long. */
+  libelleCourt?: string;
   /** true : actif seulement sur l'adresse exacte (l'accueil « / »). */
   exact?: boolean;
 }
@@ -44,10 +46,28 @@ export interface LienNav {
 export const navAcheteur: ReadonlyArray<LienNav> = [
   { vers: '/', libelle: 'Découvrir', icone: 'boussole', exact: true },
   { vers: '/billets', libelle: 'Mes billets', icone: 'billet' },
+  { vers: '/aide', libelle: 'Aide', icone: 'aide' },
 ];
 
 export const navOrganisateur: ReadonlyArray<LienNav> = [
-  { vers: '/organisateur', libelle: 'Mes événements', icone: 'calendrier', exact: true },
-  { vers: '/organisateur/evenements/nouveau', libelle: 'Nouvel événement', icone: 'plus' },
+  { vers: '/organisateur', libelle: 'Mes événements', libelleCourt: 'Événements', icone: 'calendrier', exact: true },
+  { vers: '/organisateur/evenements/nouveau', libelle: 'Nouvel événement', libelleCourt: 'Créer', icone: 'plus' },
   { vers: '/organisateur/equipe', libelle: 'Équipe', icone: 'bouclier' },
+  { vers: '/organisateur/compte', libelle: 'Mon compte', libelleCourt: 'Compte', icone: 'compte' },
 ];
+
+/** État du réseau, mis à jour par les événements online / offline du navigateur. */
+export function useEnLigne(): boolean {
+  const [enLigne, setEnLigne] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
+  useEffect(() => {
+    const oui = () => setEnLigne(true);
+    const non = () => setEnLigne(false);
+    window.addEventListener('online', oui);
+    window.addEventListener('offline', non);
+    return () => {
+      window.removeEventListener('online', oui);
+      window.removeEventListener('offline', non);
+    };
+  }, []);
+  return enLigne;
+}

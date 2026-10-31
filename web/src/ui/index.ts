@@ -25,6 +25,7 @@ export {
   navAcheteur,
   navOrganisateur,
   useCompteARebours,
+  useEnLigne,
   type LienNav,
   type Motif,
 } from './outils';
