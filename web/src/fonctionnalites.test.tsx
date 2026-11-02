@@ -208,6 +208,68 @@ describe('Organisateur', () => {
   });
 });
 
+describe('Filtre par catégorie', () => {
+  const page = (contenu: object[]) => ({ contenu, page: 0, taille: 12, total: contenu.length, pages: 1 });
+  const ev = (id: string, titre: string, categorie: string) => ({
+    id,
+    titre,
+    description: null,
+    debuteLe: '2099-11-14T21:00:00Z',
+    termineLe: null,
+    venueId: 'v1',
+    venueNom: 'Grand Théâtre',
+    venueAdresse: 'Dakar',
+    categorie,
+  });
+
+  it('interroge le backend avec la catégorie choisie et retire « À l’affiche »', async () => {
+    const appels = vi.spyOn(globalThis, 'fetch').mockImplementation(async (entree) => {
+      const url = new URL(String(entree), 'http://localhost');
+      const categorie = url.searchParams.get('categorie');
+      const contenu =
+        categorie === 'SPORT'
+          ? [ev('s1', 'Derby de la Médina', 'SPORT')]
+          : [ev('m1', 'Nuit du Mbalax', 'MUSIQUE'), ev('s1', 'Derby de la Médina', 'SPORT')];
+      return new Response(JSON.stringify(page(contenu)));
+    });
+    ouvrir('/');
+    expect(await screen.findByText("À l'affiche")).toBeInTheDocument();
+    const filtres = screen.getByRole('group', { name: "Catégories d'événements" });
+    expect(within(filtres).getByRole('button', { name: 'Tout' })).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(within(filtres).getByRole('button', { name: 'Sport' }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Sport' })).toBeInTheDocument();
+    expect(within(filtres).getByRole('button', { name: 'Sport' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByText("À l'affiche")).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Derby de la Médina/ })).toHaveTextContent('Sport');
+    expect(appels.mock.calls.some(([u]) => String(u).includes('categorie=SPORT'))).toBe(true);
+  });
+
+  it('propose de tout revoir quand une catégorie est vide', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (entree) => {
+      const vide = new URL(String(entree), 'http://localhost').searchParams.has('categorie');
+      return new Response(JSON.stringify(page(vide ? [] : [ev('m1', 'Nuit du Mbalax', 'MUSIQUE')])));
+    });
+    ouvrir('/');
+    await userEvent.click(await screen.findByRole('button', { name: 'Conférence' }));
+    expect(await screen.findByText(/Aucun événement à venir en conférence/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Voir tous les événements' }));
+    expect(await screen.findByText("À l'affiche")).toBeInTheDocument();
+  });
+});
+
+describe('En-tête public', () => {
+  it('propose le contrôle d’entrée à côté des organisateurs', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ contenu: [], page: 0, taille: 12, total: 0, pages: 0 })),
+    );
+    ouvrir('/');
+    const lien = await screen.findByRole('link', { name: "Contrôle d'entrée" });
+    expect(lien).toHaveAttribute('href', '/scanner');
+    expect(screen.getByRole('link', { name: 'Organisateurs' })).toHaveAttribute('href', '/organisateur');
+  });
+});
+
 describe('lireCoordonnees', () => {
   it('lit les formats courants et refuse le reste', () => {
     expect(lireCoordonnees('14.6697, -17.4381')).toEqual({ latitude: 14.6697, longitude: -17.4381 });

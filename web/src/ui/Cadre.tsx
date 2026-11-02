@@ -37,9 +37,9 @@ export function Cadre({
   bandeauHorsLigne = true,
 }: CadreProps) {
   const enLigne = useEnLigne();
-  // Espace public de l'acheteur : seule entrée visible vers l'espace organisateur (le contrôle
-  // et l'administration n'ont pas de lien public : leur adresse est donnée aux équipes). Jamais
-  // sur un écran sans navigation : connexions des équipes, paiement en cours.
+  // Espace public de l'acheteur : entrées vers l'espace organisateur et le contrôle d'entrée
+  // (l'administration n'a pas de lien public). Jamais sur un écran sans navigation :
+  // connexions des équipes, paiement en cours.
   const espacePublic = liens === navAcheteur && !sansNav;
   const style = {
     '--nb-liens': liens.length,
@@ -87,6 +87,13 @@ export function Cadre({
               <div className={s.actions}>
                 <Link to="/organisateur" className={s.lienOrganisateurs}>
                   Organisateurs
+                </Link>
+                <Link to="/scanner" className={s.lienOrganisateurs}>
+                  {/* Nom accessible : toujours le libellé complet ; le court n'est qu'un affichage mobile. */}
+                  <span className={s.libelleLong}>Contrôle d'entrée</span>
+                  <span className={s.libelleCourt} aria-hidden="true">
+                    Contrôle
+                  </span>
                 </Link>
               </div>
             )
