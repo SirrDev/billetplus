@@ -44,7 +44,7 @@ class EventServiceTest {
         when(venueRepository.findById(venue.getId())).thenReturn(Optional.of(venue));
         when(eventRepository.save(any(Event.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Event event = service().create("Concert", "Desc", Instant.now(), null, venue.getId(), UUID.randomUUID());
+        Event event = service().create("Concert", "Desc", Instant.now(), null, venue.getId(), UUID.randomUUID(), null);
 
         assertThat(event.getStatus()).isEqualTo(EventStatus.BROUILLON);
         verify(eventRepository).save(any(Event.class));
@@ -56,7 +56,7 @@ class EventServiceTest {
         when(venueRepository.findById(venueIdInconnu)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-            service().create("Concert", null, Instant.now(), null, venueIdInconnu, UUID.randomUUID())
+            service().create("Concert", null, Instant.now(), null, venueIdInconnu, UUID.randomUUID(), null)
         ).isInstanceOf(NoSuchElementException.class);
     }
 

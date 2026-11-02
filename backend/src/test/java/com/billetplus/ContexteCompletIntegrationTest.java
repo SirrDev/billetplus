@@ -92,7 +92,7 @@ class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
 
     private Event evenement() {
         UUID venueId = venueService.create("Grand Theatre", "Dakar", null, null).getId();
-        return eventService.create("Concert", null, Instant.now().plus(30, ChronoUnit.DAYS), null, venueId, organisateur);
+        return eventService.create("Concert", null, Instant.now().plus(30, ChronoUnit.DAYS), null, venueId, organisateur, null);
     }
 
     private TicketCategory categoriePour(Event event) {
@@ -358,7 +358,7 @@ class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
         UUID orga = organisateurInscrit();
         UUID agent = agentCreePar(orga);
         UUID venueId = venueService.create("Grand Theatre", "Dakar", null, null).getId();
-        Event event = eventService.create("Concert", null, Instant.now().plus(30, ChronoUnit.DAYS), null, venueId, orga);
+        Event event = eventService.create("Concert", null, Instant.now().plus(30, ChronoUnit.DAYS), null, venueId, orga, null);
 
         for (int i = 0; i < 2; i++) {
             mvc.perform(put("/api/events/{id}/agents/{agentId}", event.getId(), agent).with(connecte(orga, "ORGANISATEUR")))
@@ -380,7 +380,7 @@ class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
         UUID autreOrga = organisateurInscrit();
         UUID agentDeLAutre = agentCreePar(autreOrga);
         UUID venueId = venueService.create("Grand Theatre", "Dakar", null, null).getId();
-        Event event = eventService.create("Concert", null, Instant.now().plus(30, ChronoUnit.DAYS), null, venueId, orga);
+        Event event = eventService.create("Concert", null, Instant.now().plus(30, ChronoUnit.DAYS), null, venueId, orga, null);
 
         mvc.perform(put("/api/events/{id}/agents/{agentId}", event.getId(), agentDeLAutre).with(connecte(orga, "ORGANISATEUR")))
             .andExpect(status().isNotFound())
@@ -406,7 +406,7 @@ class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
         UUID orga = organisateurInscrit();
         UUID agent = agentCreePar(orga);
         UUID venueId = venueService.create("Grand Theatre", "Dakar", null, null).getId();
-        Event event = eventService.create("Concert", null, Instant.now().plus(30, ChronoUnit.DAYS), null, venueId, orga);
+        Event event = eventService.create("Concert", null, Instant.now().plus(30, ChronoUnit.DAYS), null, venueId, orga, null);
         eventService.publier(event.getId(), orga);
         mvc.perform(put("/api/events/{id}/agents/{agentId}", event.getId(), agent).with(connecte(orga, "ORGANISATEUR")))
             .andExpect(status().isNoContent());
@@ -484,7 +484,7 @@ class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
     void un_billet_d_un_autre_evenement_est_signale_sans_etre_consomme() throws Exception {
         Controle a = controlePret();
         UUID venueId = venueService.create("Stade", "Dakar", null, null).getId();
-        Event b = eventService.create("Match", null, Instant.now().plus(40, ChronoUnit.DAYS), null, venueId, a.organisateur());
+        Event b = eventService.create("Match", null, Instant.now().plus(40, ChronoUnit.DAYS), null, venueId, a.organisateur(), null);
         eventService.publier(b.getId(), a.organisateur());
         mvc.perform(put("/api/events/{id}/agents/{agentId}", b.getId(), a.agent()).with(connecte(a.organisateur(), "ORGANISATEUR")))
             .andExpect(status().isNoContent());

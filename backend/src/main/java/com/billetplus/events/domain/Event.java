@@ -45,6 +45,11 @@ public class Event {
     @Column(nullable = false)
     private EventStatus status;
 
+    /** Catégorie du catalogue public (V13). Modifiable à tout moment : elle ne fait que classer. */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private CategorieEvenement categorie;
+
     @Column(nullable = false, updatable = false)
     private Instant creeLe;
 
@@ -65,6 +70,12 @@ public class Event {
 
     public Event(String titre, String description, Instant debuteLe, Instant termineLe,
                  Venue venue, UUID organizerId) {
+        this(titre, description, debuteLe, termineLe, venue, organizerId, CategorieEvenement.AUTRE);
+    }
+
+    /** @param categorie null : AUTRE */
+    public Event(String titre, String description, Instant debuteLe, Instant termineLe,
+                 Venue venue, UUID organizerId, CategorieEvenement categorie) {
         if (titre == null || titre.isBlank()) {
             throw new IllegalArgumentException("Le titre est obligatoire");
         }
@@ -88,6 +99,7 @@ public class Event {
         this.venue = venue;
         this.organizerId = organizerId;
         this.status = EventStatus.BROUILLON;
+        this.categorie = categorie == null ? CategorieEvenement.AUTRE : categorie;
         this.creeLe = Instant.now();
     }
 
@@ -119,10 +131,14 @@ public class Event {
      *   pas de notification au MVP) : un report passe par l'annulation ;
      * - annulé ou terminé : plus rien n'est modifiable.
      *
+     * La catégorie, elle, reste modifiable même publié : elle classe l'événement sans rien
+     * changer pour un acheteur. Null : inchangée.
+     *
      * @throws IllegalArgumentException  si le titre est vide ou la fin précède le début (HTTP 400)
      * @throws BusinessConflictException si le statut interdit la modification demandée (HTTP 409)
      */
-    public void modifier(String titre, String description, Instant debuteLe, Instant termineLe) {
+    public void modifier(String titre, String description, Instant debuteLe, Instant termineLe,
+                         CategorieEvenement categorie) {
         if (status == EventStatus.ANNULE || status == EventStatus.TERMINE) {
             throw new BusinessConflictException("Un événement annulé ou terminé ne peut plus être modifié");
         }
@@ -144,6 +160,9 @@ public class Event {
         this.description = description;
         this.debuteLe = debuteLe;
         this.termineLe = termineLe;
+        if (categorie != null) {
+            this.categorie = categorie;
+        }
     }
 
     public boolean estPublie() {
@@ -189,6 +208,10 @@ public class Event {
 
     public UUID getOrganizerId() {
         return organizerId;
+    }
+
+    public CategorieEvenement getCategorie() {
+        return categorie;
     }
 
     public EventStatus getStatus() {

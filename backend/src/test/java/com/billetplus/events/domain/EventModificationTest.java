@@ -25,7 +25,7 @@ class EventModificationTest {
         Event event = brouillon();
         Instant nouveauDebut = DEBUT.plus(7, ChronoUnit.DAYS);
 
-        event.modifier("Grand concert", "Apres", nouveauDebut, null);
+        event.modifier("Grand concert", "Apres", nouveauDebut, null, null);
 
         assertThat(event.getTitre()).isEqualTo("Grand concert");
         assertThat(event.getDescription()).isEqualTo("Apres");
@@ -39,7 +39,7 @@ class EventModificationTest {
         Event event = brouillon();
         event.publier();
 
-        event.modifier("Grand concert", null, DEBUT, FIN);
+        event.modifier("Grand concert", null, DEBUT, FIN, null);
 
         assertThat(event.getTitre()).isEqualTo("Grand concert");
         assertThat(event.getDescription()).isNull();
@@ -51,7 +51,7 @@ class EventModificationTest {
         Event event = brouillon();
         event.publier();
 
-        assertThatThrownBy(() -> event.modifier("Autre", "Avant", DEBUT.plus(1, ChronoUnit.HOURS), FIN))
+        assertThatThrownBy(() -> event.modifier("Autre", "Avant", DEBUT.plus(1, ChronoUnit.HOURS), FIN, null))
             .isInstanceOf(BusinessConflictException.class);
         assertThat(event.getDebuteLe()).isEqualTo(DEBUT);
         assertThat(event.getTitre()).isEqualTo("Concert");
@@ -62,7 +62,7 @@ class EventModificationTest {
         Event event = brouillon();
         event.publier();
 
-        assertThatThrownBy(() -> event.modifier("Concert", "Avant", DEBUT, null))
+        assertThatThrownBy(() -> event.modifier("Concert", "Avant", DEBUT, null, null))
             .isInstanceOf(BusinessConflictException.class);
         assertThat(event.getTermineLe()).isEqualTo(FIN);
     }
@@ -72,7 +72,7 @@ class EventModificationTest {
         Event event = brouillon();
         event.annuler();
 
-        assertThatThrownBy(() -> event.modifier("Autre", "Avant", DEBUT, FIN))
+        assertThatThrownBy(() -> event.modifier("Autre", "Avant", DEBUT, FIN, null))
             .isInstanceOf(BusinessConflictException.class);
         assertThat(event.getTitre()).isEqualTo("Concert");
     }
@@ -81,12 +81,31 @@ class EventModificationTest {
     void refuse_un_titre_vide_une_fin_avant_le_debut_ou_un_debut_absent_sans_rien_changer() {
         Event event = brouillon();
 
-        assertThatThrownBy(() -> event.modifier(" ", "Avant", DEBUT, FIN))
+        assertThatThrownBy(() -> event.modifier(" ", "Avant", DEBUT, FIN, null))
             .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> event.modifier("Concert", "Avant", DEBUT, DEBUT.minus(1, ChronoUnit.MINUTES)))
+        assertThatThrownBy(() -> event.modifier("Concert", "Avant", DEBUT, DEBUT.minus(1, ChronoUnit.MINUTES), null))
             .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> event.modifier("Concert", "Avant", null, null))
+        assertThatThrownBy(() -> event.modifier("Concert", "Avant", null, null, null))
             .isInstanceOf(IllegalArgumentException.class);
         assertThat(event.getTermineLe()).isEqualTo(FIN);
+    }
+
+    @Test
+    void la_categorie_vaut_autre_par_defaut_et_reste_inchangee_si_absente() {
+        Event event = brouillon();
+        assertThat(event.getCategorie()).isEqualTo(CategorieEvenement.AUTRE);
+        event.publier();
+
+        event.modifier("Concert", "Avant", DEBUT, FIN, CategorieEvenement.MUSIQUE);
+        assertThat(event.getCategorie()).isEqualTo(CategorieEvenement.MUSIQUE);
+        event.modifier("Concert", "Avant", DEBUT, FIN, null);
+        assertThat(event.getCategorie()).isEqualTo(CategorieEvenement.MUSIQUE);
+    }
+
+    @Test
+    void la_categorie_se_lit_sans_tenir_compte_de_la_casse() {
+        assertThat(CategorieEvenement.lire(" sport ")).isEqualTo(CategorieEvenement.SPORT);
+        assertThatThrownBy(() -> CategorieEvenement.lire("cinema")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> CategorieEvenement.lire(null)).isInstanceOf(IllegalArgumentException.class);
     }
 }

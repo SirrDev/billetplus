@@ -9,6 +9,7 @@ import com.billetplus.events.application.AffectationAgentService;
 import com.billetplus.events.application.EvenementsAControlerService;
 import com.billetplus.events.application.EventService;
 import com.billetplus.events.application.RechercheEvenementsService;
+import com.billetplus.events.domain.CategorieEvenement;
 import com.billetplus.events.domain.Event;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -54,14 +55,17 @@ public class EventController {
     /**
      * Liste publique (voir SecurityConfig : GET /api/events/** est permitAll) :
      * événements publiés, à venir ou en cours, du plus proche au plus lointain.
-     * {@code q} filtre sur le titre. Pagination bornée (taille 1 à 50, sinon 400).
+     * {@code q} filtre sur le titre, {@code categorie} sur la catégorie (MUSIQUE, SPORT...,
+     * casse ignorée ; inconnue : 400). Pagination bornée (taille 1 à 50, sinon 400).
      */
     @GetMapping
     public ResponseEntity<PageEvenementsPublicsDto> lister(
             @RequestParam(required = false) String q,
+            @RequestParam(required = false) String categorie,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "" + RechercheEvenementsService.TAILLE_PAR_DEFAUT) int taille) {
-        return ResponseEntity.ok(PageEvenementsPublicsDto.from(rechercheEvenementsService.rechercher(q, page, taille)));
+        CategorieEvenement filtre = categorie == null || categorie.isBlank() ? null : CategorieEvenement.lire(categorie);
+        return ResponseEntity.ok(PageEvenementsPublicsDto.from(rechercheEvenementsService.rechercher(q, filtre, page, taille)));
     }
 
     @PostMapping
@@ -70,7 +74,7 @@ public class EventController {
         UUID organizerId = (UUID) auth.getPrincipal();
         Event event = eventService.create(
             request.titre(), request.description(), request.debuteLe(),
-            request.termineLe(), request.venueId(), organizerId
+            request.termineLe(), request.venueId(), organizerId, request.categorie()
         );
         return ResponseEntity.created(URI.create("/api/events/" + event.getId())).body(EventDto.from(event));
     }
@@ -106,7 +110,7 @@ public class EventController {
                                              Authentication auth) {
         UUID requestingUserId = (UUID) auth.getPrincipal();
         Event event = eventService.modifier(id, request.titre(), request.description(),
-            request.debuteLe(), request.termineLe(), requestingUserId);
+            request.debuteLe(), request.termineLe(), request.categorie(), requestingUserId);
         return ResponseEntity.ok(EventDto.from(event));
     }
 

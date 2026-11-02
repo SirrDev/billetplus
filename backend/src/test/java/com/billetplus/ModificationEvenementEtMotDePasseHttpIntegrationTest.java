@@ -49,7 +49,7 @@ class ModificationEvenementEtMotDePasseHttpIntegrationTest extends ContexteCompl
 
     private Event brouillon(UUID orga) {
         UUID lieu = venueService.create("Sorano " + UUID.randomUUID(), "Dakar", null, null).getId();
-        return eventService.create("Concert", "Avant", Instant.parse(DEBUT), Instant.parse(FIN), lieu, orga);
+        return eventService.create("Concert", "Avant", Instant.parse(DEBUT), Instant.parse(FIN), lieu, orga, null);
     }
 
     private static String corps(String titre, String debut, String fin) {
@@ -137,7 +137,7 @@ class ModificationEvenementEtMotDePasseHttpIntegrationTest extends ContexteCompl
         Event perimee = eventService.get(e.getId());
         eventService.annuler(e.getId(), orga);
 
-        perimee.modifier("Titre ecrase", null, Instant.parse(DEBUT), Instant.parse(FIN));
+        perimee.modifier("Titre ecrase", null, Instant.parse(DEBUT), Instant.parse(FIN), null);
         assertThatThrownBy(() -> eventRepository.save(perimee))
             .isInstanceOf(OptimisticLockingFailureException.class);
         assertThat(eventService.get(e.getId()).getStatus().name()).isEqualTo("ANNULE");

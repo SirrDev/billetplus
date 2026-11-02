@@ -1,5 +1,6 @@
 package com.billetplus.events.infrastructure;
 
+import com.billetplus.events.domain.CategorieEvenement;
 import com.billetplus.events.domain.Event;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -49,6 +51,7 @@ interface SpringDataEventRepository extends JpaRepository<Event, UUID> {
         where e.status = com.billetplus.events.domain.EventStatus.PUBLIE
           and (e.debuteLe > :maintenant or (e.termineLe is not null and e.termineLe > :maintenant))
           and e.titre ilike :motif escape '\\'
+          and e.categorie in :categories
         order by e.debuteLe asc, e.id asc
         """,
         countQuery = """
@@ -56,8 +59,11 @@ interface SpringDataEventRepository extends JpaRepository<Event, UUID> {
         where e.status = com.billetplus.events.domain.EventStatus.PUBLIE
           and (e.debuteLe > :maintenant or (e.termineLe is not null and e.termineLe > :maintenant))
           and e.titre ilike :motif escape '\\'
+          and e.categorie in :categories
         """)
-    Page<Event> rechercherPublies(@Param("motif") String motif, @Param("maintenant") Instant maintenant, Pageable pageable);
+    Page<Event> rechercherPublies(@Param("motif") String motif,
+                                  @Param("categories") Collection<CategorieEvenement> categories,
+                                  @Param("maintenant") Instant maintenant, Pageable pageable);
 
     /**
      * Événements à contrôler par un agent : affectation (event_agents, même module) et
