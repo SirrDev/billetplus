@@ -63,6 +63,16 @@
   color: var(--bp-white);
 }
 
+.banniereCategorie {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.18);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .banniereTitre {
   font-size: 32px;
   letter-spacing: -0.03em;

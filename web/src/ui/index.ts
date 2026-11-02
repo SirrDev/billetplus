@@ -17,7 +17,8 @@ export { Bouton, BoutonLien } from './Bouton';
 export { Cadre } from './Cadre';
 export { CompteursControle, EcranControle, PanneauVerdict, Viseur } from './Controle';
 export { CarteEvenement, EvenementALaUne, GrilleEvenements, type ResumeEvenement } from './CarteEvenement';
-export { ChampRecherche, ChampTelephone, ChampTexte, ChoixCartes, type OptionCarte } from './Formulaire';
+export { ChampChoix, ChampRecherche, ChampTelephone, ChampTexte, ChoixCartes, type OptionCarte } from './Formulaire';
+export { Filtres } from './Filtres';
 export { Icone, type NomIcone } from './Icone';
 export {
   codeBillet,

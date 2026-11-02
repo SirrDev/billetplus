@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CATEGORIES, type CategorieEvenement } from '@/commun/categories';
 import { heureDakarVersInstant } from '@/commun/format';
 import { messageErreur } from '@/commun/http';
-import { Avis, Bouton, ChampTexte, Panneau } from '@/ui';
+import { Avis, Bouton, ChampChoix, ChampTexte, Panneau } from '@/ui';
 import { creerEvenement, creerLieu, LIMITES, lireCoordonnees } from '../api';
 import { CadreOrganisateur } from './CadreOrganisateur';
 import s from './organisateur.module.css';
@@ -21,6 +22,7 @@ export function NouvelEvenementPage() {
   const navigate = useNavigate();
   const [titre, setTitre] = useState('');
   const [description, setDescription] = useState('');
+  const [categorie, setCategorie] = useState<CategorieEvenement>('MUSIQUE');
   const [debut, setDebut] = useState('');
   const [fin, setFin] = useState('');
   const [lieuNom, setLieuNom] = useState('');
@@ -53,6 +55,7 @@ export function NouvelEvenementPage() {
         debuteLe,
         termineLe,
         venueId: lieu.id,
+        categorie,
       });
       navigate(`/organisateur/evenements/${evenement.id}`, { replace: true, state: { cree: true } });
     } catch (e2) {
@@ -71,6 +74,13 @@ export function NouvelEvenementPage() {
         <form className={s.formulaire} onSubmit={valider}>
           <Panneau titre="L'événement" id="evenement">
             <ChampTexte libelle="Titre" valeur={titre} onChange={setTitre} requis maxLength={LIMITES.titre} />
+            <ChampChoix
+              libelle="Catégorie"
+              options={CATEGORIES}
+              valeur={categorie}
+              onChange={setCategorie}
+              aide="Les acheteurs filtrent le catalogue par catégorie."
+            />
             <ChampTexte
               libelle="Description"
               multiligne
