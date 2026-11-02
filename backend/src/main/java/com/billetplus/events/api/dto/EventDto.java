@@ -15,14 +15,16 @@ public record EventDto(
     String venueNom,
     UUID organizerId,
     String status,
-    Instant creeLe
+    Instant creeLe,
+    String categorie
 ) {
     public static EventDto from(Event event) {
         return new EventDto(
             event.getId(), event.getTitre(), event.getDescription(),
             event.getDebuteLe(), event.getTermineLe(),
             event.getVenue().getId(), event.getVenue().getNom(),
-            event.getOrganizerId(), event.getStatus().name(), event.getCreeLe()
+            event.getOrganizerId(), event.getStatus().name(), event.getCreeLe(),
+            event.getCategorie().name()
         );
     }
 }

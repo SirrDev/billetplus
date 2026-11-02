@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { CATEGORIES, libelleCategorie, type CategorieEvenement } from '@/commun/categories';
 import { messageErreur } from '@/commun/http';
 import {
   Avis,
@@ -10,6 +11,7 @@ import {
   Chargement,
   EtatVide,
   EvenementALaUne,
+  Filtres,
   GrilleEvenements,
   Icone,
   type NomIcone,
@@ -21,8 +23,11 @@ import s from './pages.module.css';
 const DELAI_RECHERCHE_MS = 300;
 
 function versResume(e: EvenementPublic): ResumeEvenement {
-  return { id: e.id, titre: e.titre, debuteLe: e.debuteLe, lieu: e.venueNom };
+  return { id: e.id, titre: e.titre, debuteLe: e.debuteLe, lieu: e.venueNom, categorie: libelleCategorie(e.categorie) };
 }
+
+type Filtre = CategorieEvenement | 'TOUT';
+const FILTRES: ReadonlyArray<{ valeur: Filtre; libelle: string }> = [{ valeur: 'TOUT', libelle: 'Tout' }, ...CATEGORIES];
 
 const AVANTAGES: ReadonlyArray<{ icone: NomIcone; titre: string; texte: string }> = [
   { icone: 'mobile', titre: 'Sans compte', texte: 'Votre numéro de mobile suffit pour acheter.' },
@@ -33,6 +38,8 @@ const AVANTAGES: ReadonlyArray<{ icone: NomIcone; titre: string; texte: string }
 export function DecouvrirPage() {
   const [saisie, setSaisie] = useState('');
   const [recherche, setRecherche] = useState('');
+  const [filtre, setFiltre] = useState<Filtre>('TOUT');
+  const categorie = filtre === 'TOUT' ? null : filtre;
   const [page, setPage] = useState<PageEvenements | null>(null);
   const [evenements, setEvenements] = useState<EvenementPublic[]>([]);
   const [chargement, setChargement] = useState(true);
@@ -49,7 +56,7 @@ export function DecouvrirPage() {
     let annule = false;
     setChargement(true);
     setErreur(null);
-    rechercherEvenements(recherche)
+    rechercherEvenements(recherche, 0, 12, categorie)
       .then((resultat) => {
         if (annule) return;
         setPage(resultat);
@@ -60,12 +67,12 @@ export function DecouvrirPage() {
     return () => {
       annule = true;
     };
-  }, [recherche, essai]);
+  }, [recherche, categorie, essai]);
 
   const voirPlus = () => {
     if (!page) return;
     setChargement(true);
-    rechercherEvenements(recherche, page.page + 1)
+    rechercherEvenements(recherche, page.page + 1, 12, categorie)
       .then((suite) => {
         setPage(suite);
         setEvenements((deja) => [...deja, ...suite.contenu]);
@@ -75,7 +82,8 @@ export function DecouvrirPage() {
   };
 
   const [premier, ...autres] = evenements;
-  const aLaUne = !recherche && premier ? premier : null;
+  // À l'affiche : seulement sur le catalogue complet, pas dans un résultat filtré.
+  const aLaUne = !recherche && !categorie && premier ? premier : null;
   const grille = aLaUne ? autres : evenements;
   const resteDesPages = page !== null && page.page + 1 < page.pages;
 
@@ -97,6 +105,8 @@ export function DecouvrirPage() {
           </div>
         </div>
 
+        <Filtres libelle="Catégories d'événements" options={FILTRES} valeur={filtre} onChange={setFiltre} />
+
         {erreur && (
           <Avis ton="danger">
             <p>{erreur}</p>
@@ -113,11 +123,20 @@ export function DecouvrirPage() {
         {!erreur && !chargement && evenements.length === 0 && (
           <EtatVide
             icone="recherche"
-            titre={recherche ? 'Aucun événement trouvé' : 'Aucun événement pour le moment'}
+            titre={recherche || categorie ? 'Aucun événement trouvé' : 'Aucun événement pour le moment'}
             texte={
               recherche
-                ? `Rien ne correspond à « ${recherche} ». Essayez un autre mot.`
-                : 'Revenez bientôt : les organisateurs publient leurs événements ici.'
+                ? `Rien ne correspond à « ${recherche} »${categorie ? ` en ${libelleCategorie(categorie).toLowerCase()}` : ''}. Essayez un autre mot.`
+                : categorie
+                  ? `Aucun événement à venir en ${libelleCategorie(categorie).toLowerCase()} pour le moment.`
+                  : 'Revenez bientôt : les organisateurs publient leurs événements ici.'
+            }
+            action={
+              categorie ? (
+                <Bouton variante="secondaire" onClick={() => setFiltre('TOUT')}>
+                  Voir tous les événements
+                </Bouton>
+              ) : undefined
             }
           />
         )}
@@ -125,7 +144,7 @@ export function DecouvrirPage() {
         {grille.length > 0 && (
           <section className={s.pile} aria-labelledby="titre-liste">
             <h2 id="titre-liste" className={s.titreSection}>
-              {recherche ? `Résultats pour « ${recherche} »` : 'À venir'}
+              {recherche ? `Résultats pour « ${recherche} »` : categorie ? libelleCategorie(categorie) : 'À venir'}
             </h2>
             <GrilleEvenements libelle={recherche ? 'Résultats de recherche' : 'Événements à venir'}>
               {grille.map((e) => (

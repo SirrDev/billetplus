@@ -11,6 +11,8 @@ export interface ResumeEvenement {
   titre: string;
   debuteLe: string;
   lieu: string;
+  /** Libellé de la catégorie (déjà traduit par l'appelant), affiché en étiquette. */
+  categorie?: string;
 }
 
 export function GrilleEvenements({ children, libelle }: { children: ReactNode; libelle: string }) {
@@ -30,6 +32,7 @@ export function CarteEvenement({ evenement, vers }: { evenement: ResumeEvenement
           <Affiche id={evenement.id} />
         </div>
         <div className={s.carteCorps}>
+          {evenement.categorie && <span className={s.etiquette}>{evenement.categorie}</span>}
           <span className={s.date}>{formatDateCourte(evenement.debuteLe)}</span>
           <h3 className={s.titre}>{evenement.titre}</h3>
           <span className={s.lieu}>{evenement.lieu}</span>

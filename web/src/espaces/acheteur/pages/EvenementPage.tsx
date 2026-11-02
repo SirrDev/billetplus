@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { libelleCategorie } from '@/commun/categories';
 import { formatDateLongue, formatFcfa, formatHeure, majusculeInitiale } from '@/commun/format';
 import {
   Affiche,
@@ -79,6 +80,7 @@ export function EvenementPage() {
         <div className={s.banniere}>
           <Affiche id={evenement.id} />
           <div className={s.banniereTexte}>
+            <p className={s.banniereCategorie}>{libelleCategorie(evenement.categorie)}</p>
             <h1 className={s.banniereTitre}>{evenement.titre}</h1>
           </div>
         </div>

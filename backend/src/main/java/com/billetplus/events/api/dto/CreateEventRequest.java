@@ -1,5 +1,6 @@
 package com.billetplus.events.api.dto;
 
+import com.billetplus.events.domain.CategorieEvenement;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -28,5 +29,8 @@ public record CreateEventRequest(
 
     Instant termineLe,
 
-    @NotNull UUID venueId
+    @NotNull UUID venueId,
+
+    /** Facultative : AUTRE si absente. Valeur inconnue : 400 (lecture du JSON). */
+    CategorieEvenement categorie
 ) {}

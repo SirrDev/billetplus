@@ -18,13 +18,15 @@ public record EvenementPublicDto(
     Instant termineLe,
     UUID venueId,
     String venueNom,
-    String venueAdresse
+    String venueAdresse,
+    String categorie
 ) {
     public static EvenementPublicDto from(Event event) {
         return new EvenementPublicDto(
             event.getId(), event.getTitre(), event.getDescription(),
             event.getDebuteLe(), event.getTermineLe(),
-            event.getVenue().getId(), event.getVenue().getNom(), event.getVenue().getAdresse()
+            event.getVenue().getId(), event.getVenue().getNom(), event.getVenue().getAdresse(),
+            event.getCategorie().name()
         );
     }
 }

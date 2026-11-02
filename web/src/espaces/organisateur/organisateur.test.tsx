@@ -18,6 +18,7 @@ const EVENEMENT = {
   organizerId: 'o1',
   status: 'BROUILLON',
   creeLe: '2026-10-30T10:00:00Z',
+  categorie: 'MUSIQUE',
 };
 const TABLEAU_VIDE = { eventId: EVENEMENT.id, categories: [], vendus: 0, enCoursDePaiement: 0, scannes: 0, chiffreAffairesFcfa: 0 };
 
@@ -129,6 +130,7 @@ describe('Création et gestion d’un événement', () => {
     fireEvent.change(screen.getByLabelText('Début'), { target: { value: '2099-11-14T21:00' } });
     await userEvent.type(screen.getByLabelText('Nom du lieu'), 'Grand Théâtre');
     await userEvent.type(screen.getByLabelText('Adresse'), 'Dakar');
+    await userEvent.selectOptions(screen.getByLabelText('Catégorie'), 'SPECTACLE');
     await userEvent.click(screen.getByRole('button', { name: 'Créer le brouillon' }));
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Nuit du Mbalax' })).toBeInTheDocument();
@@ -140,6 +142,7 @@ describe('Création et gestion d’un événement', () => {
       debuteLe: '2099-11-14T21:00:00Z',
       termineLe: null,
       venueId: 'v1',
+      categorie: 'SPECTACLE',
     });
     expect(jetonDe(creation?.[1])).toBe('Bearer acces');
   });
@@ -298,6 +301,9 @@ describe('Modification d’un événement', () => {
     await userEvent.type(titre, 'Grande nuit du Mbalax');
     fireEvent.change(screen.getByLabelText('Début'), { target: { value: '2099-11-21T21:00' } });
     fireEvent.change(screen.getByLabelText(/^Fin/), { target: { value: '' } });
+    // Préremplie avec la catégorie de l'événement, puis changée.
+    expect(screen.getByLabelText('Catégorie')).toHaveValue('MUSIQUE');
+    await userEvent.selectOptions(screen.getByLabelText('Catégorie'), 'FESTIVAL');
     await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Grande nuit du Mbalax' })).toBeInTheDocument();
@@ -308,6 +314,7 @@ describe('Modification d’un événement', () => {
       description: 'Une nuit de mbalax live.',
       debuteLe: '2099-11-21T21:00:00Z',
       termineLe: null,
+      categorie: 'FESTIVAL',
     });
     expect(jetonDe(envoi?.[1])).toBe('Bearer acces');
   });

@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { CATEGORIES, type CategorieEvenement } from '@/commun/categories';
 import { formatDateLongue, formatHeure, heureDakarVersInstant, instantVersHeureDakar } from '@/commun/format';
 import { ApiError, messageErreur } from '@/commun/http';
-import { Avis, Bouton, BoutonLien, Chargement, ChampTexte, EtatVide, Panneau } from '@/ui';
+import { Avis, Bouton, BoutonLien, Chargement, ChampChoix, ChampTexte, EtatVide, Panneau } from '@/ui';
 import { LIMITES, lireEvenement, modifierEvenement, type EvenementOrganisateur } from '../api';
 import { CadreOrganisateur } from './CadreOrganisateur';
 import s from './organisateur.module.css';
@@ -29,6 +30,7 @@ export function ModifierEvenementPage() {
   const [page, setPage] = useState<EtatPage>({ etat: 'chargement' });
   const [titre, setTitre] = useState('');
   const [description, setDescription] = useState('');
+  const [categorie, setCategorie] = useState<CategorieEvenement>('AUTRE');
   const [debut, setDebut] = useState('');
   const [fin, setFin] = useState('');
   const [erreurs, setErreurs] = useState<Erreurs>({});
@@ -42,6 +44,7 @@ export function ModifierEvenementPage() {
         if (annule) return;
         setTitre(evenement.titre);
         setDescription(evenement.description ?? '');
+        setCategorie(evenement.categorie ?? 'AUTRE');
         setDebut(instantVersHeureDakar(evenement.debuteLe));
         setFin(evenement.termineLe ? instantVersHeureDakar(evenement.termineLe) : '');
         setPage({ etat: 'pret', evenement });
@@ -107,6 +110,7 @@ export function ModifierEvenementPage() {
         description: description.trim() || null,
         debuteLe,
         termineLe,
+        categorie,
       });
       navigate(retour, { replace: true, state: { modifie: true } });
     } catch (e2) {
@@ -138,6 +142,7 @@ export function ModifierEvenementPage() {
           <form className={s.formulaire} onSubmit={valider}>
             <Panneau titre="L'événement" id="evenement">
               <ChampTexte libelle="Titre" valeur={titre} onChange={setTitre} requis maxLength={LIMITES.titre} />
+              <ChampChoix libelle="Catégorie" options={CATEGORIES} valeur={categorie} onChange={setCategorie} />
               <ChampTexte
                 libelle="Description"
                 multiligne

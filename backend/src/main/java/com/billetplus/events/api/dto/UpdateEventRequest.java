@@ -1,5 +1,6 @@
 package com.billetplus.events.api.dto;
 
+import com.billetplus.events.domain.CategorieEvenement;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -25,5 +26,8 @@ public record UpdateEventRequest(
 
     @NotNull Instant debuteLe,
 
-    Instant termineLe
+    Instant termineLe,
+
+    /** Facultative : inchangée si absente ; modifiable même publié. */
+    CategorieEvenement categorie
 ) {}

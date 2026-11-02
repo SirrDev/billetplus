@@ -1,5 +1,6 @@
 package com.billetplus.events.application;
 
+import com.billetplus.events.domain.CategorieEvenement;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,14 @@ public class RechercheEvenementsService {
      */
     @Transactional(readOnly = true)
     public PageEvenements rechercher(String recherche, int page, int taille) {
+        return rechercher(recherche, null, page, taille);
+    }
+
+    /**
+     * @param categorie catégorie à garder ; null : toutes
+     */
+    @Transactional(readOnly = true)
+    public PageEvenements rechercher(String recherche, CategorieEvenement categorie, int page, int taille) {
         if (page < 0) {
             throw new IllegalArgumentException("page doit être positive ou nulle");
         }
@@ -48,6 +57,6 @@ public class RechercheEvenementsService {
         if (recherche != null && recherche.length() > RECHERCHE_LONGUEUR_MAX) {
             throw new IllegalArgumentException("q ne doit pas dépasser " + RECHERCHE_LONGUEUR_MAX + " caractères");
         }
-        return eventRepository.rechercherPublies(recherche, Instant.now(clock), page, taille);
+        return eventRepository.rechercherPublies(recherche, categorie, Instant.now(clock), page, taille);
     }
 }

@@ -49,7 +49,7 @@ class EventServiceModificationTest {
         when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
         when(eventRepository.save(event)).thenReturn(event);
 
-        Event resultat = service().modifier(event.getId(), "Nouveau", "Desc", DEBUT, null, orga);
+        Event resultat = service().modifier(event.getId(), "Nouveau", "Desc", DEBUT, null, null, orga);
 
         assertThat(resultat.getTitre()).isEqualTo("Nouveau");
         verify(eventRepository).save(event);
@@ -60,7 +60,7 @@ class EventServiceModificationTest {
         Event event = brouillonDe(UUID.randomUUID());
         when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
 
-        assertThatThrownBy(() -> service().modifier(event.getId(), "Pirate", null, DEBUT, null, UUID.randomUUID()))
+        assertThatThrownBy(() -> service().modifier(event.getId(), "Pirate", null, DEBUT, null, null, UUID.randomUUID()))
             .isInstanceOf(NoSuchElementException.class);
         assertThat(event.getTitre()).isEqualTo("Concert");
         verify(eventRepository, never()).save(any());
@@ -72,7 +72,7 @@ class EventServiceModificationTest {
         event.publier();
         when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
 
-        assertThatThrownBy(() -> service().modifier(event.getId(), "Pirate", null, DEBUT, null, UUID.randomUUID()))
+        assertThatThrownBy(() -> service().modifier(event.getId(), "Pirate", null, DEBUT, null, null, UUID.randomUUID()))
             .isInstanceOf(AccessDeniedException.class);
         assertThat(event.getTitre()).isEqualTo("Concert");
         verify(eventRepository, never()).save(any());

@@ -1,3 +1,4 @@
+import type { CategorieEvenement } from '@/commun/categories';
 import { http } from '@/commun/http';
 
 /*
@@ -16,6 +17,8 @@ export interface EvenementPublic {
   venueId: string;
   venueNom: string;
   venueAdresse: string;
+  /** CategorieEvenement (MUSIQUE, SPORT...) ; libellé par commun/categories. */
+  categorie: string;
 }
 
 /** PageEvenementsPublicsDto. */
@@ -39,6 +42,7 @@ export interface Evenement {
   organizerId: string;
   status: string;
   creeLe: string;
+  categorie: string;
 }
 
 /** VenueDto (route publique GET /venues/{id}) : l'adresse n'est pas dans EventDto. */
@@ -122,9 +126,16 @@ export const QUANTITE_MAX_PAR_CATEGORIE = 20;
 /** Jamais dans l'URL (journaux, historique) : OrderController.EN_TETE_JETON. */
 const EN_TETE_JETON = 'X-Jeton-Commande';
 
-export function rechercherEvenements(q: string, page = 0, taille = 12): Promise<PageEvenements> {
+/** @param categorie null : toutes (filtre GET /events?categorie=) */
+export function rechercherEvenements(
+  q: string,
+  page = 0,
+  taille = 12,
+  categorie: CategorieEvenement | null = null,
+): Promise<PageEvenements> {
   const parametres = new URLSearchParams({ page: String(page), taille: String(taille) });
   if (q.trim()) parametres.set('q', q.trim());
+  if (categorie) parametres.set('categorie', categorie);
   return http<PageEvenements>(`/events?${parametres}`);
 }
 

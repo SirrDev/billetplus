@@ -208,3 +208,50 @@ export function ChoixCartes<V extends string>({
     </fieldset>
   );
 }
+
+/**
+ * Liste de choix (<select> natif : clavier, lecteurs d'écran et sélecteur du téléphone
+ * fonctionnent sans effort). Même habillage que ChampTexte.
+ */
+export function ChampChoix<V extends string>({
+  libelle,
+  options,
+  valeur,
+  onChange,
+  aide,
+}: {
+  libelle: string;
+  options: ReadonlyArray<{ valeur: V; libelle: string }>;
+  valeur: V;
+  onChange: (valeur: V) => void;
+  aide?: string;
+}) {
+  const id = useId();
+  return (
+    <div className={s.champ}>
+      <label htmlFor={id} className={s.libelle}>
+        {libelle}
+      </label>
+      <div className={s.saisie}>
+        <select
+          id={id}
+          className={`${s.input} ${s.choix}`}
+          value={valeur}
+          aria-describedby={aide ? `${id}-aide` : undefined}
+          onChange={(e) => onChange(e.target.value as V)}
+        >
+          {options.map((o) => (
+            <option key={o.valeur} value={o.valeur}>
+              {o.libelle}
+            </option>
+          ))}
+        </select>
+      </div>
+      {aide && (
+        <p id={`${id}-aide`} className={s.aide}>
+          {aide}
+        </p>
+      )}
+    </div>
+  );
+}

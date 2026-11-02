@@ -1,0 +1,47 @@
+.filtres {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  /* Défilement horizontal propre sur mobile : la barre est masquée, le contenu reste accessible. */
+  scrollbar-width: none;
+  margin: 0 calc(-1 * var(--bp-gutter));
+  padding: 2px var(--bp-gutter);
+}
+
+.filtres::-webkit-scrollbar {
+  display: none;
+}
+
+.filtre {
+  flex: none;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--bp-line-strong);
+  border-radius: 999px;
+  background: var(--bp-white);
+  color: var(--bp-ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filtre:hover {
+  border-color: var(--bp-ink-2);
+}
+
+/* État porté par la forme ET la couleur : fond plein, pas seulement une teinte. */
+.filtre[aria-pressed='true'] {
+  border-color: var(--bp-ink);
+  background: var(--bp-ink);
+  color: var(--bp-white);
+}
+
+@media (min-width: 720px) {
+  .filtres {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    margin: 0;
+    padding: 0;
+  }
+}

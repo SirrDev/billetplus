@@ -1,3 +1,4 @@
+import type { CategorieEvenement } from '@/commun/categories';
 import { http } from '@/commun/http';
 
 /*
@@ -21,6 +22,7 @@ export interface EvenementOrganisateur {
   organizerId: string;
   status: StatutEvenement;
   creeLe: string;
+  categorie: CategorieEvenement;
 }
 
 /** VenueDto. */
@@ -130,6 +132,7 @@ export function creerEvenement(corps: {
   debuteLe: string;
   termineLe: string | null;
   venueId: string;
+  categorie: CategorieEvenement;
 }): Promise<EvenementOrganisateur> {
   return http<EvenementOrganisateur>('/events', { ...avecJeton, method: 'POST', body: JSON.stringify(corps) });
 }
@@ -140,7 +143,13 @@ export function creerEvenement(corps: {
  */
 export function modifierEvenement(
   id: string,
-  corps: { titre: string; description: string | null; debuteLe: string; termineLe: string | null },
+  corps: {
+    titre: string;
+    description: string | null;
+    debuteLe: string;
+    termineLe: string | null;
+    categorie: CategorieEvenement;
+  },
 ): Promise<EvenementOrganisateur> {
   return http<EvenementOrganisateur>(`/events/${encodeURIComponent(id)}`, {
     ...avecJeton,

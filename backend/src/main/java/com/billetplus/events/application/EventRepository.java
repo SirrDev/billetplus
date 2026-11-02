@@ -1,5 +1,6 @@
 package com.billetplus.events.application;
 
+import com.billetplus.events.domain.CategorieEvenement;
 import com.billetplus.events.domain.Event;
 
 import java.util.Optional;
@@ -16,9 +17,12 @@ public interface EventRepository {
     /**
      * Événements publiés, à venir ou en cours à {@code maintenant} (début ou fin dans le
      * futur), du plus proche au plus lointain, dont le titre contient {@code recherche}
-     * (sans tenir compte de la casse ; null ou vide : tous).
+     * (sans tenir compte de la casse ; null ou vide : tous) et de la catégorie demandée.
+     *
+     * @param categorie null : toutes les catégories
      */
-    PageEvenements rechercherPublies(String recherche, java.time.Instant maintenant, int page, int taille);
+    PageEvenements rechercherPublies(String recherche, CategorieEvenement categorie,
+                                     java.time.Instant maintenant, int page, int taille);
 
     /**
      * Événements PUBLIÉS auxquels l'agent est affecté et qui restent à contrôler : début
