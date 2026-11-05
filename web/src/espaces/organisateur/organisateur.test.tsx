@@ -110,6 +110,12 @@ describe('Connexion', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Entre 8 et 72 caractères.');
     expect(appels).not.toHaveBeenCalled();
   });
+
+  it.each(['/organisateur/connexion', '/organisateur/inscription'])("propose un retour à l'accueil sur %s", async (adresse) => {
+    backend({});
+    ouvrir(adresse);
+    expect(await screen.findByRole('link', { name: "Retour à l'accueil" })).toHaveAttribute('href', '/');
+  });
 });
 
 describe('Création et gestion d’un événement', () => {

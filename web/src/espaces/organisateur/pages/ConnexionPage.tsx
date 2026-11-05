@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { TEXTE_MAX, useSession } from '@/commun/auth';
 import { ApiError, messageErreur } from '@/commun/http';
-import { Avis, Bouton, Cadre, ChampTexte, Panneau } from '@/ui';
+import { Avis, Bouton, BoutonLien, Cadre, ChampTexte, Icone, Panneau } from '@/ui';
 import s from './organisateur.module.css';
 
 export function ConnexionPage() {
@@ -45,6 +45,12 @@ export function ConnexionPage() {
       <div className={s.connexion}>
         <Panneau>
           <form className={s.formulaire} onSubmit={valider}>
+            <div>
+              <BoutonLien to="/" variante="secondaire">
+                <Icone nom="retour" />
+                Retour à l'accueil
+              </BoutonLien>
+            </div>
             <div>
               <p className={s.surtitre}>Espace organisateur</p>
               <h1 className={s.titrePage}>Connexion</h1>

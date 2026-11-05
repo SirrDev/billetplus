@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { MOT_DE_PASSE_MAX, MOT_DE_PASSE_MIN, sInscrire, TEXTE_MAX, useSession } from '@/commun/auth';
 import { messageErreur } from '@/commun/http';
-import { Avis, Bouton, Cadre, ChampTexte, Panneau } from '@/ui';
+import { Avis, Bouton, BoutonLien, Cadre, ChampTexte, Icone, Panneau } from '@/ui';
 import s from './organisateur.module.css';
 
 /** Le client ne choisit jamais son rôle : /register crée toujours un ORGANISATEUR. */
@@ -46,6 +46,12 @@ export function InscriptionPage() {
       <div className={s.connexion}>
         <Panneau>
           <form className={s.formulaire} onSubmit={valider}>
+            <div>
+              <BoutonLien to="/" variante="secondaire">
+                <Icone nom="retour" />
+                Retour à l'accueil
+              </BoutonLien>
+            </div>
             <div>
               <p className={s.surtitre}>Espace organisateur</p>
               <h1 className={s.titrePage}>Créer un compte</h1>
