@@ -2,6 +2,7 @@ package com.billetplus.auth.api;
 
 import com.billetplus.auth.api.dto.AgentDto;
 import com.billetplus.auth.api.dto.CreateAgentRequest;
+import com.billetplus.auth.api.dto.UpdateAgentRequest;
 import com.billetplus.auth.application.AgentAccountService;
 import com.billetplus.auth.domain.User;
 import jakarta.validation.Valid;
@@ -42,5 +43,23 @@ public class AgentController {
     public ResponseEntity<List<AgentDto>> mine(Authentication auth) {
         UUID organisateurId = (UUID) auth.getPrincipal();
         return ResponseEntity.ok(agentAccountService.listerMesAgents(organisateurId).stream().map(AgentDto::from).toList());
+    }
+
+    /** Corrige le nom et l'e-mail d'un de SES agents. Inconnu, retiré ou d'un autre organisateur → 404. */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ORGANISATEUR')")
+    public ResponseEntity<AgentDto> modifier(@PathVariable UUID id, @Valid @RequestBody UpdateAgentRequest request,
+                                             Authentication auth) {
+        UUID organisateurId = (UUID) auth.getPrincipal();
+        User agent = agentAccountService.modifierAgent(organisateurId, id, request.email(), request.nomComplet());
+        return ResponseEntity.ok(AgentDto.from(agent));
+    }
+
+    /** Retire un de SES agents (compte désactivé, affectations supprimées). Idempotent. */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ORGANISATEUR')")
+    public ResponseEntity<Void> retirer(@PathVariable UUID id, Authentication auth) {
+        agentAccountService.retirerAgent((UUID) auth.getPrincipal(), id);
+        return ResponseEntity.noContent().build();
     }
 }

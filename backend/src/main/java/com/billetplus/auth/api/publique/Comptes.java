@@ -10,8 +10,8 @@ import java.util.UUID;
 public interface Comptes {
 
     /**
-     * Vrai si {@code agentId} est un compte AGENT créé par {@code organisateurId}.
-     * Faux pour tout autre cas (identifiant absent, inconnu, autre rôle, autre créateur).
+     * Vrai si {@code agentId} est un compte AGENT actif créé par {@code organisateurId}.
+     * Faux pour tout autre cas (identifiant absent, inconnu, autre rôle, autre créateur, agent retiré).
      */
     boolean estAgentCreePar(UUID agentId, UUID organisateurId);
 }

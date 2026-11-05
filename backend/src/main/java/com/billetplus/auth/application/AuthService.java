@@ -35,6 +35,10 @@ public class AuthService {
         if (!passwordEncoder.matches(motDePasse, user.getMotDePasseHash())) {
             throw new BadCredentialsException("Identifiants invalides");
         }
+        // Agent retiré : même réponse que des identifiants faux.
+        if (!user.estActif()) {
+            throw new BadCredentialsException("Identifiants invalides");
+        }
 
         return new TokenPair(
             tokenProvider.generateAccessToken(user),
@@ -64,7 +68,9 @@ public class AuthService {
         }
 
         UUID userId = tokenProvider.getUserId(claims);
+        // Agent retiré : le jeton de rafraîchissement, non révocable, ne doit plus rien émettre.
         User user = userRepository.findById(userId)
+            .filter(User::estActif)
             .orElseThrow(() -> new BadCredentialsException("Utilisateur introuvable"));
 
         return new TokenPair(

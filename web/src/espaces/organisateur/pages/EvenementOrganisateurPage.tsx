@@ -22,6 +22,7 @@ import {
   annuler,
   creerCategorie,
   LIMITES,
+  lireAffectations,
   lireCategories,
   lireEvenement,
   lireTableauDeBord,
@@ -349,31 +350,41 @@ function AjoutCategorie({ eventId, onAjout }: { eventId: string; onAjout: () => 
   );
 }
 
-/**
- * Affectation des agents au contrôle d'entrée. Le backend ne dit pas qui est déjà affecté :
- * affecter est idempotent (PUT), chaque action affiche son résultat.
- */
+/** Agents affectés au contrôle d'entrée de l'événement, avec ajout et retrait en un clic. */
 function ControleEntree({ eventId, agents }: { eventId: string; agents: Agent[] }) {
   const idSelect = useId();
+  const [affectes, setAffectes] = useState<string[] | null>(null);
+  const [erreurListe, setErreurListe] = useState<string | null>(null);
   const [agentId, setAgentId] = useState('');
   const [message, setMessage] = useState<{ ton: 'succes' | 'danger'; texte: string } | null>(null);
   const [envoi, setEnvoi] = useState(false);
-  const choisi = agents.find((a) => a.id === agentId);
 
-  const agir = async (operation: 'affecter' | 'retirer') => {
-    if (!choisi) return;
+  useEffect(() => {
+    let annule = false;
+    lireAffectations(eventId)
+      .then((ids) => {
+        if (!annule) setAffectes(ids);
+      })
+      .catch((e: unknown) => {
+        if (!annule) setErreurListe(messageErreur(e));
+      });
+    return () => {
+      annule = true;
+    };
+  }, [eventId]);
+
+  const enPoste = agents.filter((a) => affectes?.includes(a.id));
+  const disponibles = agents.filter((a) => !affectes?.includes(a.id));
+  const choisi = disponibles.find((a) => a.id === agentId);
+
+  const affecter = async (agent: Agent) => {
     setMessage(null);
     setEnvoi(true);
     try {
-      if (operation === 'affecter') await affecterAgent(eventId, choisi.id);
-      else await retirerAgent(eventId, choisi.id);
-      setMessage({
-        ton: 'succes',
-        texte:
-          operation === 'affecter'
-            ? `${choisi.nomComplet} peut contrôler les entrées de cet événement.`
-            : `${choisi.nomComplet} ne contrôle plus cet événement.`,
-      });
+      await affecterAgent(eventId, agent.id);
+      setAffectes((ids) => [...(ids ?? []), agent.id]);
+      setAgentId('');
+      setMessage({ ton: 'succes', texte: `${agent.nomComplet} peut contrôler les entrées de cet événement.` });
     } catch (e) {
       setMessage({ ton: 'danger', texte: messageErreur(e) });
     } finally {
@@ -381,50 +392,100 @@ function ControleEntree({ eventId, agents }: { eventId: string; agents: Agent[] 
     }
   };
 
-  return (
-    <Panneau titre="Contrôle d'entrée" id="controle">
-      {agents.length === 0 ? (
+  const retirer = async (agent: Agent) => {
+    setMessage(null);
+    setEnvoi(true);
+    try {
+      await retirerAgent(eventId, agent.id);
+      setAffectes((ids) => (ids ?? []).filter((id) => id !== agent.id));
+      setMessage({ ton: 'succes', texte: `${agent.nomComplet} ne contrôle plus cet événement.` });
+    } catch (e) {
+      setMessage({ ton: 'danger', texte: messageErreur(e) });
+    } finally {
+      setEnvoi(false);
+    }
+  };
+
+  if (agents.length === 0) {
+    return (
+      <Panneau titre="Contrôle d'entrée" id="controle">
         <p className={s.texte}>
           Aucun agent pour l'instant.{' '}
           <Link to="/organisateur/equipe" className={s.lienDiscret}>
             Créer un compte d'agent
           </Link>
         </p>
-      ) : (
+      </Panneau>
+    );
+  }
+
+  return (
+    <Panneau titre="Contrôle d'entrée" id="controle">
+      {erreurListe && (
+        <Avis ton="danger">
+          <p>{erreurListe}</p>
+        </Avis>
+      )}
+      {!erreurListe && affectes === null && <Chargement />}
+      {affectes !== null && (
         <div className={s.formulaire}>
-          <div className={s.formulaire} style={{ gap: 8 }}>
-            <label htmlFor={idSelect} style={{ fontWeight: 700 }}>
-              Agent
-            </label>
-            <select
-              id={idSelect}
-              value={agentId}
-              onChange={(e) => setAgentId(e.target.value)}
-              style={{
-                minHeight: 52,
-                borderRadius: 16,
-                border: '1px solid var(--bp-line-strong)',
-                padding: '0 14px',
-                fontSize: 16,
-                background: 'var(--bp-white)',
-              }}
-            >
-              <option value="">Choisir un agent</option>
-              {agents.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.nomComplet} ({a.email})
-                </option>
+          {enPoste.length === 0 ? (
+            <p className={s.texte}>Aucun agent affecté à cet événement.</p>
+          ) : (
+            <ul className={s.liste} aria-label="Agents affectés">
+              {enPoste.map((a) => (
+                <li key={a.id} className={s.ligneAgent}>
+                  <span>
+                    <strong>{a.nomComplet}</strong>
+                    <br />
+                    <span className={s.ligneDetail}>{a.email}</span>
+                  </span>
+                  <Bouton
+                    variante="secondaire"
+                    aria-label={`Retirer ${a.nomComplet} de cet événement`}
+                    onClick={() => void retirer(a)}
+                    disabled={envoi}
+                  >
+                    Retirer
+                  </Bouton>
+                </li>
               ))}
-            </select>
-          </div>
-          <div className={s.actions}>
-            <Bouton onClick={() => void agir('affecter')} disabled={!choisi || envoi}>
-              Affecter
-            </Bouton>
-            <Bouton variante="secondaire" onClick={() => void agir('retirer')} disabled={!choisi || envoi}>
-              Retirer
-            </Bouton>
-          </div>
+            </ul>
+          )}
+          {disponibles.length > 0 && (
+            <>
+              <div className={s.formulaire} style={{ gap: 8 }}>
+                <label htmlFor={idSelect} style={{ fontWeight: 700 }}>
+                  Agent
+                </label>
+                <select
+                  id={idSelect}
+                  value={agentId}
+                  onChange={(e) => setAgentId(e.target.value)}
+                  style={{
+                    minHeight: 52,
+                    borderRadius: 16,
+                    border: '1px solid var(--bp-line-strong)',
+                    padding: '0 14px',
+                    fontSize: 16,
+                    background: 'var(--bp-white)',
+                  }}
+                >
+                  <option value="">Choisir un agent</option>
+                  {disponibles.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.nomComplet} ({a.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className={s.actions}>
+                <Bouton onClick={() => choisi && void affecter(choisi)} disabled={!choisi || envoi}>
+                  Affecter
+                </Bouton>
+              </div>
+            </>
+          )}
           {message && (
             <Avis ton={message.ton}>
               <p>{message.texte}</p>

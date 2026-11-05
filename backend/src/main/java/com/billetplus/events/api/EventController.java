@@ -128,6 +128,13 @@ public class EventController {
         return ResponseEntity.ok(EventDto.from(eventService.annuler(id, requestingUserId)));
     }
 
+    /** Identifiants des agents affectés à un de SES événements. Jeton exigé aussi par SecurityConfig. */
+    @GetMapping("/{id}/agents")
+    @PreAuthorize("hasRole('ORGANISATEUR')")
+    public ResponseEntity<List<UUID>> agentsAffectes(@PathVariable UUID id, Authentication auth) {
+        return ResponseEntity.ok(affectationAgentService.listerAgents(id, (UUID) auth.getPrincipal()));
+    }
+
     /**
      * Affecte un de SES agents au contrôle d'entrée de l'événement. Idempotent
      * (PUT) : réaffecter ne change rien. Agent d'un autre organisateur ou inconnu → 404.

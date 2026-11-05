@@ -55,6 +55,38 @@ class AuthServiceTest {
             .isInstanceOf(NoSuchElementException.class);
     }
 
+    // ---------------------------------------------------------------- agent retiré
+
+    private User agentRetire() {
+        User agent = User.agentCreePar(UUID.randomUUID(), "agent@example.com", "hash", "Agent");
+        agent.desactiver();
+        return agent;
+    }
+
+    @Test
+    void un_agent_retire_ne_se_connecte_plus_meme_avec_le_bon_mot_de_passe() {
+        User agent = agentRetire();
+        when(userRepository.findByEmail("agent@example.com")).thenReturn(Optional.of(agent));
+        when(passwordEncoder.matches("motdepasse", "hash")).thenReturn(true);
+
+        assertThatThrownBy(() -> service().login("agent@example.com", "motdepasse"))
+            .isInstanceOf(org.springframework.security.authentication.BadCredentialsException.class)
+            .hasMessage("Identifiants invalides");
+    }
+
+    @Test
+    void un_agent_retire_ne_rafraichit_plus_ses_jetons() {
+        User agent = agentRetire();
+        io.jsonwebtoken.Claims claims = org.mockito.Mockito.mock(io.jsonwebtoken.Claims.class);
+        when(tokenProvider.parseAndValidate("refresh")).thenReturn(claims);
+        when(tokenProvider.isRefreshToken(claims)).thenReturn(true);
+        when(tokenProvider.getUserId(claims)).thenReturn(agent.getId());
+        when(userRepository.findById(agent.getId())).thenReturn(Optional.of(agent));
+
+        assertThatThrownBy(() -> service().refresh("refresh"))
+            .isInstanceOf(org.springframework.security.authentication.BadCredentialsException.class);
+    }
+
     // ---------------------------------------------------------------- inscription publique
 
     @Test

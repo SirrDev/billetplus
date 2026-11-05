@@ -133,6 +133,15 @@
   }
 }
 
+/* Agent affecté : identité à gauche, action à droite (l'action passe dessous si la place manque). */
+.ligneAgent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .connexion {
   max-width: 480px;
   margin: 0 auto;

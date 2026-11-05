@@ -12,9 +12,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -41,6 +43,25 @@ class AffectationAgentServiceTest {
         Event event = new Event("Concert", null, Instant.now(), null, new Venue("Grand Theatre", "Dakar", null, null), organisateur);
         lenient().when(eventService.getPourSonOrganisateur(event.getId(), organisateur)).thenReturn(event);
         return event;
+    }
+
+    @Test
+    void liste_les_agents_affectes_apres_le_controle_de_propriete() {
+        Event event = evenement();
+        when(affectationRepository.listerAgents(event.getId())).thenReturn(List.of(agent));
+
+        assertThat(service().listerAgents(event.getId(), organisateur)).containsExactly(agent);
+        verify(eventService).getPourSonOrganisateur(event.getId(), organisateur);
+    }
+
+    @Test
+    void un_autre_organisateur_ne_lit_pas_les_agents_affectes() {
+        UUID eventId = UUID.randomUUID();
+        UUID autre = UUID.randomUUID();
+        when(eventService.getPourSonOrganisateur(eventId, autre)).thenThrow(new AccessDeniedException("non"));
+
+        assertThatThrownBy(() -> service().listerAgents(eventId, autre)).isInstanceOf(AccessDeniedException.class);
+        verify(affectationRepository, never()).listerAgents(any());
     }
 
     @Test

@@ -21,7 +21,7 @@ class ComptesService implements Comptes {
     @Transactional(readOnly = true)
     public boolean estAgentCreePar(UUID agentId, UUID organisateurId) {
         return agentId != null && organisateurId != null && userRepository.findById(agentId)
-            .map(user -> user.getRole() == Role.AGENT && organisateurId.equals(user.getCreePar()))
+            .map(user -> user.getRole() == Role.AGENT && user.estActif() && organisateurId.equals(user.getCreePar()))
             .orElse(false);
     }
 }
