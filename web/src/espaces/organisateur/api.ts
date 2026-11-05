@@ -126,6 +126,30 @@ export function lireCoordonnees(saisie: string): { latitude: number; longitude: 
   return { latitude, longitude };
 }
 
+/** Forme écrite par la carte : six décimales, soit une dizaine de centimètres. */
+export function formaterCoordonnees(latitude: number, longitude: number): string {
+  return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+}
+
+export function lireLieu(id: string): Promise<Lieu> {
+  return http<Lieu>(`/venues/${encodeURIComponent(id)}`);
+}
+
+/**
+ * Le backend donne à l'événement une copie du lieu à cette position, sans toucher au lieu
+ * d'origine : venueId change. Événement annulé ou terminé : 409.
+ */
+export function definirPosition(
+  id: string,
+  coordonnees: { latitude: number; longitude: number },
+): Promise<EvenementOrganisateur> {
+  return http<EvenementOrganisateur>(`/events/${encodeURIComponent(id)}/position`, {
+    ...avecJeton,
+    method: 'PUT',
+    body: JSON.stringify(coordonnees),
+  });
+}
+
 export function creerEvenement(corps: {
   titre: string;
   description: string | null;

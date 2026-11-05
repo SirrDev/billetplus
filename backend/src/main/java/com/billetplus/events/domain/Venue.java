@@ -61,6 +61,13 @@ public class Venue {
         this.longitude = longitude;
     }
 
+    /** Même lieu à une autre position. Le lieu d'origine, peut-être partagé, n'est pas touché. */
+    public Venue copieA(double latitude, double longitude) {
+        Venue copie = new Venue(nom, adresse, latitude, longitude);
+        copie.seatingPlan = seatingPlan;
+        return copie;
+    }
+
     public void definirPlanDeSalle(String seatingPlanJson) {
         this.seatingPlan = seatingPlanJson;
     }

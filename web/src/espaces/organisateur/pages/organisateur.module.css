@@ -133,6 +133,22 @@
   }
 }
 
+/* isolation : les couches internes de Leaflet (z-index jusqu'à 1000) restent sous l'en-tête. */
+.carte {
+  height: 320px;
+  border: 1px solid var(--bp-line-strong);
+  border-radius: 16px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.repere {
+  border: 3px solid var(--bp-white);
+  border-radius: 50%;
+  background: var(--bp-accent-text);
+  box-shadow: 0 1px 6px rgb(0 0 0 / 45%);
+}
+
 /* Agent affecté : identité à gauche, action à droite (l'action passe dessous si la place manque). */
 .ligneAgent {
   display: flex;

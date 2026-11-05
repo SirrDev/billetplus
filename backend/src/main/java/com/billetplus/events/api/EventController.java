@@ -1,6 +1,7 @@
 package com.billetplus.events.api;
 
 import com.billetplus.events.api.dto.CreateEventRequest;
+import com.billetplus.events.api.dto.DefinirPositionRequest;
 import com.billetplus.events.api.dto.EvenementPublicDto;
 import com.billetplus.events.api.dto.EventDto;
 import com.billetplus.events.api.dto.PageEvenementsPublicsDto;
@@ -111,6 +112,15 @@ public class EventController {
         UUID requestingUserId = (UUID) auth.getPrincipal();
         Event event = eventService.modifier(id, request.titre(), request.description(),
             request.debuteLe(), request.termineLe(), request.categorie(), requestingUserId);
+        return ResponseEntity.ok(EventDto.from(event));
+    }
+
+    /** Définit la position GPS d'un de SES événements. Annulé ou terminé → 409. */
+    @PutMapping("/{id}/position")
+    @PreAuthorize("hasRole('ORGANISATEUR')")
+    public ResponseEntity<EventDto> definirPosition(@PathVariable UUID id, @Valid @RequestBody DefinirPositionRequest request,
+                                                    Authentication auth) {
+        Event event = eventService.definirPosition(id, request.latitude(), request.longitude(), (UUID) auth.getPrincipal());
         return ResponseEntity.ok(EventDto.from(event));
     }
 

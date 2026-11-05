@@ -1,10 +1,48 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { Routage } from '@/App';
 import { effacerJetons, enregistrerJetons, lireJetons } from '@/commun/session';
 
 /* Espace organisateur de bout en bout, backend simulé au niveau de fetch. */
+
+/*
+ * Fausse carte : jsdom ne dessine rien. Elle garde l'écouteur de clic et les positions du
+ * repère, pour vérifier le lien carte <-> champ. Le vrai Leaflet se vérifie dans un navigateur.
+ */
+const carte = vi.hoisted(() => ({
+  clic: null as null | ((e: unknown) => void),
+  repere: [] as unknown[],
+}));
+vi.mock('./pages/carteLeaflet', () => {
+  const map = {
+    setView: () => map,
+    on: (_: string, f: (e: unknown) => void) => {
+      carte.clic = f;
+      return map;
+    },
+    remove: () => undefined,
+    getBounds: () => ({ contains: () => true }),
+    getZoom: () => 12,
+  };
+  const marker = (position: unknown) => {
+    carte.repere.push(position);
+    const m = {
+      addTo: () => m,
+      on: () => m,
+      remove: () => undefined,
+      setLatLng: (p: unknown) => {
+        carte.repere.push(p);
+        return m;
+      },
+    };
+    return m;
+  };
+  return { L: { map: () => map, tileLayer: () => ({ addTo: () => undefined }), divIcon: () => ({}), marker } };
+});
+const cliquerCarte = (lat: number, lng: number) => {
+  act(() => carte.clic?.({ latlng: { wrap: () => ({ lat, lng }) } }));
+};
 
 const ORGANISATEUR = { id: 'o1', email: 'orga@test.sn', nomComplet: 'Orga Test', role: 'ORGANISATEUR' };
 const EVENEMENT = {
@@ -55,7 +93,11 @@ function connecte() {
 const jetonDe = (init?: RequestInit) => (init?.headers as Record<string, string> | undefined)?.Authorization;
 const corpsDe = (init?: RequestInit) => JSON.parse(String(init?.body)) as unknown;
 
-beforeEach(() => effacerJetons());
+beforeEach(() => {
+  effacerJetons();
+  carte.clic = null;
+  carte.repere = [];
+});
 
 describe('Connexion', () => {
   it("renvoie un anonyme vers la connexion, puis vers l'espace après connexion", async () => {
@@ -306,6 +348,83 @@ describe('Agents affectés à un événement', () => {
     expect(screen.getByText('Aucun agent affecté à cet événement.')).toBeInTheDocument();
     expect(within(screen.getByLabelText('Agent')).getByRole('option', { name: /Awa Agent/ })).toBeInTheDocument();
     expect(appels.mock.calls.some(([u, i]) => String(u).endsWith('/agents/a1') && i?.method === 'DELETE')).toBe(true);
+  });
+});
+
+describe('Position GPS sur la carte', () => {
+  const LIEU_SANS_POSITION = { id: 'v1', nom: 'Grand Théâtre', adresse: 'Dakar', latitude: null, longitude: null, seatingPlan: null };
+
+  it('envoie à la création la position choisie en touchant la carte', async () => {
+    connecte();
+    const appels = backend({
+      'GET /api/auth/me': () => ORGANISATEUR,
+      'POST /api/venues': () => LIEU_SANS_POSITION,
+      'POST /api/events': () => EVENEMENT,
+      [`GET /api/events/${EVENEMENT.id}`]: () => EVENEMENT,
+      [`GET /api/events/${EVENEMENT.id}/categories`]: () => [],
+      [`GET /api/events/${EVENEMENT.id}/tableau-de-bord`]: () => TABLEAU_VIDE,
+      'GET /api/agents': () => [],
+    });
+    ouvrir('/organisateur/evenements/nouveau');
+    await userEvent.type(await screen.findByLabelText('Titre'), 'Nuit du Mbalax');
+    fireEvent.change(screen.getByLabelText('Début'), { target: { value: '2099-11-14T21:00' } });
+    await userEvent.type(screen.getByLabelText('Nom du lieu'), 'Grand Théâtre');
+    await userEvent.type(screen.getByLabelText('Adresse'), 'Dakar');
+
+    await waitFor(() => expect(carte.clic).not.toBeNull());
+    cliquerCarte(14.7, -17.45);
+    expect(screen.getByLabelText(/^Coordonnées GPS/)).toHaveValue('14.700000, -17.450000');
+    await waitFor(() => expect(carte.repere).toHaveLength(1));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Créer le brouillon' }));
+    await screen.findByRole('heading', { level: 1, name: 'Nuit du Mbalax' });
+    const lieu = appels.mock.calls.find(([u, i]) => String(u) === '/api/venues' && i?.method === 'POST');
+    expect(corpsDe(lieu?.[1])).toMatchObject({ latitude: 14.7, longitude: -17.45 });
+  });
+
+  const routesModification = (lieu: object, evenement: object = EVENEMENT) => ({
+    'GET /api/auth/me': () => ORGANISATEUR,
+    [`GET /api/events/${EVENEMENT.id}`]: () => evenement,
+    [`GET /api/events/${EVENEMENT.id}/categories`]: () => [],
+    [`GET /api/events/${EVENEMENT.id}/tableau-de-bord`]: () => TABLEAU_VIDE,
+    'GET /api/agents': () => [],
+    'GET /api/venues/v1': () => lieu,
+    [`PUT /api/events/${EVENEMENT.id}`]: () => evenement,
+    [`PUT /api/events/${EVENEMENT.id}/position`]: () => evenement,
+  });
+  const appelPosition = (appels: ReturnType<typeof backend>) =>
+    appels.mock.calls.find(([u, i]) => String(u).endsWith('/position') && i?.method === 'PUT');
+
+  it('ajoute une position à un événement publié créé sans elle', async () => {
+    connecte();
+    const appels = backend(routesModification(LIEU_SANS_POSITION, { ...EVENEMENT, status: 'PUBLIE' }));
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}/modifier`);
+    await screen.findByLabelText(/^Coordonnées GPS/);
+    await waitFor(() => expect(carte.clic).not.toBeNull());
+    cliquerCarte(14.7, -17.45);
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    await screen.findByText('Modifications enregistrées.');
+    expect(corpsDe(appelPosition(appels)?.[1])).toEqual({ latitude: 14.7, longitude: -17.45 });
+  });
+
+  it("préremplit la position et ne l'envoie pas si elle n'a pas changé", async () => {
+    connecte();
+    const appels = backend(routesModification({ ...LIEU_SANS_POSITION, latitude: 14.6928123, longitude: -17.4467 }));
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}/modifier`);
+    expect(await screen.findByLabelText(/^Coordonnées GPS/)).toHaveValue('14.6928123, -17.4467');
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    await screen.findByText('Modifications enregistrées.');
+    expect(appelPosition(appels)).toBeUndefined();
+  });
+
+  it('refuse de retirer une position existante, sans rien envoyer', async () => {
+    connecte();
+    const appels = backend(routesModification({ ...LIEU_SANS_POSITION, latitude: 14.69, longitude: -17.44 }));
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}/modifier`);
+    await userEvent.clear(await screen.findByLabelText(/^Coordonnées GPS/));
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    expect(await screen.findByText('La position peut être déplacée, mais pas retirée.')).toBeInTheDocument();
+    expect(appels.mock.calls.some(([, i]) => i?.method === 'PUT')).toBe(false);
   });
 });
 
