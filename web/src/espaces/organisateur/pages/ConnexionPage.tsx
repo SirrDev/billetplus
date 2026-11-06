@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { TEXTE_MAX, useSession } from '@/commun/auth';
 import { ApiError, messageErreur } from '@/commun/http';
+import { retourDansEspace } from '@/commun/retourInterne';
 import { Avis, Bouton, BoutonLien, Cadre, ChampTexte, Icone, Panneau } from '@/ui';
 import s from './organisateur.module.css';
 
@@ -32,7 +33,7 @@ export function ConnexionPage() {
         return;
       }
       // Seule une adresse de l'espace organisateur est suivie : jamais une adresse arbitraire.
-      navigate(depuis?.startsWith('/organisateur') ? depuis : '/organisateur', { replace: true });
+      navigate(retourDansEspace('/organisateur', depuis), { replace: true });
     } catch (e2) {
       // 401 : même message que le backend, sans dire si l'e-mail existe.
       setErreur(e2 instanceof ApiError && e2.status === 401 ? 'E-mail ou mot de passe incorrect.' : messageErreur(e2));
