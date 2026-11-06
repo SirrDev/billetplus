@@ -68,6 +68,10 @@ export function EvenementPage() {
   const places = nombreDePlaces(quantites);
   const total = apercuTotal(categories, quantites);
   const toutEpuise = categories.length > 0 && categories.every((c) => !c.disponible);
+  // Gratuit et payant se commandent séparément (ADR 0010) : l'entrée libre ne passe pas par le paiement.
+  const choisies = categories.filter((c) => (quantites[c.id] ?? 0) > 0);
+  const gratuite = choisies.length > 0 && choisies.every((c) => c.prixFcfa === 0);
+  const mixte = choisies.some((c) => c.prixFcfa === 0) && !gratuite;
 
   const continuer = () => {
     const etat: EtatNavigationPaiement = { quantites };
@@ -157,16 +161,21 @@ export function EvenementPage() {
                 Places gardées pendant le paiement. Au plus {QUANTITE_MAX_PAR_CATEGORIE} billets par catégorie.
               </p>
             )}
+            {mixte && (
+              <Avis ton="attention">
+                <p>Les billets gratuits et payants se commandent séparément : choisissez les uns, puis les autres.</p>
+              </Avis>
+            )}
           </Panneau>
         </div>
 
         {categories.length > 0 && !toutEpuise && (
           <BarreAction
             libelle={places === 0 ? 'Choisissez vos billets' : `${places} ${places > 1 ? 'billets' : 'billet'} · total`}
-            montant={places === 0 ? undefined : formatFcfa(total)}
+            montant={places === 0 ? undefined : gratuite ? 'Gratuit' : formatFcfa(total)}
           >
-            <Bouton grand disabled={places === 0} onClick={continuer}>
-              Continuer vers le paiement
+            <Bouton grand disabled={places === 0 || mixte} onClick={continuer}>
+              {gratuite ? 'Obtenir mes billets' : 'Continuer vers le paiement'}
             </Bouton>
           </BarreAction>
         )}

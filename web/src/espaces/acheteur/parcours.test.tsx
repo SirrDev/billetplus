@@ -160,6 +160,66 @@ describe('Achat', () => {
     expect(JSON.parse(String(paiement?.[1]?.body))).toEqual({ moyen: 'ORANGE_MONEY' });
   });
 
+  it('obtient des billets gratuits sans paiement et les affiche aussitôt (entrée libre)', async () => {
+    const GRATUITE = [{ id: 'libre', nom: 'Entrée libre', prixFcfa: 0, disponible: true }];
+    const CONFIRMEE = {
+      ...COMMANDE,
+      status: 'PAYEE',
+      lignes: [{ categoryId: 'libre', quantite: 2, prixUnitaireFcfa: 0, sousTotalFcfa: 0 }],
+      montantTotalFcfa: 0,
+      payeeLe: '2026-10-30T10:00:01Z',
+    };
+    const appels = backend({
+      'GET /api/events/e1/categories': () => GRATUITE,
+      'GET /api/events/e1': () => EVENEMENT,
+      'POST /api/orders/entree-libre': () => ({ commande: CONFIRMEE, jetonAcces: 'jeton-libre' }),
+      'GET /api/orders/c1/billets': () => [
+        { id: 'b1', categoryId: 'libre', categorie: 'Entrée libre', statut: 'EMIS', qr: 'charge.signature' },
+        { id: 'b2', categoryId: 'libre', categorie: 'Entrée libre', statut: 'EMIS', qr: 'charge.signature2' },
+      ],
+      'GET /api/orders/c1': () => CONFIRMEE,
+    });
+    ouvrir('/evenements/e1');
+
+    expect(await screen.findByText('Gratuit')).toBeInTheDocument();
+    const plus = screen.getByRole('button', { name: 'Ajouter un billet Entrée libre' });
+    await userEvent.click(plus);
+    await userEvent.click(plus);
+    await userEvent.click(screen.getByRole('button', { name: 'Obtenir mes billets' }));
+
+    expect(await screen.findByRole('heading', { name: 'Vos billets gratuits' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /Wave/ })).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Numéro de mobile'), '771234567');
+    await userEvent.click(screen.getByRole('button', { name: 'Obtenir mes billets' }));
+
+    expect(await screen.findAllByRole('article')).toHaveLength(2);
+    expect(allerPayer).not.toHaveBeenCalled();
+    expect(stockage.get('c1')).toMatchObject({ jeton: 'jeton-libre' });
+    const creation = appels.mock.calls.find(([url]) => url === '/api/orders/entree-libre');
+    expect(JSON.parse(String(creation?.[1]?.body))).toEqual({
+      eventId: 'e1',
+      telephone: '+221771234567',
+      lignes: [{ categoryId: 'libre', quantite: 2 }],
+    });
+    expect(appels.mock.calls.some(([url, init]) => url === '/api/orders' && init?.method === 'POST')).toBe(false);
+  });
+
+  it('refuse de mélanger billets gratuits et payants dans une commande', async () => {
+    backend({
+      'GET /api/events/e1/categories': () => [
+        { id: 'libre', nom: 'Entrée libre', prixFcfa: 0, disponible: true },
+        { id: 'std', nom: 'Standard', prixFcfa: 5000, disponible: true },
+      ],
+      'GET /api/events/e1': () => EVENEMENT,
+    });
+    ouvrir('/evenements/e1');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Ajouter un billet Entrée libre' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ajouter un billet Standard' }));
+    expect(screen.getByText(/se commandent séparément/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continuer vers le paiement' })).toBeDisabled();
+  });
+
   it("affiche l'erreur du backend quand les places viennent de partir", async () => {
     backend({
       'GET /api/events/e1/categories': () => CATEGORIES,
