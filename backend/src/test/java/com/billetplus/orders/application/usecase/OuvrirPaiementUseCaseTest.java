@@ -1,5 +1,6 @@
 package com.billetplus.orders.application.usecase;
 
+import com.billetplus.orders.domain.TauxCommission;
 import com.billetplus.orders.application.port.OrderRepository;
 import com.billetplus.orders.application.port.PasserellePaiement;
 import com.billetplus.orders.domain.MoyenPaiement;
@@ -48,7 +49,7 @@ class OuvrirPaiementUseCaseTest {
 
     private Order.CommandeCreee commande(long prix) {
         Order.CommandeCreee creee = Order.creer(UUID.randomUUID(), NumeroTelephone.depuis("771234567"),
-            List.of(new OrderLine(UUID.randomUUID(), 2, Money.ofFcfa(prix))), CREATION, Duration.ofMinutes(4));
+            List.of(new OrderLine(UUID.randomUUID(), 2, Money.ofFcfa(prix))), CREATION, Duration.ofMinutes(4), TauxCommission.CINQ_POUR_CENT);
         when(orderRepository.findById(creee.commande().getId())).thenReturn(Optional.of(creee.commande()));
         when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
         return creee;

@@ -319,6 +319,63 @@ describe('Création et gestion d’un événement', () => {
   });
 });
 
+describe('Recettes et commission', () => {
+  const routesEvenement = (recettes: object, evenement: object = EVENEMENT) => ({
+    'GET /api/auth/me': () => ORGANISATEUR,
+    [`GET /api/events/${EVENEMENT.id}`]: () => evenement,
+    [`GET /api/events/${EVENEMENT.id}/categories`]: () => [],
+    [`GET /api/events/${EVENEMENT.id}/tableau-de-bord`]: () => TABLEAU_VIDE,
+    [`GET /api/events/${EVENEMENT.id}/recettes`]: () => recettes,
+    [`GET /api/events/${EVENEMENT.id}/agents`]: () => [],
+    'GET /api/agents': () => [],
+  });
+
+  it("affiche la part de l'organisateur, commission déduite, et le reste à recevoir", async () => {
+    connecte();
+    backend(
+      routesEvenement(
+        { commandes: 2, brutFcfa: 13333, commissionFcfa: 466, netFcfa: 12867, reverseFcfa: 10000, resteAReverserFcfa: 2867 },
+        { ...EVENEMENT, status: 'PUBLIE' },
+      ),
+    );
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}`);
+
+    const panneau = await screen.findByRole('region', { name: 'Vos recettes' });
+    const texte = (panneau.textContent ?? '').replace(/\s/g, ' ');
+    expect(texte).toContain('Ventes encaissées (2 commandes)');
+    expect(texte).toContain('13 333 FCFA');
+    expect(texte).toContain('− 466 FCFA');
+    expect(texte).toContain('12 867 FCFA');
+    expect(texte).toContain('Reste à recevoir');
+    expect(texte).toContain('2 867 FCFA');
+  });
+
+  it("annonce un trop perçu après l'annulation", async () => {
+    connecte();
+    backend(
+      routesEvenement(
+        { commandes: 0, brutFcfa: 0, commissionFcfa: 0, netFcfa: 0, reverseFcfa: 9500, resteAReverserFcfa: -9500 },
+        { ...EVENEMENT, status: 'ANNULE' },
+      ),
+    );
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}`);
+
+    const panneau = await screen.findByRole('region', { name: 'Vos recettes' });
+    const texte = (panneau.textContent ?? '').replace(/\s/g, ' ');
+    expect(texte).toContain('Trop perçu');
+    expect(texte).toContain('9 500 FCFA');
+    expect(texte).toContain('Événement annulé');
+  });
+
+  it("n'affiche rien tant qu'il n'y a ni vente ni reversement", async () => {
+    connecte();
+    backend(routesEvenement({ commandes: 0, brutFcfa: 0, commissionFcfa: 0, netFcfa: 0, reverseFcfa: 0, resteAReverserFcfa: 0 }));
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}`);
+    await screen.findByRole('heading', { level: 1, name: 'Nuit du Mbalax' });
+    expect(screen.queryByRole('region', { name: 'Vos recettes' })).not.toBeInTheDocument();
+  });
+});
+
 describe('Agents affectés à un événement', () => {
   const AWA = { id: 'a1', email: 'awa@test.sn', nomComplet: 'Awa Agent', creeLe: '2026-10-30T10:00:00Z' };
   const MOUSSA = { id: 'a2', email: 'moussa@test.sn', nomComplet: 'Moussa Diop', creeLe: '2026-10-30T10:00:00Z' };

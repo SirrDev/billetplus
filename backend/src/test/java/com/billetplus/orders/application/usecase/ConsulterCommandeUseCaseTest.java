@@ -1,5 +1,6 @@
 package com.billetplus.orders.application.usecase;
 
+import com.billetplus.orders.domain.TauxCommission;
 import com.billetplus.orders.application.port.OrderRepository;
 import com.billetplus.orders.domain.NumeroTelephone;
 import com.billetplus.orders.domain.Order;
@@ -26,7 +27,7 @@ class ConsulterCommandeUseCaseTest {
 
     private Order.CommandeCreee commandeEnregistree() {
         Order.CommandeCreee creee = Order.creer(UUID.randomUUID(), NumeroTelephone.depuis("771234567"),
-            List.of(new OrderLine(UUID.randomUUID(), 1, Money.ofFcfa(5000))), Instant.now(), Duration.ofMinutes(4));
+            List.of(new OrderLine(UUID.randomUUID(), 1, Money.ofFcfa(5000))), Instant.now(), Duration.ofMinutes(4), TauxCommission.CINQ_POUR_CENT);
         when(orderRepository.findById(creee.commande().getId())).thenReturn(Optional.of(creee.commande()));
         return creee;
     }

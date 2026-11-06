@@ -149,6 +149,20 @@
   box-shadow: 0 1px 6px rgb(0 0 0 / 45%);
 }
 
+/* Recettes : libellé à gauche, montant aligné à droite. */
+.recettes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px 16px;
+  margin: 0;
+}
+
+.recettes dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Agent affecté : identité à gauche, action à droite (l'action passe dessous si la place manque). */
 .ligneAgent {
   display: flex;

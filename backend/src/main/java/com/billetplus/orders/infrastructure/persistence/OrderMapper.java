@@ -1,5 +1,6 @@
 package com.billetplus.orders.infrastructure.persistence;
 
+import com.billetplus.orders.domain.TauxCommission;
 import com.billetplus.orders.domain.NumeroTelephone;
 import com.billetplus.orders.domain.Order;
 import com.billetplus.orders.domain.OrderLine;
@@ -28,6 +29,7 @@ final class OrderMapper {
             entity.getEmpreinteJeton(),
             entity.getCreeLe(),
             entity.getExpireLe(),
+            new TauxCommission(entity.getTauxCommissionPointsBase()),
             entity.getStatus(),
             entity.getPayeeLe(),
             entity.getMotifSansBillet(),
@@ -51,7 +53,8 @@ final class OrderMapper {
             order.getLignes().stream()
                 .map(l -> new OrderLineEmbeddable(l.categoryId(), l.quantite(),
                     l.prixUnitaire().valeur().longValueExact()))
-                .toList()
+                .toList(),
+            order.getTauxCommission().pointsBase()
         );
         copierPaiement(order, entity);
         return entity;

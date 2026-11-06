@@ -25,6 +25,7 @@ import {
   lireAffectations,
   lireCategories,
   lireEvenement,
+  lireRecettes,
   lireTableauDeBord,
   mesAgents,
   publier,
@@ -33,6 +34,7 @@ import {
   type CategorieOrganisateur,
   type EvenementOrganisateur,
   type LigneTableauDeBord,
+  type Recettes,
   type TableauDeBord,
 } from '../api';
 import { CadreOrganisateur } from './CadreOrganisateur';
@@ -63,6 +65,7 @@ export function EvenementOrganisateurPage() {
   const vientDEtreModifie = etatNavigation?.modifie === true;
   const [donnees, setDonnees] = useState<EtatPage>({ etat: 'chargement' });
   const [tableau, setTableau] = useState<TableauDeBord | null>(null);
+  const [recettes, setRecettes] = useState<Recettes | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [message, setMessage] = useState<{ ton: 'succes' | 'danger'; texte: string } | null>(null);
   const [confirmerAnnulation, setConfirmerAnnulation] = useState(false);
@@ -88,6 +91,7 @@ export function EvenementOrganisateurPage() {
     }
     // Compléments : leur échec n'empêche pas de gérer l'événement.
     lireTableauDeBord(id).then(setTableau).catch(() => setTableau(null));
+    lireRecettes(id).then(setRecettes).catch(() => setRecettes(null));
     mesAgents().then(setAgents).catch(() => setAgents([]));
   }, [id, moi]);
 
@@ -247,6 +251,10 @@ export function EvenementOrganisateurPage() {
           </Indicateurs>
         )}
 
+        {recettes && (recettes.commandes > 0 || recettes.reverseFcfa !== 0) && (
+          <VosRecettes recettes={recettes} annule={evenement.status === 'ANNULE'} />
+        )}
+
         <div className={s.deuxColonnes}>
           <div className={s.pile}>
             <Panneau>
@@ -288,6 +296,46 @@ export function EvenementOrganisateurPage() {
         </div>
       </div>
     </CadreOrganisateur>
+  );
+}
+
+/** Part de l'organisateur (ADR 0009) : la commission de Billet+ est déduite de chaque commande. */
+function VosRecettes({ recettes, annule }: { recettes: Recettes; annule: boolean }) {
+  const reste = recettes.resteAReverserFcfa;
+  return (
+    <Panneau titre="Vos recettes" id="recettes">
+      {annule && (
+        <Avis ton="attention">
+          <p>Événement annulé : les acheteurs sont remboursés, il n'y a plus de recette à vous reverser.</p>
+        </Avis>
+      )}
+      <dl className={s.recettes}>
+        <dt>
+          Ventes encaissées ({recettes.commandes} commande{recettes.commandes > 1 ? 's' : ''})
+        </dt>
+        <dd>{formatFcfa(recettes.brutFcfa)}</dd>
+        <dt>Commission Billet+</dt>
+        <dd>− {formatFcfa(recettes.commissionFcfa)}</dd>
+        <dt>
+          <strong>Votre part</strong>
+        </dt>
+        <dd>
+          <strong>{formatFcfa(recettes.netFcfa)}</strong>
+        </dd>
+        <dt>Déjà reversé</dt>
+        <dd>{formatFcfa(recettes.reverseFcfa)}</dd>
+        <dt>
+          <strong>{reste < 0 ? 'Trop perçu' : 'Reste à recevoir'}</strong>
+        </dt>
+        <dd>
+          <strong>{formatFcfa(Math.abs(reste))}</strong>
+        </dd>
+      </dl>
+      <p className={s.ligneDetail}>
+        La commission de Billet+ est déduite de chaque commande, au taux en vigueur le jour de la vente. Billet+ vous
+        reverse votre part par virement.
+      </p>
+    </Panneau>
   );
 }
 
