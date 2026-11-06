@@ -62,7 +62,7 @@ class EquipeEtPositionHttpIntegrationTest extends ContexteCompletTestBase {
     }
 
     private Event evenement(UUID organisateur, Double latitude, Double longitude) {
-        UUID lieu = venueService.create("Sorano", "Dakar", latitude, longitude).getId();
+        UUID lieu = venueService.create("Sorano", "Dakar", latitude, longitude, com.billetplus.events.domain.VillesDeTest.DAKAR).getId();
         return eventService.create("Concert", null, Instant.now().plus(10, ChronoUnit.DAYS), null, lieu, organisateur, null);
     }
 

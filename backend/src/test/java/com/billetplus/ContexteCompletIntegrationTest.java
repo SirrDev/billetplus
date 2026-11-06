@@ -91,7 +91,7 @@ class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
     }
 
     private Event evenement() {
-        UUID venueId = venueService.create("Grand Theatre", "Dakar", null, null).getId();
+        UUID venueId = venueService.create("Grand Theatre", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.DAKAR).getId();
         return eventService.create("Concert", null, Instant.now().plus(30, ChronoUnit.DAYS), null, venueId, organisateur, null);
     }
 
@@ -357,7 +357,7 @@ class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
     void l_organisateur_affecte_et_retire_un_de_ses_agents() throws Exception {
         UUID orga = organisateurInscrit();
         UUID agent = agentCreePar(orga);
-        UUID venueId = venueService.create("Grand Theatre", "Dakar", null, null).getId();
+        UUID venueId = venueService.create("Grand Theatre", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.DAKAR).getId();
         Event event = eventService.create("Concert", null, Instant.now().plus(30, ChronoUnit.DAYS), null, venueId, orga, null);
 
         for (int i = 0; i < 2; i++) {
@@ -379,7 +379,7 @@ class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
         UUID orga = organisateurInscrit();
         UUID autreOrga = organisateurInscrit();
         UUID agentDeLAutre = agentCreePar(autreOrga);
-        UUID venueId = venueService.create("Grand Theatre", "Dakar", null, null).getId();
+        UUID venueId = venueService.create("Grand Theatre", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.DAKAR).getId();
         Event event = eventService.create("Concert", null, Instant.now().plus(30, ChronoUnit.DAYS), null, venueId, orga, null);
 
         mvc.perform(put("/api/events/{id}/agents/{agentId}", event.getId(), agentDeLAutre).with(connecte(orga, "ORGANISATEUR")))
@@ -405,7 +405,7 @@ class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
     private Controle controlePret() throws Exception {
         UUID orga = organisateurInscrit();
         UUID agent = agentCreePar(orga);
-        UUID venueId = venueService.create("Grand Theatre", "Dakar", null, null).getId();
+        UUID venueId = venueService.create("Grand Theatre", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.DAKAR).getId();
         Event event = eventService.create("Concert", null, Instant.now().plus(30, ChronoUnit.DAYS), null, venueId, orga, null);
         eventService.publier(event.getId(), orga);
         mvc.perform(put("/api/events/{id}/agents/{agentId}", event.getId(), agent).with(connecte(orga, "ORGANISATEUR")))
@@ -483,7 +483,7 @@ class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
     @Test
     void un_billet_d_un_autre_evenement_est_signale_sans_etre_consomme() throws Exception {
         Controle a = controlePret();
-        UUID venueId = venueService.create("Stade", "Dakar", null, null).getId();
+        UUID venueId = venueService.create("Stade", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.DAKAR).getId();
         Event b = eventService.create("Match", null, Instant.now().plus(40, ChronoUnit.DAYS), null, venueId, a.organisateur(), null);
         eventService.publier(b.getId(), a.organisateur());
         mvc.perform(put("/api/events/{id}/agents/{agentId}", b.getId(), a.agent()).with(connecte(a.organisateur(), "ORGANISATEUR")))

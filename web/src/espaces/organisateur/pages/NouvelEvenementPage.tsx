@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { CATEGORIES, type CategorieEvenement } from '@/commun/categories';
 import { heureDakarVersInstant } from '@/commun/format';
 import { messageErreur } from '@/commun/http';
+import { optionsVilles, paysDeLaVille, useVilles } from '@/commun/villes';
 import { Avis, Bouton, ChampChoix, ChampTexte, Panneau } from '@/ui';
 import { creerEvenement, creerLieu, LIMITES, lireCoordonnees } from '../api';
 import { CadreOrganisateur } from './CadreOrganisateur';
@@ -13,6 +14,7 @@ interface Erreurs {
   debut?: string;
   fin?: string;
   coordonnees?: string;
+  ville?: string;
 }
 
 /**
@@ -28,6 +30,8 @@ export function NouvelEvenementPage() {
   const [fin, setFin] = useState('');
   const [lieuNom, setLieuNom] = useState('');
   const [lieuAdresse, setLieuAdresse] = useState('');
+  const [ville, setVille] = useState('');
+  const { villes, erreur: erreurVilles } = useVilles();
   const [coordonnees, setCoordonnees] = useState('');
   const [erreurs, setErreurs] = useState<Erreurs>({});
   const [erreur, setErreur] = useState<string | null>(null);
@@ -44,12 +48,13 @@ export function NouvelEvenementPage() {
     if (debuteLe && termineLe && termineLe < debuteLe) nouvelles.fin = 'La fin ne peut pas précéder le début.';
     const gps = coordonnees.trim() ? lireCoordonnees(coordonnees) : null;
     if (coordonnees.trim() && !gps) nouvelles.coordonnees = 'Format attendu : latitude, longitude (par exemple 14.6928, -17.4467).';
+    if (!ville) nouvelles.ville = 'Choisissez la ville du lieu.';
     setErreurs(nouvelles);
     if (Object.keys(nouvelles).length > 0 || !debuteLe) return;
 
     setEnvoi(true);
     try {
-      const lieu = await creerLieu(lieuNom.trim(), lieuAdresse.trim(), gps);
+      const lieu = await creerLieu(lieuNom.trim(), lieuAdresse.trim(), ville, gps);
       const evenement = await creerEvenement({
         titre: titre.trim(),
         description: description.trim() || null,
@@ -113,6 +118,31 @@ export function NouvelEvenementPage() {
 
           <Panneau titre="Le lieu" id="lieu">
             <ChampTexte libelle="Nom du lieu" valeur={lieuNom} onChange={setLieuNom} requis maxLength={LIMITES.lieuNom} />
+            <ChampChoix
+              libelle="Ville"
+              options={optionsVilles(villes ?? [], villes === null ? 'Chargement des villes…' : 'Choisissez une ville')}
+              valeur={ville}
+              onChange={setVille}
+              aide="Les acheteurs cherchent les événements par ville. Ville absente : contactez Billet+."
+            />
+            {erreurs.ville && (
+              <Avis ton="danger">
+                <p>{erreurs.ville}</p>
+              </Avis>
+            )}
+            {erreurVilles && (
+              <Avis ton="danger">
+                <p>{erreurVilles}</p>
+              </Avis>
+            )}
+            {ville && paysDeLaVille(ville) !== 'SN' && (
+              <Avis ton="attention">
+                <p>
+                  Hors du Sénégal, vous pouvez préparer l'événement, mais pas encore le publier : la vente n'y est pas
+                  encore ouverte.
+                </p>
+              </Avis>
+            )}
             <ChampTexte
               libelle="Adresse"
               valeur={lieuAdresse}

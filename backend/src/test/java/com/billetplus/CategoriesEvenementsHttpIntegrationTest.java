@@ -40,7 +40,7 @@ class CategoriesEvenementsHttpIntegrationTest extends ContexteCompletTestBase {
     }
 
     private Event publie(UUID orga, String titre, CategorieEvenement categorie) {
-        UUID lieu = venueService.create("Lieu " + titre, "Dakar", null, null).getId();
+        UUID lieu = venueService.create("Lieu " + titre, "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.DAKAR).getId();
         Event e = eventService.create(titre, null, Instant.now().plus(5, ChronoUnit.DAYS), null, lieu, orga, categorie);
         eventService.publier(e.getId(), orga);
         return e;
@@ -76,7 +76,7 @@ class CategoriesEvenementsHttpIntegrationTest extends ContexteCompletTestBase {
     @Test
     void la_categorie_se_choisit_a_la_creation_et_se_modifie_meme_publie() throws Exception {
         UUID orga = organisateur();
-        UUID lieu = venueService.create("Sorano " + UUID.randomUUID(), "Dakar", null, null).getId();
+        UUID lieu = venueService.create("Sorano " + UUID.randomUUID(), "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.DAKAR).getId();
         String debut = Instant.now().plus(9, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS).toString();
 
         String cree = mvc.perform(post("/api/events").with(connecte(orga, "ORGANISATEUR"))
@@ -104,7 +104,7 @@ class CategoriesEvenementsHttpIntegrationTest extends ContexteCompletTestBase {
     @Test
     void sans_categorie_a_la_creation_l_evenement_est_classe_autre() throws Exception {
         UUID orga = organisateur();
-        UUID lieu = venueService.create("Sorano " + UUID.randomUUID(), "Dakar", null, null).getId();
+        UUID lieu = venueService.create("Sorano " + UUID.randomUUID(), "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.DAKAR).getId();
         mvc.perform(post("/api/events").with(connecte(orga, "ORGANISATEUR"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"titre\":\"Divers\",\"debuteLe\":\"" + Instant.now().plus(9, ChronoUnit.DAYS) + "\",\"venueId\":\"" + lieu + "\"}"))

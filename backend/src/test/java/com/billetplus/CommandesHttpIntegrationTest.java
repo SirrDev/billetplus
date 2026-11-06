@@ -41,7 +41,7 @@ class CommandesHttpIntegrationTest extends ContexteCompletTestBase {
 
     private UUID evenement(String statut) {
         UUID lieu = UUID.randomUUID();
-        jdbc.update("INSERT INTO venues (id, nom, adresse) VALUES (?, 'Arena', 'Dakar')", lieu);
+        jdbc.update("INSERT INTO venues (id, nom, adresse, ville_code) VALUES (?, 'Arena', 'Dakar', 'SN-DAKAR')", lieu);
         UUID id = UUID.randomUUID();
         jdbc.update("INSERT INTO events (id, titre, debute_le, venue_id, organizer_id, status) VALUES (?, ?, ?, ?, ?, ?)",
             id, "Concert " + id, Timestamp.from(Instant.now().plus(10, ChronoUnit.DAYS)), lieu, UUID.randomUUID(), statut);

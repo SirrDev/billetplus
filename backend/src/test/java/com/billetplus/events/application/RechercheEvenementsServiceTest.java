@@ -22,13 +22,14 @@ class RechercheEvenementsServiceTest {
     private static final Instant MAINTENANT = Instant.parse("2026-11-01T10:00:00Z");
 
     private final EventRepository eventRepository = mock(EventRepository.class);
+    private final VilleRepository villeRepository = mock(VilleRepository.class);
     private final RechercheEvenementsService service =
-        new RechercheEvenementsService(eventRepository, Clock.fixed(MAINTENANT, ZoneOffset.UTC));
+        new RechercheEvenementsService(eventRepository, villeRepository, Clock.fixed(MAINTENANT, ZoneOffset.UTC));
 
     @Test
     void la_recherche_transmet_l_heure_de_l_horloge_et_les_parametres() {
         PageEvenements attendue = new PageEvenements(List.of(), 2, 10, 0);
-        when(eventRepository.rechercherPublies("jazz", null, MAINTENANT, 2, 10)).thenReturn(attendue);
+        when(eventRepository.rechercherPublies("jazz", null, null, null, MAINTENANT, 2, 10)).thenReturn(attendue);
 
         assertThat(service.rechercher("jazz", 2, 10)).isSameAs(attendue);
     }
@@ -36,21 +37,21 @@ class RechercheEvenementsServiceTest {
     @Test
     void la_categorie_est_transmise_au_filtre() {
         PageEvenements attendue = new PageEvenements(List.of(), 0, 10, 0);
-        when(eventRepository.rechercherPublies(null, CategorieEvenement.SPORT, MAINTENANT, 0, 10)).thenReturn(attendue);
+        when(eventRepository.rechercherPublies(null, CategorieEvenement.SPORT, null, null, MAINTENANT, 0, 10)).thenReturn(attendue);
 
         assertThat(service.rechercher(null, CategorieEvenement.SPORT, 0, 10)).isSameAs(attendue);
     }
 
     @Test
     void les_bornes_incluses_sont_acceptees() {
-        when(eventRepository.rechercherPublies(any(), any(), any(), anyInt(), anyInt()))
+        when(eventRepository.rechercherPublies(any(), any(), any(), any(), any(), anyInt(), anyInt()))
             .thenReturn(new PageEvenements(List.of(), 0, 1, 0));
 
         service.rechercher(null, 0, 1);
         service.rechercher("a".repeat(RechercheEvenementsService.RECHERCHE_LONGUEUR_MAX), 0,
             RechercheEvenementsService.TAILLE_MAX);
 
-        verify(eventRepository).rechercherPublies(null, null, MAINTENANT, 0, 1);
+        verify(eventRepository).rechercherPublies(null, null, null, null, MAINTENANT, 0, 1);
     }
 
     @Test

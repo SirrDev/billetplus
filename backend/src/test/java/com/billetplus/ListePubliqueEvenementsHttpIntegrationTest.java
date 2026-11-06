@@ -37,7 +37,7 @@ class ListePubliqueEvenementsHttpIntegrationTest extends ContexteCompletTestBase
 
     private UUID creerLieu() {
         UUID id = UUID.randomUUID();
-        jdbc.update("INSERT INTO venues (id, nom, adresse) VALUES (?, 'Grand Theatre', 'Dakar Plateau')", id);
+        jdbc.update("INSERT INTO venues (id, nom, adresse, ville_code) VALUES (?, 'Grand Theatre', 'Dakar Plateau', 'SN-DAKAR')", id);
         return id;
     }
 

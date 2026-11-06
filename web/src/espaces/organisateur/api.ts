@@ -24,6 +24,11 @@ export interface EvenementOrganisateur {
   status: StatutEvenement;
   creeLe: string;
   categorie: CategorieEvenement;
+  /** Ville du lieu (ADR 0011) : code de la liste, nom affiché, pays (code ISO). */
+  villeCode: string;
+  villeNom: string;
+  pays: string;
+  paysNom: string;
 }
 
 /** VenueDto. */
@@ -34,6 +39,11 @@ export interface Lieu {
   latitude: number | null;
   longitude: number | null;
   seatingPlan: string | null;
+  /** Ville du lieu (ADR 0011) : code de la liste, nom affiché, pays (code ISO). */
+  villeCode: string;
+  villeNom: string;
+  pays: string;
+  paysNom: string;
 }
 
 /** TicketCategoryDto, vue organisateur : quotas présents. */
@@ -100,15 +110,23 @@ export function lireEvenement(id: string): Promise<EvenementOrganisateur> {
 }
 
 /** Coordonnées facultatives (CreateVenueRequest : latitude -90..90, longitude -180..180). */
+/** @param villeCode code d'une ville de la liste fermée (ADR 0011), obligatoire */
 export function creerLieu(
   nom: string,
   adresse: string,
+  villeCode: string,
   coordonnees: { latitude: number; longitude: number } | null = null,
 ): Promise<Lieu> {
   return http<Lieu>('/venues', {
     ...avecJeton,
     method: 'POST',
-    body: JSON.stringify({ nom, adresse, latitude: coordonnees?.latitude ?? null, longitude: coordonnees?.longitude ?? null }),
+    body: JSON.stringify({
+      nom,
+      adresse,
+      villeCode,
+      latitude: coordonnees?.latitude ?? null,
+      longitude: coordonnees?.longitude ?? null,
+    }),
   });
 }
 

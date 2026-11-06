@@ -20,8 +20,11 @@ public interface EventRepository {
      * (sans tenir compte de la casse ; null ou vide : tous) et de la catégorie demandée.
      *
      * @param categorie null : toutes les catégories
+     * @param villeCode  code d'une ville de la liste (ADR 0011) ; null : toutes
+     * @param pays       null : tous les pays
      */
-    PageEvenements rechercherPublies(String recherche, CategorieEvenement categorie,
+    PageEvenements rechercherPublies(String recherche, CategorieEvenement categorie, String villeCode,
+                                     com.billetplus.events.domain.Pays pays,
                                      java.time.Instant maintenant, int page, int taille);
 
     /**

@@ -57,16 +57,20 @@ public class EventController {
      * Liste publique (voir SecurityConfig : GET /api/events/** est permitAll) :
      * événements publiés, à venir ou en cours, du plus proche au plus lointain.
      * {@code q} filtre sur le titre, {@code categorie} sur la catégorie (MUSIQUE, SPORT...,
-     * casse ignorée ; inconnue : 400). Pagination bornée (taille 1 à 50, sinon 400).
+     * casse ignorée ; inconnue : 400), {@code ville} sur un code de la liste (SN-DAKAR...) et
+     * {@code pays} sur un code ISO (SN, CI...), inconnus : 400 (ADR 0011). Pagination bornée
+     * (taille 1 à 50, sinon 400).
      */
     @GetMapping
     public ResponseEntity<PageEvenementsPublicsDto> lister(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String categorie,
+            @RequestParam(required = false) String ville,
+            @RequestParam(required = false) String pays,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "" + RechercheEvenementsService.TAILLE_PAR_DEFAUT) int taille) {
         CategorieEvenement filtre = categorie == null || categorie.isBlank() ? null : CategorieEvenement.lire(categorie);
-        return ResponseEntity.ok(PageEvenementsPublicsDto.from(rechercheEvenementsService.rechercher(q, filtre, page, taille)));
+        return ResponseEntity.ok(PageEvenementsPublicsDto.from(rechercheEvenementsService.rechercher(q, filtre, ville, pays, page, taille)));
     }
 
     @PostMapping

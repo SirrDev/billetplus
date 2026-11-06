@@ -40,7 +40,7 @@ class AffectationAgentServiceTest {
 
     /** Le contrôle de propriété vit dans EventService.getPourSonOrganisateur (testé avec EventService). */
     private Event evenement() {
-        Event event = new Event("Concert", null, Instant.now(), null, new Venue("Grand Theatre", "Dakar", null, null), organisateur);
+        Event event = new Event("Concert", null, Instant.now(), null, new Venue("Grand Theatre", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.dakar()), organisateur);
         lenient().when(eventService.getPourSonOrganisateur(event.getId(), organisateur)).thenReturn(event);
         return event;
     }

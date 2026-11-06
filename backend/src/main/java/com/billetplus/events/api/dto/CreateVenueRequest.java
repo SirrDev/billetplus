@@ -28,5 +28,10 @@ public record CreateVenueRequest(
 
     @DecimalMin(value = "-180.0", message = "La longitude doit être comprise entre -180 et 180")
     @DecimalMax(value = "180.0", message = "La longitude doit être comprise entre -180 et 180")
-    Double longitude
+    Double longitude,
+
+    /** Code d'une ville de la liste fermée (ADR 0011), par exemple SN-DAKAR ; inconnu : 400. */
+    @NotBlank(message = "La ville est obligatoire")
+    @Size(max = 40, message = "Ville inconnue")
+    String villeCode
 ) {}

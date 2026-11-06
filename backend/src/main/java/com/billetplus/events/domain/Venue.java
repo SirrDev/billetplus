@@ -34,6 +34,15 @@ public class Venue {
     private Double longitude;
 
     /**
+     * Ville de la liste fermée (ADR 0011, V18) : même module, donc relation JPA et clé
+     * étrangère permises. EAGER : une ligne courte, lue avec chaque lieu (liste publique,
+     * publication), sans risque de LazyInitializationException hors transaction.
+     */
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @JoinColumn(name = "ville_code", nullable = false)
+    private Ville ville;
+
+    /**
      * Plan de salle — structure JSON libre, propre à chaque lieu.
      * Pas de modèle Java dédié tant que feature/web-event-detail-checkout
      * (plan de salle interactif, SHOULD) n'est pas construite ; stocké tel
@@ -47,7 +56,10 @@ public class Venue {
         // requis par JPA
     }
 
-    public Venue(String nom, String adresse, Double latitude, Double longitude) {
+    public Venue(String nom, String adresse, Double latitude, Double longitude, Ville ville) {
+        if (ville == null) {
+            throw new IllegalArgumentException("La ville du lieu est obligatoire");
+        }
         if (nom == null || nom.isBlank()) {
             throw new IllegalArgumentException("Le nom du lieu est obligatoire");
         }
@@ -59,11 +71,12 @@ public class Venue {
         this.adresse = adresse;
         this.latitude = latitude;
         this.longitude = longitude;
+        this.ville = ville;
     }
 
     /** Même lieu à une autre position. Le lieu d'origine, peut-être partagé, n'est pas touché. */
     public Venue copieA(double latitude, double longitude) {
-        Venue copie = new Venue(nom, adresse, latitude, longitude);
+        Venue copie = new Venue(nom, adresse, latitude, longitude, ville);
         copie.seatingPlan = seatingPlan;
         return copie;
     }
@@ -90,6 +103,10 @@ public class Venue {
 
     public Double getLongitude() {
         return longitude;
+    }
+
+    public Ville getVille() {
+        return ville;
     }
 
     public String getSeatingPlan() {

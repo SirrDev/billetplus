@@ -19,6 +19,11 @@ export interface EvenementPublic {
   venueAdresse: string;
   /** CategorieEvenement (MUSIQUE, SPORT...) ; libellé par commun/categories. */
   categorie: string;
+  /** Ville du lieu (ADR 0011) : code de la liste, nom affiché, pays (code ISO). */
+  villeCode: string;
+  villeNom: string;
+  pays: string;
+  paysNom: string;
 }
 
 /** PageEvenementsPublicsDto. */
@@ -44,6 +49,11 @@ export interface Evenement {
   status: string;
   creeLe: string;
   categorie: string;
+  /** Ville du lieu (ADR 0011) : code de la liste, nom affiché, pays (code ISO). */
+  villeCode: string;
+  villeNom: string;
+  pays: string;
+  paysNom: string;
 }
 
 /** VenueDto (route publique GET /venues/{id}) : l'adresse n'est pas dans EventDto. */
@@ -53,6 +63,11 @@ export interface LieuPublic {
   adresse: string;
   latitude: number | null;
   longitude: number | null;
+  /** Ville du lieu (ADR 0011) : code de la liste, nom affiché, pays (code ISO). */
+  villeCode: string;
+  villeNom: string;
+  pays: string;
+  paysNom: string;
 }
 
 /** TicketCategoryDto, vue acheteur : « disponible », jamais le stock. */
@@ -133,10 +148,13 @@ export function rechercherEvenements(
   page = 0,
   taille = 12,
   categorie: CategorieEvenement | null = null,
+  /** Code d'une ville de la liste (ADR 0011), ou null pour toutes. */
+  ville: string | null = null,
 ): Promise<PageEvenements> {
   const parametres = new URLSearchParams({ page: String(page), taille: String(taille) });
   if (q.trim()) parametres.set('q', q.trim());
   if (categorie) parametres.set('categorie', categorie);
+  if (ville) parametres.set('ville', ville);
   return http<PageEvenements>(`/events?${parametres}`);
 }
 

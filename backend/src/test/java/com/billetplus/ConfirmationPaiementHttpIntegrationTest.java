@@ -45,7 +45,7 @@ class ConfirmationPaiementHttpIntegrationTest extends ContexteCompletTestBase {
     /** Événement publié, catégorie à 5000 F, commande de 2 places, paiement Wave ouvert. */
     private Achat acheter(int quota) throws Exception {
         UUID lieu = UUID.randomUUID();
-        jdbc.update("INSERT INTO venues (id, nom, adresse) VALUES (?, 'Arena', 'Dakar')", lieu);
+        jdbc.update("INSERT INTO venues (id, nom, adresse, ville_code) VALUES (?, 'Arena', 'Dakar', 'SN-DAKAR')", lieu);
         UUID evenement = UUID.randomUUID();
         jdbc.update("INSERT INTO events (id, titre, debute_le, venue_id, organizer_id, status) VALUES (?, ?, ?, ?, ?, 'PUBLIE')",
             evenement, "Concert " + evenement, Timestamp.from(Instant.now().plus(10, ChronoUnit.DAYS)), lieu, UUID.randomUUID());

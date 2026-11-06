@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { CATEGORIES, libelleCategorie, type CategorieEvenement } from '@/commun/categories';
 import { messageErreur } from '@/commun/http';
+import { libelleVille, optionsVilles, useVilles } from '@/commun/villes';
 import {
   Avis,
   Bouton,
   BoutonLien,
   Cadre,
   CarteEvenement,
+  ChampChoix,
   ChampRecherche,
   Chargement,
   EtatVide,
@@ -23,7 +25,13 @@ import s from './pages.module.css';
 const DELAI_RECHERCHE_MS = 300;
 
 function versResume(e: EvenementPublic): ResumeEvenement {
-  return { id: e.id, titre: e.titre, debuteLe: e.debuteLe, lieu: e.venueNom, categorie: libelleCategorie(e.categorie) };
+  return {
+    id: e.id,
+    titre: e.titre,
+    debuteLe: e.debuteLe,
+    lieu: `${e.venueNom} · ${libelleVille(e)}`,
+    categorie: libelleCategorie(e.categorie),
+  };
 }
 
 type Filtre = CategorieEvenement | 'TOUT';
@@ -40,6 +48,9 @@ export function DecouvrirPage() {
   const [recherche, setRecherche] = useState('');
   const [filtre, setFiltre] = useState<Filtre>('TOUT');
   const categorie = filtre === 'TOUT' ? null : filtre;
+  const [ville, setVille] = useState('');
+  const { villes } = useVilles();
+  const nomVille = villes?.flatMap((p) => p.villes).find((v) => v.code === ville)?.nom;
   const [page, setPage] = useState<PageEvenements | null>(null);
   const [evenements, setEvenements] = useState<EvenementPublic[]>([]);
   const [chargement, setChargement] = useState(true);
@@ -56,7 +67,7 @@ export function DecouvrirPage() {
     let annule = false;
     setChargement(true);
     setErreur(null);
-    rechercherEvenements(recherche, 0, 12, categorie)
+    rechercherEvenements(recherche, 0, 12, categorie, ville || null)
       .then((resultat) => {
         if (annule) return;
         setPage(resultat);
@@ -67,12 +78,12 @@ export function DecouvrirPage() {
     return () => {
       annule = true;
     };
-  }, [recherche, categorie, essai]);
+  }, [recherche, categorie, ville, essai]);
 
   const voirPlus = () => {
     if (!page) return;
     setChargement(true);
-    rechercherEvenements(recherche, page.page + 1, 12, categorie)
+    rechercherEvenements(recherche, page.page + 1, 12, categorie, ville || null)
       .then((suite) => {
         setPage(suite);
         setEvenements((deja) => [...deja, ...suite.contenu]);
@@ -83,7 +94,7 @@ export function DecouvrirPage() {
 
   const [premier, ...autres] = evenements;
   // À l'affiche : seulement sur le catalogue complet, pas dans un résultat filtré.
-  const aLaUne = !recherche && !categorie && premier ? premier : null;
+  const aLaUne = !recherche && !categorie && !ville && premier ? premier : null;
   const grille = aLaUne ? autres : evenements;
   const resteDesPages = page !== null && page.page + 1 < page.pages;
 
@@ -92,7 +103,7 @@ export function DecouvrirPage() {
       <div className={s.pile}>
         <div className={s.entete}>
           <div>
-            <p className={s.surtitre}>Dakar et alentours</p>
+            <p className={s.surtitre}>{nomVille ?? "Afrique de l'Ouest"}</p>
             <h1 className={s.titrePage}>Découvrir</h1>
           </div>
           <div className={s.recherche}>
@@ -102,6 +113,14 @@ export function DecouvrirPage() {
               libelle="Rechercher un événement"
               placeholder="Concert, match, conférence…"
             />
+            {villes !== null && villes.length > 0 && (
+              <ChampChoix
+                libelle="Ville"
+                options={optionsVilles(villes, 'Toutes les villes')}
+                valeur={ville}
+                onChange={setVille}
+              />
+            )}
           </div>
         </div>
 

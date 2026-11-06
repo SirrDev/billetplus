@@ -58,7 +58,7 @@ class EntreeLibreHttpIntegrationTest extends ContexteCompletTestBase {
     /** Événement publié : une catégorie gratuite et une payante, de ces quotas. */
     private Evenement evenement(int quotaGratuit, int quotaPayant) {
         UUID lieu = UUID.randomUUID();
-        jdbc.update("INSERT INTO venues (id, nom, adresse) VALUES (?, 'Sorano', 'Dakar')", lieu);
+        jdbc.update("INSERT INTO venues (id, nom, adresse, ville_code) VALUES (?, 'Sorano', 'Dakar', 'SN-DAKAR')", lieu);
         UUID id = UUID.randomUUID();
         UUID orga = UUID.randomUUID();
         jdbc.update("INSERT INTO events (id, titre, debute_le, venue_id, organizer_id, status) VALUES (?, ?, ?, ?, ?, 'PUBLIE')",

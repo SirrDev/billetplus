@@ -3,6 +3,7 @@ package com.billetplus.events.infrastructure;
 import com.billetplus.events.application.EventRepository;
 import com.billetplus.events.application.PageEvenements;
 import com.billetplus.events.domain.CategorieEvenement;
+import com.billetplus.events.domain.Pays;
 import com.billetplus.events.domain.Event;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -38,13 +39,16 @@ class JpaEventRepositoryAdapter implements EventRepository {
     }
 
     @Override
-    public PageEvenements rechercherPublies(String recherche, CategorieEvenement categorie, Instant maintenant,
-                                            int page, int taille) {
+    public PageEvenements rechercherPublies(String recherche, CategorieEvenement categorie, String villeCode,
+                                            Pays pays, Instant maintenant, int page, int taille) {
         String motif = "%" + echapperJokers(recherche == null ? "" : recherche.trim()) + "%";
         // Liste plutôt qu'un paramètre nullable : « :c is null » sur un enum pose des problèmes de
         // typage du paramètre avec PostgreSQL ; sans filtre, la liste contient toutes les catégories.
         List<CategorieEvenement> categories = categorie == null ? List.of(CategorieEvenement.values()) : List.of(categorie);
-        Page<Event> resultat = springRepo.rechercherPublies(motif, categories, maintenant, PageRequest.of(page, taille));
+        // Même raison pour le pays (énumération). La ville est une chaîne : « :ville is null » suffit.
+        List<Pays> lesPays = pays == null ? List.of(Pays.values()) : List.of(pays);
+        Page<Event> resultat = springRepo.rechercherPublies(motif, categories, villeCode, lesPays, maintenant,
+            PageRequest.of(page, taille));
         return new PageEvenements(resultat.getContent(), page, taille, resultat.getTotalElements());
     }
 

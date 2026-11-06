@@ -19,14 +19,21 @@ public record EvenementPublicDto(
     UUID venueId,
     String venueNom,
     String venueAdresse,
-    String categorie
+    String categorie,
+    /** Ville du lieu (ADR 0011) : code de la liste, nom affiché, pays (code ISO). */
+    String villeCode,
+    String villeNom,
+    String pays,
+    String paysNom
 ) {
     public static EvenementPublicDto from(Event event) {
         return new EvenementPublicDto(
             event.getId(), event.getTitre(), event.getDescription(),
             event.getDebuteLe(), event.getTermineLe(),
             event.getVenue().getId(), event.getVenue().getNom(), event.getVenue().getAdresse(),
-            event.getCategorie().name()
+            event.getCategorie().name(),
+            event.getVenue().getVille().getCode(), event.getVenue().getVille().getNom(),
+            event.getVenue().getVille().getPays().name(), event.getVenue().getVille().getPays().getNom()
         );
     }
 }

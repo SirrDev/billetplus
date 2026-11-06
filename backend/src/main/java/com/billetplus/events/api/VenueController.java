@@ -25,7 +25,8 @@ public class VenueController {
     @PostMapping
     @PreAuthorize("hasRole('ORGANISATEUR') or hasRole('ADMIN')")
     public ResponseEntity<VenueDto> create(@Valid @RequestBody CreateVenueRequest request) {
-        Venue venue = venueService.create(request.nom(), request.adresse(), request.latitude(), request.longitude());
+        Venue venue = venueService.create(request.nom(), request.adresse(), request.latitude(), request.longitude(),
+            request.villeCode());
         return ResponseEntity.created(URI.create("/api/venues/" + venue.getId())).body(VenueDto.from(venue));
     }
 

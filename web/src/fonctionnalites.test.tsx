@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { Routage } from '@/App';
@@ -24,8 +24,16 @@ const EVENEMENT = {
   organizerId: 'o1',
   status: 'PUBLIE',
   creeLe: '2026-10-01T00:00:00Z',
+  villeCode: 'SN-DAKAR',
+  villeNom: 'Dakar',
+  pays: 'SN',
 };
-const LIEU = { id: 'v1', nom: 'Grand Théâtre', adresse: 'Boulevard de la République, Dakar', latitude: 14.6697, longitude: -17.4381, seatingPlan: null };
+const LIEU = { id: 'v1', nom: 'Grand Théâtre', adresse: 'Boulevard de la République', latitude: 14.6697, longitude: -17.4381, seatingPlan: null };
+/* Liste des villes (ADR 0011), telle que GET /api/villes la rend (extrait). */
+const VILLES = [
+  { code: 'SN', nom: 'Sénégal', villes: [{ code: 'SN-DAKAR', nom: 'Dakar' }, { code: 'SN-THIES', nom: 'Thiès' }] },
+  { code: 'CI', nom: "Côte d'Ivoire", villes: [{ code: 'CI-ABIDJAN', nom: 'Abidjan' }] },
+];
 
 type Route = (init?: RequestInit) => unknown;
 
@@ -166,6 +174,7 @@ describe('Organisateur', () => {
     enregistrerJetons({ accessToken: 'a', refreshToken: 'r' });
     const appels = backend({
       'GET /api/auth/me': () => ({ id: 'o1', email: 'orga@test.sn', nomComplet: 'Orga', role: 'ORGANISATEUR' }),
+      'GET /api/villes': () => VILLES,
       'POST /api/venues': () => LIEU,
       'POST /api/events': () => EVENEMENT,
       'GET /api/events/e1': () => ({ ...EVENEMENT, status: 'BROUILLON' }),
@@ -178,6 +187,7 @@ describe('Organisateur', () => {
     fireEvent.change(screen.getByLabelText('Début'), { target: { value: '2099-11-14T21:00' } });
     await userEvent.type(screen.getByLabelText('Nom du lieu'), 'Grand Théâtre');
     await userEvent.type(screen.getByLabelText('Adresse'), 'Dakar');
+    await userEvent.selectOptions(await screen.findByLabelText('Ville'), 'SN-DAKAR');
     fireEvent.change(screen.getByLabelText(/^Coordonnées GPS/), { target: { value: '14.6697, -17.4381' } });
     await userEvent.click(screen.getByRole('button', { name: 'Créer le brouillon' }));
 
@@ -186,6 +196,7 @@ describe('Organisateur', () => {
     expect(JSON.parse(String(lieu?.[1]?.body))).toEqual({
       nom: 'Grand Théâtre',
       adresse: 'Dakar',
+      villeCode: 'SN-DAKAR',
       latitude: 14.6697,
       longitude: -17.4381,
     });
@@ -205,6 +216,49 @@ describe('Organisateur', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Créer le brouillon' }));
     expect(await screen.findByText(/Format attendu : latitude, longitude/)).toBeInTheDocument();
     expect(appels.mock.calls.some(([u]) => String(u) === '/api/venues')).toBe(false);
+  });
+});
+
+describe('Villes (ADR 0011)', () => {
+  it('exige une ville et prévient qu’un lieu hors du Sénégal ne pourra pas être publié', async () => {
+    enregistrerJetons({ accessToken: 'a', refreshToken: 'r' });
+    const appels = backend({
+      'GET /api/auth/me': () => ({ id: 'o1', email: 'orga@test.sn', nomComplet: 'Orga', role: 'ORGANISATEUR' }),
+      'GET /api/villes': () => VILLES,
+    });
+    ouvrir('/organisateur/evenements/nouveau');
+    await userEvent.type(await screen.findByLabelText('Titre'), 'Nuit du Mbalax');
+    fireEvent.change(screen.getByLabelText('Début'), { target: { value: '2099-11-14T21:00' } });
+    await userEvent.type(screen.getByLabelText('Nom du lieu'), 'Palais de la culture');
+    await userEvent.type(screen.getByLabelText('Adresse'), 'Treichville');
+    await userEvent.click(screen.getByRole('button', { name: 'Créer le brouillon' }));
+    expect(await screen.findByText('Choisissez la ville du lieu.')).toBeInTheDocument();
+    expect(appels.mock.calls.some(([, i]) => i?.method === 'POST')).toBe(false);
+
+    const ville = await screen.findByLabelText('Ville');
+    expect(within(ville).getByRole('group', { name: "Côte d'Ivoire" })).toBeInTheDocument();
+    await userEvent.selectOptions(ville, 'CI-ABIDJAN');
+    expect(screen.getByText(/pas encore le publier/)).toBeInTheDocument();
+  });
+
+  it('filtre la liste publique par ville et l’affiche sur chaque carte', async () => {
+    const appels = backend({
+      'GET /api/villes': () => VILLES,
+      'GET /api/events': () => ({
+        contenu: [{ ...EVENEMENT, venueAdresse: 'Plateau', categorie: 'MUSIQUE', villeNom: 'Thiès' }],
+        page: 0,
+        taille: 12,
+        total: 1,
+        pages: 1,
+      }),
+    });
+    ouvrir('/');
+    await userEvent.selectOptions(await screen.findByLabelText('Ville'), 'SN-THIES');
+    await waitFor(() =>
+      expect(appels.mock.calls.some(([u]) => new URL(String(u), 'http://localhost').searchParams.get('ville') === 'SN-THIES')).toBe(true),
+    );
+    expect(await screen.findByText(/Grand Théâtre · Thiès/)).toBeInTheDocument();
+    expect(screen.getByText('Thiès', { selector: 'p' })).toBeInTheDocument();
   });
 });
 
