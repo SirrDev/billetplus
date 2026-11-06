@@ -161,10 +161,16 @@ class UnitechPayPasserelle implements PasserellePaiement {
         return new PaiementCree(reference, transaction.asLong(), url);
     }
 
-    private static String tronquer(String texte) {
+    /**
+     * Message de la passerelle prêt à journaliser : toute suite de 9 chiffres ou plus (un
+     * numéro de mobile recopié dans un message d'erreur, par exemple) est masquée, puis le
+     * texte est tronqué. Les journaux partent souvent vers un outil tiers.
+     */
+    static String tronquer(String texte) {
         if (texte == null) {
             return "";
         }
-        return texte.length() <= LONGUEUR_MAX_MESSAGE_JOURNAL ? texte : texte.substring(0, LONGUEUR_MAX_MESSAGE_JOURNAL) + "…";
+        String masque = texte.replaceAll("\\d{9,}", "•••");
+        return masque.length() <= LONGUEUR_MAX_MESSAGE_JOURNAL ? masque : masque.substring(0, LONGUEUR_MAX_MESSAGE_JOURNAL) + "…";
     }
 }

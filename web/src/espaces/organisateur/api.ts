@@ -19,7 +19,8 @@ export interface EvenementOrganisateur {
   termineLe: string | null;
   venueId: string;
   venueNom: string;
-  organizerId: string;
+  /** null quand le demandeur n'est pas l'organisateur : GET /events/{id} ne le rend qu'à lui. */
+  organizerId: string | null;
   status: StatutEvenement;
   creeLe: string;
   categorie: CategorieEvenement;

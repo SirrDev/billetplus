@@ -1,5 +1,6 @@
 package com.billetplus.events.domain;
 
+import com.billetplus.shared.exception.BusinessConflictException;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -54,7 +55,18 @@ class EventTest {
         event.publier();
 
         assertThatThrownBy(event::publier)
-            .isInstanceOf(IllegalStateException.class);
+            .isInstanceOf(BusinessConflictException.class);
+    }
+
+    @Test
+    void refuse_d_annuler_un_evenement_deja_annule() {
+        Event event = new Event("Concert", null, Instant.now(), null, venue(), UUID.randomUUID());
+        event.annuler();
+
+        assertThatThrownBy(event::annuler)
+            .isInstanceOf(BusinessConflictException.class)
+            .hasMessage("L'événement est déjà annulé");
+        assertThat(event.getStatus()).isEqualTo(EventStatus.ANNULE);
     }
 
     // Pas de test sur "refuse d'annuler un événement TERMINE" : aucun mécanisme

@@ -152,6 +152,13 @@ spring:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
+    hikari:
+      data-source-properties:
+        # Pilote PostgreSQL : sans le détail du serveur (« Key (email)=(...) already exists »,
+        # « Failing row contains (...) »), les messages d'erreur SQL journalisés par Hibernate
+        # ne recopient plus les valeurs saisies (e-mails, numéros). Le nom de la contrainte
+        # reste dans le message : JpaUserRepositoryAdapter le reconnaît toujours.
+        logServerErrorDetail: false
   jpa:
     hibernate:
       ddl-auto: validate

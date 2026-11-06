@@ -39,7 +39,8 @@ export interface Evenement {
   termineLe: string | null;
   venueId: string;
   venueNom: string;
-  organizerId: string;
+  /** null pour un autre visiteur que l'organisateur (le backend ne l'expose qu'à lui). */
+  organizerId: string | null;
   status: string;
   creeLe: string;
   categorie: string;
