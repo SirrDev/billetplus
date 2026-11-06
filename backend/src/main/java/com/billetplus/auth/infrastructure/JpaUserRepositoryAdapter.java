@@ -3,6 +3,7 @@ package com.billetplus.auth.infrastructure;
 import com.billetplus.auth.application.UserRepository;
 import com.billetplus.auth.domain.Role;
 import com.billetplus.auth.domain.User;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
@@ -50,12 +51,25 @@ class JpaUserRepositoryAdapter implements UserRepository {
         try {
             return springRepo.saveAndFlush(user);
         } catch (DataIntegrityViolationException e) {
-            Throwable cause = e.getMostSpecificCause();
-            if (cause.getMessage() != null && cause.getMessage().contains(CONTRAINTE_EMAIL_UNIQUE)) {
+            if (violeLaContrainte(e, CONTRAINTE_EMAIL_UNIQUE)) {
                 throw new IllegalArgumentException("Un compte existe déjà avec cet email", e);
             }
             throw e;
         }
+    }
+
+    /**
+     * Nom de contrainte donné par Hibernate, et non un texte cherché dans le message : le
+     * détail PostgreSQL (« Failing row contains ... ») recopie des valeurs saisies, qui
+     * pourraient contenir ce nom. À garder aligné sur V2 si la contrainte change de nom.
+     */
+    private static boolean violeLaContrainte(Throwable erreur, String contrainte) {
+        for (Throwable cause = erreur; cause != null; cause = cause.getCause()) {
+            if (cause instanceof ConstraintViolationException violation) {
+                return contrainte.equalsIgnoreCase(violation.getConstraintName());
+            }
+        }
+        return false;
     }
 
     @Override
