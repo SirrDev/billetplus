@@ -10,6 +10,8 @@ import java.util.UUID;
 /** Interface Spring Data — usage interne à infrastructure/ uniquement. */
 interface SpringDataReversementRepository extends JpaRepository<ReversementJpaEntity, UUID> {
 
+    boolean existsByEventId(UUID eventId);
+
     @Query("select coalesce(sum(r.montantFcfa), 0) from ReversementJpaEntity r where r.eventId = :eventId")
     long totalReverse(@Param("eventId") UUID eventId);
 

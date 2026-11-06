@@ -1,5 +1,6 @@
 package com.billetplus.orders.application.usecase;
 
+import com.billetplus.orders.domain.TauxCommission;
 import com.billetplus.orders.application.port.DelaiAttenteVerrous;
 import com.billetplus.orders.application.port.NotificationPaiement;
 import com.billetplus.orders.application.port.OrderRepository;
@@ -61,7 +62,7 @@ class ConfirmerPaiementUseCaseTest {
 
         static Order copier(Order o) {
             return Order.reconstituer(o.getId(), o.getEventId(), o.getTelephone(), o.getLignes(), o.getEmpreinteJeton(),
-                o.getCreeLe(), o.getExpireLe(), o.getStatus(), o.getPayeeLe(), o.getMotifSansBillet(), o.getPaiement());
+                o.getCreeLe(), o.getExpireLe(), o.getTauxCommission(), o.getStatus(), o.getPayeeLe(), o.getMotifSansBillet(), o.getPaiement());
         }
 
         void debuter() {
@@ -108,6 +109,22 @@ class ConfirmerPaiementUseCaseTest {
         @Override
         public List<Order> findPayeesDeLEvenement(UUID eventId, int limite) {
             return List.of();
+        }
+
+        // Recettes (ADR 0009) : sans objet pour la confirmation du paiement.
+        @Override
+        public TotauxPayees totauxPayees(UUID eventId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public List<TotauxPayees> totauxPayeesParEvenement() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean existeCommandePayee(UUID eventId) {
+            throw new UnsupportedOperationException();
         }
     }
 
@@ -159,7 +176,7 @@ class ConfirmerPaiementUseCaseTest {
         // Dans le désordre : l'émission doit suivre l'ordre des categoryId.
         commande = Order.creer(UUID.randomUUID(), NumeroTelephone.depuis("771234567"),
             List.of(new OrderLine(SECONDE, 1, Money.ofFcfa(15000)), new OrderLine(PREMIERE, 2, Money.ofFcfa(5000))),
-            CREATION, Duration.ofMinutes(4)).commande();
+            CREATION, Duration.ofMinutes(4), TauxCommission.CINQ_POUR_CENT).commande();
         commande.ouvrirPaiement(new Paiement(MoyenPaiement.WAVE, REFERENCE, 18, "https://pay.wave.com/c/1",
             CREATION.plusSeconds(10)), Duration.ofSeconds(60));
         depot.save(commande);

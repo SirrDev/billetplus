@@ -38,6 +38,33 @@ interface SpringDataOrderRepository extends JpaRepository<OrderJpaEntity, UUID> 
         "select distinct o.eventId from OrderJpaEntity o where o.status = :status")
     List<UUID> evenementsAvecStatut(@Param("status") OrderStatus status);
 
+    /**
+     * Totaux par événement (ADR 0009) : la sous-requête regroupe par commande, pour que la
+     * commission soit arrondie au franc inférieur commande par commande (division entière
+     * de PostgreSQL sur des montants positifs = plancher), comme TauxCommission.commissionSur.
+     * Le total de chaque commande est reconverti en BIGINT : sum() rend un numeric, et
+     * numeric / 10000 garderait des décimales au lieu d'arrondir au franc inférieur.
+     * Lignes : event_id, commandes, brut, commission.
+     */
+    @Query(value = "SELECT t.event_id, count(*), coalesce(sum(t.total), 0), coalesce(sum(t.total * t.taux / 10000), 0) "
+        + "FROM (SELECT o.id, o.event_id, o.taux_commission_points_base AS taux, "
+        + "CAST(sum(CAST(l.quantite AS BIGINT) * l.prix_unitaire_fcfa) AS BIGINT) AS total "
+        + "FROM orders o JOIN order_lines l ON l.order_id = o.id "
+        + "WHERE o.status = 'PAYEE' AND o.event_id = :eventId "
+        + "GROUP BY o.id, o.event_id, o.taux_commission_points_base) t GROUP BY t.event_id", nativeQuery = true)
+    List<Object[]> totauxPayees(@Param("eventId") UUID eventId);
+
+    @Query(value = "SELECT t.event_id, count(*), coalesce(sum(t.total), 0), coalesce(sum(t.total * t.taux / 10000), 0) "
+        + "FROM (SELECT o.id, o.event_id, o.taux_commission_points_base AS taux, "
+        + "CAST(sum(CAST(l.quantite AS BIGINT) * l.prix_unitaire_fcfa) AS BIGINT) AS total "
+        + "FROM orders o JOIN order_lines l ON l.order_id = o.id "
+        + "WHERE o.status = 'PAYEE' "
+        + "GROUP BY o.id, o.event_id, o.taux_commission_points_base) t GROUP BY t.event_id", nativeQuery = true)
+    List<Object[]> totauxPayeesParEvenement();
+
+    /** Servie par idx_orders_event_id_status (V8). */
+    boolean existsByEventIdAndStatus(UUID eventId, OrderStatus status);
+
     /** Servie par idx_orders_event_id_status (V8). */
     @EntityGraph(attributePaths = "lignes")
     List<OrderJpaEntity> findByEventIdAndStatusOrderByPayeeLeAsc(UUID eventId, OrderStatus status, Pageable pageable);

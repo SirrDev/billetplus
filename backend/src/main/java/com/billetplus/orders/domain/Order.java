@@ -59,17 +59,11 @@ public class Order {
     }
 
     /**
-     * @param dureeValidite délai de paiement ; doit être plus court que la
-     *                      réservation des places (contrat de orders, HANDOFF section 7)
-     * @throws IllegalArgumentException si un invariant de création n'est pas respecté
-     */
-    public static CommandeCreee creer(UUID eventId, NumeroTelephone telephone, List<OrderLine> lignes,
-                                      Instant maintenant, Duration dureeValidite) {
-        return creer(eventId, telephone, lignes, maintenant, dureeValidite, TauxCommission.CINQ_POUR_CENT);
-    }
-
-    /**
-     * @param tauxCommission taux courant (configuration), recopié dans la commande (ADR 0009)
+     * @param dureeValidite  délai de paiement ; doit être plus court que la
+     *                       réservation des places (contrat de orders, HANDOFF section 7)
+     * @param tauxCommission taux courant (configuration), recopié dans la commande (ADR 0009) ;
+     *                       obligatoire, sans valeur par défaut, pour qu'aucun appelant ne
+     *                       contourne la configuration
      * @throws IllegalArgumentException si un invariant de création n'est pas respecté
      */
     public static CommandeCreee creer(UUID eventId, NumeroTelephone telephone, List<OrderLine> lignes,
@@ -118,13 +112,6 @@ public class Order {
      * Reconstruction depuis la persistance — ne revalide pas les invariants
      * de création, l'état est supposé déjà cohérent en base.
      */
-    public static Order reconstituer(UUID id, UUID eventId, NumeroTelephone telephone, List<OrderLine> lignes,
-                                     String empreinteJeton, Instant creeLe, Instant expireLe, OrderStatus status,
-                                     Instant payeeLe, MotifSansBillet motifSansBillet, Paiement paiement) {
-        return reconstituer(id, eventId, telephone, lignes, empreinteJeton, creeLe, expireLe,
-            TauxCommission.CINQ_POUR_CENT, status, payeeLe, motifSansBillet, paiement);
-    }
-
     /** Reconstruction depuis la persistance, avec le taux de commission enregistré (V16). */
     public static Order reconstituer(UUID id, UUID eventId, NumeroTelephone telephone, List<OrderLine> lignes,
                                      String empreinteJeton, Instant creeLe, Instant expireLe,

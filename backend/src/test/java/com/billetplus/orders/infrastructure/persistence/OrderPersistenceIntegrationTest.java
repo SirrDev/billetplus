@@ -1,5 +1,6 @@
 package com.billetplus.orders.infrastructure.persistence;
 
+import com.billetplus.orders.domain.TauxCommission;
 import com.billetplus.orders.domain.MotifSansBillet;
 import com.billetplus.orders.domain.MoyenPaiement;
 import com.billetplus.orders.domain.NumeroTelephone;
@@ -84,7 +85,7 @@ class OrderPersistenceIntegrationTest {
         return Order.creer(UUID.randomUUID(), NumeroTelephone.depuis("77 123 45 67"),
             List.of(new OrderLine(UUID.randomUUID(), 2, Money.ofFcfa(5000)),
                     new OrderLine(UUID.randomUUID(), 1, Money.ofFcfa(15000))),
-            MAINTENANT, Duration.ofMinutes(4));
+            MAINTENANT, Duration.ofMinutes(4), TauxCommission.CINQ_POUR_CENT);
     }
 
     private Order enregistrer(Order commande) {
@@ -103,6 +104,44 @@ class OrderPersistenceIntegrationTest {
         assertThat(relue.getLignes()).hasSize(2);
         assertThat(relue.montantTotal()).isEqualTo(Money.ofFcfa(25000));
         assertThat(relue.accepteLeJeton(creee.jeton().enClair())).isTrue();
+    }
+
+    /**
+     * Parité (ADR 0009) : les totaux calculés en base, commission arrondie commande par
+     * commande, valent exactement la somme des Order.commission() calculées par le domaine.
+     * Montants choisis pour que chaque arrondi compte (3333 × 5 % = 166,65 → 166...).
+     */
+    @Test
+    void les_totaux_en_base_egalent_le_calcul_du_domaine_commande_par_commande() {
+        UUID evenement = UUID.randomUUID();
+        long[][] commandesTest = {{3333, 1, 500}, {19, 3, 500}, {10_001, 2, 300}, {99_999, 1, 750}, {5_000, 2, 0}};
+        long brutAttendu = 0;
+        long commissionAttendue = 0;
+        for (long[] c : commandesTest) {
+            Order commande = Order.creer(evenement, NumeroTelephone.depuis("77 123 45 67"),
+                List.of(new OrderLine(UUID.randomUUID(), (int) c[1], Money.ofFcfa(c[0])),
+                        new OrderLine(UUID.randomUUID(), 1, Money.ofFcfa(7))),
+                MAINTENANT, Duration.ofMinutes(4), new com.billetplus.orders.domain.TauxCommission((int) c[2])).commande();
+            commande.marquerPayee(MAINTENANT.plusSeconds(30));
+            enregistrer(commande);
+            brutAttendu += commande.montantTotal().valeur().longValueExact();
+            commissionAttendue += commande.commission().valeur().longValueExact();
+        }
+        // Une commande non payée du même événement ne compte pas.
+        Order enAttente = Order.creer(evenement, NumeroTelephone.depuis("77 123 45 67"),
+            List.of(new OrderLine(UUID.randomUUID(), 1, Money.ofFcfa(50_000))), MAINTENANT, Duration.ofMinutes(4),
+            new com.billetplus.orders.domain.TauxCommission(500)).commande();
+        enregistrer(enAttente);
+
+        var totaux = commandes.totauxPayees(evenement);
+
+        assertThat(totaux.commandes()).isEqualTo(commandesTest.length);
+        assertThat(totaux.brutFcfa()).isEqualTo(brutAttendu);
+        assertThat(totaux.commissionFcfa()).isEqualTo(commissionAttendue);
+        assertThat(commandes.totauxPayeesParEvenement()).filteredOn(t -> t.eventId().equals(evenement))
+            .singleElement().isEqualTo(totaux);
+        assertThat(commandes.existeCommandePayee(evenement)).isTrue();
+        assertThat(commandes.totauxPayees(UUID.randomUUID()).commandes()).isZero();
     }
 
     /** Le taux de commission figé dans la commande survit à la base (V16, ADR 0009). */

@@ -20,8 +20,8 @@ CREATE TABLE reversements (
     reverse_le      DATE NOT NULL,          -- date du virement, saisie par l'administrateur
     enregistre_par  UUID NOT NULL,          -- reference users.id (module auth) par UUID uniquement
     enregistre_le   TIMESTAMPTZ NOT NULL,
-    CONSTRAINT chk_reversements_correction_motivee CHECK (montant_fcfa > 0 OR motif IS NOT NULL)
+    CONSTRAINT chk_reversements_correction_motivee CHECK (montant_fcfa > 0 OR motif IS NOT NULL),
+    -- Un virement ne s'enregistre qu'une fois (double clic, rejeu) : meme evenement et meme
+    -- reference refuses (409). L'index unique sert aussi le total reverse par evenement.
+    CONSTRAINT uq_reversements_event_reference UNIQUE (event_id, reference)
 );
-
--- Total reverse par evenement (recettes de l'organisateur, liste de l'administrateur).
-CREATE INDEX idx_reversements_event_id ON reversements (event_id);

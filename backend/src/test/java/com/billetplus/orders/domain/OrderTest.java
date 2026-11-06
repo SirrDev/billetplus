@@ -25,7 +25,7 @@ class OrderTest {
     }
 
     private static Order.CommandeCreee creer(List<OrderLine> lignes) {
-        return Order.creer(UUID.randomUUID(), TELEPHONE, lignes, MAINTENANT, DELAI);
+        return Order.creer(UUID.randomUUID(), TELEPHONE, lignes, MAINTENANT, DELAI, TauxCommission.CINQ_POUR_CENT);
     }
 
     private static Order enAttente() {
@@ -99,15 +99,15 @@ class OrderTest {
     @Test
     void la_creation_exige_evenement_telephone_date_et_delai_positif() {
         List<OrderLine> lignes = List.of(ligne(1, 5000));
-        assertThatThrownBy(() -> Order.creer(null, TELEPHONE, lignes, MAINTENANT, DELAI))
+        assertThatThrownBy(() -> Order.creer(null, TELEPHONE, lignes, MAINTENANT, DELAI, TauxCommission.CINQ_POUR_CENT))
             .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> Order.creer(UUID.randomUUID(), null, lignes, MAINTENANT, DELAI))
+        assertThatThrownBy(() -> Order.creer(UUID.randomUUID(), null, lignes, MAINTENANT, DELAI, TauxCommission.CINQ_POUR_CENT))
             .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> Order.creer(UUID.randomUUID(), TELEPHONE, lignes, null, DELAI))
+        assertThatThrownBy(() -> Order.creer(UUID.randomUUID(), TELEPHONE, lignes, null, DELAI, TauxCommission.CINQ_POUR_CENT))
             .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> Order.creer(UUID.randomUUID(), TELEPHONE, lignes, MAINTENANT, Duration.ZERO))
+        assertThatThrownBy(() -> Order.creer(UUID.randomUUID(), TELEPHONE, lignes, MAINTENANT, Duration.ZERO, TauxCommission.CINQ_POUR_CENT))
             .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> Order.creer(UUID.randomUUID(), TELEPHONE, lignes, MAINTENANT, Duration.ofSeconds(-1)))
+        assertThatThrownBy(() -> Order.creer(UUID.randomUUID(), TELEPHONE, lignes, MAINTENANT, Duration.ofSeconds(-1), TauxCommission.CINQ_POUR_CENT))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -276,7 +276,7 @@ class OrderTest {
         origine.marquerPayeeSansBillet(MotifSansBillet.PLACES_INDISPONIBLES, MAINTENANT);
 
         Order copie = Order.reconstituer(origine.getId(), origine.getEventId(), origine.getTelephone(),
-            origine.getLignes(), origine.getEmpreinteJeton(), origine.getCreeLe(), origine.getExpireLe(),
+            origine.getLignes(), origine.getEmpreinteJeton(), origine.getCreeLe(), origine.getExpireLe(), TauxCommission.CINQ_POUR_CENT,
             origine.getStatus(), origine.getPayeeLe(), origine.getMotifSansBillet(), origine.getPaiement());
 
         assertThat(copie).usingRecursiveComparison().isEqualTo(origine);

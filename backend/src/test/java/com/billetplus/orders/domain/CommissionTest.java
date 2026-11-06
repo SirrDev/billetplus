@@ -76,26 +76,19 @@ class CommissionTest {
     // ---------------------------------------------------------------- recettes
 
     @Test
-    void recettes_calculees_commande_par_commande_avec_le_taux_de_chacune() {
-        Order aCinq = payee(3333, 1, TauxCommission.CINQ_POUR_CENT);     // commission 166
-        Order aTrois = payee(10_000, 2, new TauxCommission(300));       // commission 600
-        Order enAttente = commande(50_000, 1, TauxCommission.CINQ_POUR_CENT);
-
-        RecettesEvenement recettes = RecettesEvenement.calculer(List.of(aCinq, aTrois, enAttente), false, 10_000);
+    void recettes_depuis_les_totaux_de_la_base() {
+        RecettesEvenement recettes = RecettesEvenement.depuisTotaux(2, 23_333, 766, false, 10_000);
 
         assertThat(recettes.commandes()).isEqualTo(2);
         assertThat(recettes.brut()).isEqualTo(Money.ofFcfa(23_333));
         assertThat(recettes.commission()).isEqualTo(Money.ofFcfa(766));
         assertThat(recettes.net()).isEqualTo(Money.ofFcfa(22_567));
-        assertThat(recettes.reverseFcfa()).isEqualTo(10_000);
         assertThat(recettes.resteAReverserFcfa()).isEqualTo(12_567);
     }
 
     @Test
     void un_evenement_annule_ne_donne_ni_commission_ni_net_et_montre_le_trop_reverse() {
-        Order payeeAvantAnnulation = payee(10_000, 1, TauxCommission.CINQ_POUR_CENT);
-
-        RecettesEvenement recettes = RecettesEvenement.calculer(List.of(payeeAvantAnnulation), true, 9_500);
+        RecettesEvenement recettes = RecettesEvenement.depuisTotaux(1, 10_000, 500, true, 9_500);
 
         assertThat(recettes.commandes()).isZero();
         assertThat(recettes.brut()).isEqualTo(Money.ofFcfa(0));
@@ -105,14 +98,11 @@ class CommissionTest {
     }
 
     @Test
-    void une_commande_payee_sans_billet_ne_compte_pas() {
-        Order sansBillet = commande(10_000, 1, TauxCommission.CINQ_POUR_CENT);
-        sansBillet.marquerPayeeSansBillet(MotifSansBillet.PLACES_INDISPONIBLES, MAINTENANT.plusSeconds(60));
-
-        RecettesEvenement recettes = RecettesEvenement.calculer(List.of(sansBillet), false, 0);
-
-        assertThat(recettes.commandes()).isZero();
-        assertThat(recettes.net()).isEqualTo(Money.ofFcfa(0));
+    void des_totaux_incoherents_sont_refuses_plutot_que_masques() {
+        assertThatThrownBy(() -> RecettesEvenement.depuisTotaux(1, 100, 101, false, 0))
+            .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> RecettesEvenement.depuisTotaux(-1, 100, 5, false, 0))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     // ---------------------------------------------------------------- reversement

@@ -2,6 +2,9 @@ package com.billetplus.orders.infrastructure.persistence;
 
 import com.billetplus.orders.application.port.ReversementRepository;
 import com.billetplus.orders.domain.Reversement;
+import com.billetplus.shared.exception.BusinessConflictException;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,7 +15,9 @@ import java.util.UUID;
 
 /**
  * Adaptateur du port ReversementRepository (ADR 0009). Le mapping entre domaine et
- * entité JPA tient en deux méthodes, gardées ici.
+ * entité JPA tient en deux méthodes, gardées ici. {@code @Component} et non
+ * {@code @Repository} : il lève une BusinessConflictException (409), que la traduction des
+ * beans {@code @Repository} transformerait en 500 (piège du CLAUDE.md).
  */
 @Component
 class JpaReversementRepositoryAdapter implements ReversementRepository {
@@ -26,7 +31,29 @@ class JpaReversementRepositoryAdapter implements ReversementRepository {
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public Reversement save(Reversement reversement) {
-        return versDomaine(springRepo.save(versEntite(reversement)));
+        try {
+            // Écrit tout de suite : un doublon (double clic, rejeu) apparaît ici, pas au commit.
+            return versDomaine(springRepo.saveAndFlush(versEntite(reversement)));
+        } catch (DataIntegrityViolationException e) {
+            if (violeLaContrainte(e, "uq_reversements_event_reference")) {
+                throw new BusinessConflictException("Ce virement est déjà enregistré pour cet événement");
+            }
+            throw e;
+        }
+    }
+
+    @Override
+    public boolean existePour(UUID eventId) {
+        return springRepo.existsByEventId(eventId);
+    }
+
+    private static boolean violeLaContrainte(Throwable erreur, String contrainte) {
+        for (Throwable cause = erreur; cause != null; cause = cause.getCause()) {
+            if (cause instanceof ConstraintViolationException violation) {
+                return contrainte.equalsIgnoreCase(violation.getConstraintName());
+            }
+        }
+        return false;
     }
 
     @Override

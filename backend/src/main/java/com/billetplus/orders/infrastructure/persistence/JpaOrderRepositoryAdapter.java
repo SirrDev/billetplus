@@ -82,6 +82,31 @@ class JpaOrderRepositoryAdapter implements OrderRepository {
     }
 
     @Override
+    public TotauxPayees totauxPayees(UUID eventId) {
+        return springRepo.totauxPayees(eventId).stream().findFirst().map(JpaOrderRepositoryAdapter::totaux)
+            .orElse(new TotauxPayees(eventId, 0, 0, 0));
+    }
+
+    @Override
+    public List<TotauxPayees> totauxPayeesParEvenement() {
+        return springRepo.totauxPayeesParEvenement().stream().map(JpaOrderRepositoryAdapter::totaux).toList();
+    }
+
+    @Override
+    public boolean existeCommandePayee(UUID eventId) {
+        return springRepo.existsByEventIdAndStatus(eventId, OrderStatus.PAYEE);
+    }
+
+    /** Ligne (event_id, commandes, brut, commission) : PostgreSQL rend les sommes en numeric. */
+    private static TotauxPayees totaux(Object[] ligne) {
+        return new TotauxPayees((UUID) ligne[0], entier(ligne[1]), entier(ligne[2]), entier(ligne[3]));
+    }
+
+    private static long entier(Object valeur) {
+        return new java.math.BigDecimal(valeur.toString()).longValueExact();
+    }
+
+    @Override
     public List<Order> findPayeesDeLEvenement(UUID eventId, int limite) {
         return springRepo.findByEventIdAndStatusOrderByPayeeLeAsc(eventId, OrderStatus.PAYEE, PageRequest.of(0, limite))
             .stream().map(OrderMapper::versDomaine).toList();

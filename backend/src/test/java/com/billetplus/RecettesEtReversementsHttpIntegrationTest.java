@@ -135,6 +135,38 @@ class RecettesEtReversementsHttpIntegrationTest extends ContexteCompletTestBase 
     }
 
     @Test
+    void un_meme_virement_ne_s_enregistre_qu_une_fois() throws Exception {
+        UUID orga = organisateur();
+        Event e = evenementPublie(orga);
+        commandePayee(e, 20_000, 500);
+
+        mvc.perform(post("/api/admin/reversements").with(connecte(admin, "ADMIN"))
+                .contentType(MediaType.APPLICATION_JSON).content(reversement(e.getId(), 19_000, "WAVE-UNIQUE", null)))
+            .andExpect(status().isCreated());
+        // Rejeu (réponse perdue, double clic) ou second administrateur : refusé, rien n'est compté deux fois.
+        mvc.perform(post("/api/admin/reversements").with(connecte(UUID.randomUUID(), "ADMIN"))
+                .contentType(MediaType.APPLICATION_JSON).content(reversement(e.getId(), 19_000, "WAVE-UNIQUE", null)))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value("Ce virement est déjà enregistré pour cet événement"));
+
+        mvc.perform(get("/api/events/{id}/recettes", e.getId()).with(connecte(orga, "ORGANISATEUR")))
+            .andExpect(jsonPath("$.reverseFcfa").value(19_000))
+            .andExpect(jsonPath("$.resteAReverserFcfa").value(0));
+    }
+
+    @Test
+    void aucun_virement_positif_vers_un_evenement_annule() throws Exception {
+        UUID orga = organisateur();
+        Event e = evenementPublie(orga);
+        commandePayee(e, 10_000, 500);
+        eventService.annuler(e.getId(), orga);
+
+        mvc.perform(post("/api/admin/reversements").with(connecte(admin, "ADMIN"))
+                .contentType(MediaType.APPLICATION_JSON).content(reversement(e.getId(), 9_500, "WAVE-X", null)))
+            .andExpect(status().isConflict());
+    }
+
+    @Test
     void les_saisies_invalides_et_les_mauvais_roles_sont_refuses() throws Exception {
         UUID orga = organisateur();
         Event e = evenementPublie(orga);

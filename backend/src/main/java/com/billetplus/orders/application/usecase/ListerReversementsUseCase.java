@@ -11,13 +11,18 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Lecture (niveau 1, ADR 0002) — reversements à faire, vus par l'administrateur
  * (ADR 0009) : un événement par ligne, s'il a des commandes payées ou des reversements.
- * Le plus grand reste à reverser d'abord ; un reste négatif (trop reversé) reste visible.
+ * Deux requêtes agrégées (commandes, reversements) pour toute la liste, puis le statut de
+ * chaque événement. Le plus grand reste à reverser d'abord ; un reste négatif (trop
+ * reversé) reste visible.
  */
 @Service
 public class ListerReversementsUseCase {
@@ -29,24 +34,29 @@ public class ListerReversementsUseCase {
     private final OrderRepository orderRepository;
     private final ReversementRepository reversementRepository;
     private final StatutEvenements statutEvenements;
-    private final ConsulterRecettesUseCase consulterRecettes;
 
     public ListerReversementsUseCase(OrderRepository orderRepository, ReversementRepository reversementRepository,
-                                     StatutEvenements statutEvenements, ConsulterRecettesUseCase consulterRecettes) {
+                                     StatutEvenements statutEvenements) {
         this.orderRepository = orderRepository;
         this.reversementRepository = reversementRepository;
         this.statutEvenements = statutEvenements;
-        this.consulterRecettes = consulterRecettes;
     }
 
     @Transactional(readOnly = true)
     public List<LigneReversement> execute() {
-        Set<UUID> evenements = new LinkedHashSet<>(orderRepository.evenementsAvecCommandesPayees());
-        evenements.addAll(reversementRepository.totauxParEvenement().keySet());
+        Map<UUID, OrderRepository.TotauxPayees> ventes = orderRepository.totauxPayeesParEvenement().stream()
+            .collect(Collectors.toMap(OrderRepository.TotauxPayees::eventId, Function.identity()));
+        Map<UUID, Long> reverses = reversementRepository.totauxParEvenement();
+        Set<UUID> evenements = new LinkedHashSet<>(ventes.keySet());
+        evenements.addAll(reverses.keySet());
+
         List<LigneReversement> lignes = new ArrayList<>();
         for (UUID eventId : evenements) {
-            lignes.add(new LigneReversement(eventId, statutEvenements.estAnnule(eventId),
-                consulterRecettes.recettesDe(eventId)));
+            OrderRepository.TotauxPayees totaux = ventes.getOrDefault(eventId,
+                new OrderRepository.TotauxPayees(eventId, 0, 0, 0));
+            boolean annule = statutEvenements.estAnnule(eventId);
+            lignes.add(new LigneReversement(eventId, annule, RecettesEvenement.depuisTotaux(totaux.commandes(),
+                totaux.brutFcfa(), totaux.commissionFcfa(), annule, reverses.getOrDefault(eventId, 0L))));
         }
         lignes.sort(Comparator.comparingLong((LigneReversement l) -> l.recettes().resteAReverserFcfa()).reversed()
             .thenComparing(LigneReversement::eventId));
