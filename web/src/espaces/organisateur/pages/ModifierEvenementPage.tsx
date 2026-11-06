@@ -33,8 +33,9 @@ type EtatPage =
  * Modification d'un événement (PUT /events/{id}). Brouillon : tout, sauf le nom et l'adresse
  * du lieu. Publié : titre et description seulement. Des billets ont pu être vendus pour ces
  * dates et les acheteurs ne seraient pas prévenus ; les dates sont donc affichées sans champ,
- * et renvoyées telles que reçues. La position GPS reste modifiable dans les deux cas (route
- * distincte, appelée seulement si elle a changé). Annulé ou terminé : plus rien n'est modifiable.
+ * et renvoyées telles que reçues. La position GPS se modifie seulement en brouillon (route
+ * distincte, appelée seulement si elle a changé) ; publiée, elle est figée comme les dates.
+ * Annulé ou terminé : plus rien n'est modifiable.
  */
 export function ModifierEvenementPage() {
   const { id = '' } = useParams();
@@ -112,10 +113,11 @@ export function ModifierEvenementPage() {
     let debuteLe = evenement.debuteLe;
     let termineLe = evenement.termineLe;
     const nouvelles: Erreurs = {};
-    const saisie = coordonnees.trim();
+    // Position modifiable seulement en brouillon (figée à la publication, comme les dates).
+    const saisie = brouillon ? coordonnees.trim() : '';
     const gps = saisie ? lireCoordonnees(saisie) : null;
     if (saisie && !gps) nouvelles.coordonnees = 'Format attendu : latitude, longitude (par exemple 14.6928, -17.4467).';
-    if (!saisie && lieu?.latitude != null) nouvelles.coordonnees = 'La position peut être déplacée, mais pas retirée.';
+    if (brouillon && !saisie && lieu?.latitude != null) nouvelles.coordonnees = 'La position peut être déplacée, mais pas retirée.';
     if (brouillon) {
       const d = heureDakarVersInstant(debut);
       const f = fin ? heureDakarVersInstant(fin) : null;
@@ -231,8 +233,20 @@ export function ModifierEvenementPage() {
             </Panneau>
 
             <Panneau titre="Position du lieu" id="position">
-              <p className={s.texte}>Le nom et l'adresse du lieu sont fixés à la création. Seule sa position peut changer.</p>
-              <CartePosition valeur={coordonnees} onChange={setCoordonnees} erreur={erreurs.coordonnees} />
+              {brouillon ? (
+                <>
+                  <p className={s.texte}>
+                    Le nom et l'adresse du lieu sont fixés à la création. Sa position peut changer jusqu'à la publication.
+                  </p>
+                  <CartePosition valeur={coordonnees} onChange={setCoordonnees} erreur={erreurs.coordonnees} />
+                </>
+              ) : (
+                <p className={s.texte}>
+                  La position du lieu est fixée depuis la publication, comme les dates : des billets ont pu être vendus
+                  pour ce lieu.
+                  {coordonnees && <> Coordonnées : {coordonnees}.</>}
+                </p>
+              )}
             </Panneau>
 
             {erreur && (

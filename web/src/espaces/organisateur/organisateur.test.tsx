@@ -452,9 +452,22 @@ describe('Position GPS sur la carte', () => {
   const appelPosition = (appels: ReturnType<typeof backend>) =>
     appels.mock.calls.find(([u, i]) => String(u).endsWith('/position') && i?.method === 'PUT');
 
-  it('ajoute une position à un événement publié créé sans elle', async () => {
+  it('fige la position une fois l’événement publié : pas de carte, rien envoyé', async () => {
     connecte();
-    const appels = backend(routesModification(LIEU_SANS_POSITION, { ...EVENEMENT, status: 'PUBLIE' }));
+    const appels = backend(
+      routesModification({ ...LIEU_SANS_POSITION, latitude: 14.69, longitude: -17.44 }, { ...EVENEMENT, status: 'PUBLIE' }),
+    );
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}/modifier`);
+    expect(await screen.findByText(/La position du lieu est fixée depuis la publication/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Coordonnées GPS/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    await screen.findByText('Modifications enregistrées.');
+    expect(appelPosition(appels)).toBeUndefined();
+  });
+
+  it('ajoute une position à un brouillon créé sans elle', async () => {
+    connecte();
+    const appels = backend(routesModification(LIEU_SANS_POSITION));
     ouvrir(`/organisateur/evenements/${EVENEMENT.id}/modifier`);
     await screen.findByLabelText(/^Coordonnées GPS/);
     await waitFor(() => expect(carte.clic).not.toBeNull());
