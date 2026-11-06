@@ -164,6 +164,8 @@ function FormulaireVirement({
   const [date, setDate] = useState(aujourdhui());
   const [motif, setMotif] = useState('');
   const [erreurs, setErreurs] = useState<{ montant?: string; motif?: string }>({});
+  /** Montant au-delà du reste à reverser : enregistré seulement après une seconde validation. */
+  const [confirmeDepassement, setConfirmeDepassement] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
 
@@ -176,6 +178,10 @@ function FormulaireVirement({
     if (valeur !== null && valeur < 0 && !motif.trim()) nouvelles.motif = 'Une correction (montant négatif) doit être motivée.';
     setErreurs(nouvelles);
     if (Object.keys(nouvelles).length > 0 || valeur === null) return;
+    if (valeur > Math.max(reste, 0) && !confirmeDepassement) {
+      setConfirmeDepassement(true);
+      return;
+    }
     setEnvoi(true);
     try {
       await enregistrerReversement({
@@ -198,7 +204,10 @@ function FormulaireVirement({
         <ChampTexte
           libelle="Montant viré (FCFA)"
           valeur={montant}
-          onChange={setMontant}
+          onChange={(v) => {
+            setMontant(v);
+            setConfirmeDepassement(false);
+          }}
           requis
           inputMode="numeric"
           aide={`Reste à reverser : ${formatFcfa(reste)}. Un montant négatif corrige une erreur.`}
@@ -221,6 +230,14 @@ function FormulaireVirement({
           aide="Obligatoire pour une correction."
           erreur={erreurs.motif}
         />
+        {confirmeDepassement && (
+          <Avis ton="attention">
+            <p>
+              Ce montant dépasse le reste à reverser ({formatFcfa(Math.max(reste, 0))}). Vérifiez le virement, puis
+              confirmez.
+            </p>
+          </Avis>
+        )}
         {erreur && (
           <Avis ton="danger">
             <p>{erreur}</p>
@@ -228,7 +245,7 @@ function FormulaireVirement({
         )}
         <div className={s.actions}>
           <Bouton type="submit" disabled={envoi}>
-            {envoi ? 'Enregistrement…' : 'Enregistrer le virement'}
+            {envoi ? 'Enregistrement…' : confirmeDepassement ? 'Confirmer le virement' : 'Enregistrer le virement'}
           </Bouton>
           <Bouton variante="secondaire" onClick={onFermer} disabled={envoi}>
             Fermer

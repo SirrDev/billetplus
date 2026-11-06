@@ -88,6 +88,28 @@ describe('Reversements', () => {
     expect(corps).not.toHaveProperty('enregistrePar');
   });
 
+  it('demande une confirmation quand le montant dépasse le reste à reverser', async () => {
+    const appels = backend({
+      'GET /api/auth/me': () => ADMIN,
+      'GET /api/admin/reversements': () => LIGNES,
+      'GET /api/events/e1': () => ({ id: 'e1', titre: 'Nuit du Mbalax' }),
+      'POST /api/admin/reversements': () => ({ id: 'r2' }),
+    });
+    ouvrir('/admin/reversements');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Enregistrer un virement pour Nuit du Mbalax' }));
+    const montant = screen.getByLabelText('Montant viré (FCFA)');
+    await userEvent.clear(montant);
+    await userEvent.type(montant, '40000');
+    await userEvent.type(screen.getByLabelText('Référence du virement'), 'WAVE-GROS');
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer le virement' }));
+
+    expect(await screen.findByText(/Ce montant dépasse le reste à reverser/)).toBeInTheDocument();
+    expect(appels.mock.calls.some(([, i]) => i?.method === 'POST')).toBe(false);
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmer le virement' }));
+    expect(await screen.findByText(/Virement de 40\s000 FCFA enregistré/)).toBeInTheDocument();
+  });
+
   it("refuse une correction négative sans motif, sans rien envoyer", async () => {
     const appels = backend({
       'GET /api/auth/me': () => ADMIN,

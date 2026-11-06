@@ -332,8 +332,8 @@ function VosRecettes({ recettes, annule }: { recettes: Recettes; annule: boolean
         </dd>
       </dl>
       <p className={s.ligneDetail}>
-        La commission de Billet+ (5 % aujourd'hui) est déduite de chaque commande, au taux en vigueur le jour de la
-        vente. Billet+ vous reverse votre part par virement.
+        La commission de Billet+ est déduite de chaque commande, au taux en vigueur le jour de la vente. Billet+ vous
+        reverse votre part par virement.
       </p>
     </Panneau>
   );
