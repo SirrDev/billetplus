@@ -75,6 +75,38 @@ class LimitationDebitHttpIntegrationTest extends ContexteCompletTestBase {
         commandeInvalide(ipUnique()).andExpect(status().isBadRequest());
     }
 
+    /**
+     * Lectures publiques (catalogue, détail, catégories, lieu, villes) : une IP qui dépasse la
+     * limite reçoit 429 ; une autre IP n'est pas touchée. Identifiants inconnus : 404 rapide,
+     * mais la requête compte quand même (la limitation passe avant le contrôleur).
+     */
+    @Test
+    void les_lectures_publiques_sont_limitees_par_ip() throws Exception {
+        UUID inconnu = UUID.randomUUID();
+        Object[][] cas = {
+            {"/api/events", 300, 200},
+            {"/api/events/" + inconnu, 300, 404},
+            {"/api/events/" + inconnu + "/categories", 300, 404},
+            {"/api/venues/" + inconnu, 300, 404},
+            {"/api/villes", 60, 200},
+        };
+        for (Object[] c : cas) {
+            // Chaque cas dans une seule fenêtre d'une minute (voir attendreUneFenetreEntiere).
+            attendreUneFenetreEntiere();
+            String chemin = (String) c[0];
+            int limite = (int) c[1];
+            int attendu = (int) c[2];
+            String ip = ipUnique();
+            for (int i = 0; i < limite; i++) {
+                mvc.perform(depuis(get(chemin), ip)).andExpect(status().is(attendu));
+            }
+            mvc.perform(depuis(get(chemin), ip))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().exists(HttpHeaders.RETRY_AFTER));
+            mvc.perform(depuis(get(chemin), ipUnique())).andExpect(status().is(attendu));
+        }
+    }
+
     @Test
     void au_dela_de_10_connexions_par_minute_une_ip_recoit_429_meme_avec_de_mauvais_identifiants() throws Exception {
         String ip = ipUnique();
