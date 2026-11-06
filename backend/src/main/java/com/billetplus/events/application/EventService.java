@@ -103,7 +103,8 @@ public class EventService {
      * Chaque copie est une ligne venues de plus : aucune pour une position identique, et la
      * route est limitée en débit (application.yml, position-evenement).
      *
-     * @throws com.billetplus.shared.exception.BusinessConflictException si l'événement est annulé ou terminé (HTTP 409)
+     * @throws com.billetplus.shared.exception.BusinessConflictException si l'événement n'est plus un brouillon :
+     *         publié, annulé ou terminé (HTTP 409 ; position figée à la publication, comme les dates)
      */
     @Transactional
     public Event definirPosition(UUID eventId, double latitude, double longitude, UUID requestingUserId) {
