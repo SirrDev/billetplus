@@ -127,6 +127,13 @@ class OrderPersistenceIntegrationTest {
             brutAttendu += commande.montantTotal().valeur().longValueExact();
             commissionAttendue += commande.commission().valeur().longValueExact();
         }
+        // Une commande payée sans billet (à rembourser, ADR 0009) ne compte pas non plus.
+        Order sansBillet = Order.creer(evenement, NumeroTelephone.depuis("77 123 45 67"),
+            List.of(new OrderLine(UUID.randomUUID(), 1, Money.ofFcfa(30_000))), MAINTENANT, Duration.ofMinutes(4),
+            TauxCommission.CINQ_POUR_CENT).commande();
+        sansBillet.marquerPayeeSansBillet(com.billetplus.orders.domain.MotifSansBillet.PLACES_INDISPONIBLES,
+            MAINTENANT.plusSeconds(30));
+        enregistrer(sansBillet);
         // Une commande non payée du même événement ne compte pas.
         Order enAttente = Order.creer(evenement, NumeroTelephone.depuis("77 123 45 67"),
             List.of(new OrderLine(UUID.randomUUID(), 1, Money.ofFcfa(50_000))), MAINTENANT, Duration.ofMinutes(4),

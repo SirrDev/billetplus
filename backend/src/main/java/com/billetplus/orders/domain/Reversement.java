@@ -61,7 +61,10 @@ public final class Reversement {
         if (Math.abs(montantFcfa) > MONTANT_MAX_FCFA) {
             throw new IllegalArgumentException("Montant hors limites");
         }
-        String referenceNettoyee = reference == null ? "" : reference.trim();
+        // Forme canonique (majuscules, sans espaces) : « wave-123 » et « WAVE 123 » ne passent
+        // pas pour deux virements différents (contrainte uq_reversements_event_reference).
+        String referenceNettoyee = reference == null ? ""
+            : reference.replaceAll("\\s+", "").toUpperCase(java.util.Locale.ROOT);
         if (referenceNettoyee.isEmpty() || referenceNettoyee.length() > REFERENCE_MAX) {
             throw new IllegalArgumentException("La référence du virement est obligatoire (100 caractères au plus)");
         }
