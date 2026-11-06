@@ -79,11 +79,25 @@ class EventServiceModificationTest {
         Event event = brouillonDe(orga);
         event.annuler();
         when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
-        when(venueRepository.save(any(Venue.class))).thenAnswer(inv -> inv.getArgument(0));
 
         assertThatThrownBy(() -> service().definirPosition(event.getId(), 14.7, -17.4, orga))
             .isInstanceOf(BusinessConflictException.class);
 
+        // Refus constaté AVANT la copie : aucune ligne venues écrite, même annulée ensuite.
+        verify(venueRepository, never()).save(any());
+        verify(eventRepository, never()).save(any());
+    }
+
+    @Test
+    void une_position_identique_ne_cree_pas_de_lieu() {
+        UUID orga = UUID.randomUUID();
+        Event event = new Event("Concert", null, DEBUT, null, new Venue("Sorano", "Dakar", 14.7, -17.4), orga);
+        when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+
+        Event resultat = service().definirPosition(event.getId(), 14.7, -17.4, orga);
+
+        assertThat(resultat.getVenue()).isSameAs(event.getVenue());
+        verify(venueRepository, never()).save(any());
         verify(eventRepository, never()).save(any());
     }
 
