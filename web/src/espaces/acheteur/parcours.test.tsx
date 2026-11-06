@@ -195,6 +195,8 @@ describe('Achat', () => {
     expect(await screen.findAllByRole('article')).toHaveLength(2);
     expect(allerPayer).not.toHaveBeenCalled();
     expect(stockage.get('c1')).toMatchObject({ jeton: 'jeton-libre' });
+    expect(screen.getByText('Billets gratuits confirmés')).toBeInTheDocument();
+    expect(screen.getByText('2 · Coordonnées')).toBeInTheDocument();
     const creation = appels.mock.calls.find(([url]) => url === '/api/orders/entree-libre');
     expect(JSON.parse(String(creation?.[1]?.body))).toEqual({
       eventId: 'e1',

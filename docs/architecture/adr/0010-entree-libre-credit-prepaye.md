@@ -2,7 +2,7 @@
 
 ## Statut
 
-Acceptée — 6 novembre 2026 (choix de SirrDev : entrée libre autorisée ; l'organisateur paie Billet+ 75 FCFA par billet gratuit si l'événement a 100 places ou moins, toutes catégories confondues, 50 FCFA au-delà ; crédit prépayé en FCFA, débité à chaque billet émis, rechargé par paiement dans l'application)
+Acceptée — 6 novembre 2026 (choix de SirrDev : entrée libre autorisée ; l'organisateur paie Billet+ 75 FCFA par billet gratuit si l'événement a 100 places ou moins, toutes catégories confondues, 50 FCFA au-delà ; crédit prépayé en FCFA, débité à chaque billet émis, rechargé par paiement dans l'application). **Modifiée le même jour** par SirrDev : le seuil des 100 places ne compte que les **places gratuites** (point 3)
 
 ## Contexte
 
@@ -21,7 +21,7 @@ Contraintes existantes :
 
 1. **Commande gratuite confirmée tout de suite.** Une commande dont **toutes** les lignes sont à 0 FCFA ne passe pas par la passerelle. Elle se demande par une **route dédiée**, `POST /api/orders/entree-libre` (même corps qu'une commande) : `CreerEntreeLibreUseCase` la crée et réserve ses places (par `CreateOrderUseCase`), puis **débite le crédit de l'organisateur**, la marque `PAYEE` et émet ses billets, **dans la même transaction**. `POST /api/orders` refuse une commande entièrement gratuite (400), et l'entrée libre refuse toute catégorie payante (400). L'acheteur reçoit ses billets aussitôt. Si une étape échoue (places, crédit, quota), tout est annulé : ni commande, ni débit, ni billet.
 2. **Pas de commande mixte.** Une commande qui mélange des catégories gratuites et payantes est refusée (400) : l'acheteur fait deux commandes. Sinon un paiement UnitechPay déclencherait aussi un débit du crédit, dans le webhook, avec un échec possible après encaissement.
-3. **Tarif par billet, figé dans la commande.** Le module `tickets` fournit le **nombre total de places de l'événement** (somme des quotas de toutes ses catégories, payantes comprises), lu **à chaque commande**. Si ce total vaut **100 ou moins**, un billet gratuit coûte **75 FCFA** ; sinon **50 FCFA**. Le tarif retenu est **recopié dans la commande** (colonne dédiée, comme le taux de commission, ADR 0009) ; le montant débité (tarif × nombre de billets) se recalcule et figure dans le journal du crédit. Seuil et tarifs viennent de la configuration (`billetplus.entree-libre.*`) et sont vérifiés au démarrage.
+3. **Tarif par billet, figé dans la commande.** Le module `tickets` fournit le **nombre de places gratuites de l'événement** (somme des quotas de ses catégories à 0 FCFA, seules), lu **à chaque commande** (`PlacesEnVente.placesGratuites`). Si ce total vaut **100 ou moins**, un billet gratuit coûte **75 FCFA** ; sinon **50 FCFA**. Le tarif retenu est **recopié dans la commande** (colonne dédiée, comme le taux de commission, ADR 0009) ; le montant débité (tarif × nombre de billets) se recalcule et figure dans le journal du crédit. Seuil et tarifs viennent de la configuration (`billetplus.entree-libre.*`) et sont vérifiés au démarrage. *Première version : toutes les catégories comptaient ; une catégorie payante jamais vendue suffisait à faire passer un petit événement gratuit à 50 F (relecture de sécurité), d'où la décision de SirrDev de ne compter que les places gratuites.*
 4. **Crédit prépayé par organisateur** (module `orders`, migration V17) :
    - un **solde en FCFA entiers**, jamais négatif (`CHECK (solde_fcfa >= 0)`), une ligne par organisateur ;
    - un **journal des mouvements**, jamais modifié : recharge (+), débit d'une commande gratuite (−), avec la commande ou la recharge concernée. Le solde doit toujours égaler la somme du journal ; un test le vérifie ;
@@ -41,7 +41,7 @@ Contraintes existantes :
     - **événement annulé : aucun re-crédit.** Les billets gratuits émis restent dus ; l'annulation ne crée aucun mouvement ;
     - **crédit restant non remboursable** en argent : il ne sert que sur Billet+ (à écrire dans les conditions d'utilisation) ;
     - **transfert d'un billet gratuit autorisé** (ADR 0008), **sans nouveau débit** : le billet a déjà été payé ;
-    - **ajout de places après des billets gratuits** : les billets suivants prennent le nouveau tarif, les précédents gardent le leur (chaque commande garde le tarif de son moment).
+    - **ajout de places gratuites après des billets gratuits** : les billets suivants prennent le nouveau tarif, les précédents gardent le leur (chaque commande garde le tarif de son moment).
 
 ## Alternatives considérées
 
@@ -64,4 +64,4 @@ Contraintes existantes :
   - **Recharge payée mais webhook perdu** : la recharge reste en attente, le solde n'est pas crédité. Même risque que pour une commande (ADR 0007) ; le rapprochement périodique (`action=transactions`) le couvrira.
   - **Recharge en anomalie** (montant différent) : régularisée à la main par l'administrateur, hors de l'application au MVP.
   - **Frais UnitechPay sur une recharge** : à la charge de Billet+, comme pour une vente (taux *à confirmer* auprès d'Unitech).
-  - **Seuil lu à chaque commande** : le module `orders` dépend d'une nouvelle méthode du port `PlacesEnVente` (nombre total de places de l'événement).
+  - **Seuil lu à chaque commande** : le module `orders` dépend d'une nouvelle méthode du port `PlacesEnVente` (places gratuites de l'événement, `placesGratuites`).

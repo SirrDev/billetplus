@@ -58,9 +58,9 @@ describe('Crédit entrée libre', () => {
     const solde = await screen.findByText(/^850/);
     expect(espaces(solde.textContent)).toBe('850 FCFA');
     expect(espaces(screen.getByText(/Chaque billet gratuit émis coûte/).textContent)).toMatch(
-      /75 FCFA si l'événement a 100 places ou moins .* 50 FCFA au-delà/,
+      /75 FCFA si l'événement a 100 places gratuites ou moins, 50 FCFA au-delà/,
     );
-    const mouvements = screen.getByRole('table', { name: 'Mouvements du crédit' });
+    const mouvements = screen.getByRole('table', { name: 'Mouvements' });
     expect(espaces(mouvements.textContent)).toContain('− 150 FCFA');
     expect(espaces(mouvements.textContent)).toContain('+ 1 000 FCFA');
     expect(screen.getByText('À régulariser')).toBeInTheDocument();

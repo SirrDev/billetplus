@@ -231,7 +231,7 @@ export function lireRecettes(eventId: string): Promise<Recettes> {
 /**
  * CreditDto (orders/api/dto, ADR 0010) : crédit prépayé de l'entrée libre. Chaque billet
  * gratuit émis est débité au tarif en vigueur (petit tarif jusqu'à seuilPlaces places,
- * toutes catégories de l'événement confondues).
+ * gratuites de l'événement : les places payantes ne comptent pas).
  */
 export interface Credit {
   soldeFcfa: number;
