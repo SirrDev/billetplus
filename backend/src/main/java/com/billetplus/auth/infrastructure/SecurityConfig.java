@@ -48,6 +48,8 @@ public class SecurityConfig {
                         // (défense en profondeur : sans cette règle, l'anonyme reçoit déjà 401 par
                         // GlobalExceptionHandler, mais la route ne dépendrait plus que de l'annotation).
                         .requestMatchers(HttpMethod.GET, "/api/events/affectes").authenticated()
+                        // Agents affectés à un événement : réservé à son organisateur, jamais public.
+                        .requestMatchers(HttpMethod.GET, "/api/events/*/agents").authenticated()
                         // Parcourir les événements/lieux ne requiert pas de compte (acheteur anonyme).
                         // Créer/publier/annuler reste protégé par @PreAuthorize sur les controllers.
                         .requestMatchers(HttpMethod.GET, "/api/events/**", "/api/venues/**").permitAll()

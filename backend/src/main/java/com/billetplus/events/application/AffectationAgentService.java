@@ -9,6 +9,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
@@ -66,6 +67,24 @@ public class AffectationAgentService {
     public void retirer(UUID eventId, UUID agentId, UUID organisateurId) {
         evenementDe(eventId, organisateurId);
         affectationRepository.supprimer(eventId, agentId);
+    }
+
+    /**
+     * Agents affectés à un de SES événements, par identifiant : le nom vient de GET /api/agents.
+     *
+     * @throws NoSuchElementException si l'événement n'existe pas
+     * @throws AccessDeniedException  si le demandeur n'est pas l'organisateur de l'événement
+     */
+    @Transactional(readOnly = true)
+    public List<UUID> listerAgents(UUID eventId, UUID organisateurId) {
+        evenementDe(eventId, organisateurId);
+        return affectationRepository.listerAgents(eventId);
+    }
+
+    /** Agent retiré par son organisateur (AgentRetire) : le module auth a contrôlé la propriété. */
+    @Transactional
+    public void retirerDeTousLesEvenements(UUID agentId) {
+        affectationRepository.supprimerToutes(agentId);
     }
 
     @Transactional(readOnly = true)

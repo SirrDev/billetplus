@@ -6,6 +6,7 @@ import { messageErreur } from '@/commun/http';
 import { Avis, Bouton, ChampChoix, ChampTexte, Panneau } from '@/ui';
 import { creerEvenement, creerLieu, LIMITES, lireCoordonnees } from '../api';
 import { CadreOrganisateur } from './CadreOrganisateur';
+import { CartePosition } from './CartePosition';
 import s from './organisateur.module.css';
 
 interface Erreurs {
@@ -120,14 +121,7 @@ export function NouvelEvenementPage() {
               maxLength={LIMITES.lieuAdresse}
               autoComplete="street-address"
             />
-            <ChampTexte
-              libelle="Coordonnées GPS"
-              valeur={coordonnees}
-              onChange={setCoordonnees}
-              maxLength={60}
-              aide="Pour le lien « Voir sur la carte » des acheteurs. Dans Google Maps, un appui long sur le lieu affiche ses coordonnées : copiez-les ici."
-              erreur={erreurs.coordonnees}
-            />
+            <CartePosition valeur={coordonnees} onChange={setCoordonnees} erreur={erreurs.coordonnees} />
           </Panneau>
 
           {erreur && (

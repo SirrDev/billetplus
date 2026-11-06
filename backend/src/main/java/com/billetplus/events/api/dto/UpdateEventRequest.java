@@ -10,7 +10,8 @@ import java.time.Instant;
 /**
  * Corps de PUT /api/events/{id} : remplace le contenu modifiable de l'événement.
  * Ni organisateur, ni statut, ni lieu : l'organisateur vient du jeton, le statut
- * change par publier / annuler, et le lieu n'est pas modifiable au MVP.
+ * change par publier / annuler, et le lieu n'est pas modifiable ici (sa position GPS se
+ * change par PUT /api/events/{id}/position ; son nom et son adresse restent fixes au MVP).
  *
  * Pour un événement publié, le client renvoie les dates reçues, inchangées : toute
  * différence est refusée en 409 (voir Event#modifier). Limites alignées sur

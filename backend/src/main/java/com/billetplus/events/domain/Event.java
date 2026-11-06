@@ -165,6 +165,32 @@ public class Event {
         }
     }
 
+    /**
+     * Remplace le lieu, y compris pour un événement publié : corriger le repère sur la carte
+     * aide les acheteurs sans rien changer à ce qu'ils ont acheté. Le nom et l'adresse sont
+     * ceux du lieu d'origine (voir EventService#definirPosition).
+     *
+     * @throws BusinessConflictException si l'événement est annulé ou terminé (HTTP 409)
+     */
+    public void changerLieu(Venue nouveauLieu) {
+        verifierLieuModifiable();
+        if (nouveauLieu == null) {
+            throw new IllegalArgumentException("Le lieu est obligatoire");
+        }
+        this.venue = nouveauLieu;
+    }
+
+    /**
+     * À appeler avant de préparer un nouveau lieu, pour ne rien écrire si le changement sera refusé.
+     *
+     * @throws BusinessConflictException si l'événement est annulé ou terminé (HTTP 409)
+     */
+    public void verifierLieuModifiable() {
+        if (status == EventStatus.ANNULE || status == EventStatus.TERMINE) {
+            throw new BusinessConflictException("Un événement annulé ou terminé ne peut plus être modifié");
+        }
+    }
+
     public boolean estPublie() {
         return status == EventStatus.PUBLIE;
     }

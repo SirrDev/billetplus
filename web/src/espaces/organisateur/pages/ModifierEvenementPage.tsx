@@ -4,13 +4,24 @@ import { CATEGORIES, type CategorieEvenement } from '@/commun/categories';
 import { formatDateLongue, formatHeure, heureDakarVersInstant, instantVersHeureDakar } from '@/commun/format';
 import { ApiError, messageErreur } from '@/commun/http';
 import { Avis, Bouton, BoutonLien, Chargement, ChampChoix, ChampTexte, EtatVide, Panneau } from '@/ui';
-import { LIMITES, lireEvenement, modifierEvenement, type EvenementOrganisateur } from '../api';
+import {
+  definirPosition,
+  LIMITES,
+  lireCoordonnees,
+  lireEvenement,
+  lireLieu,
+  modifierEvenement,
+  type EvenementOrganisateur,
+  type Lieu,
+} from '../api';
 import { CadreOrganisateur } from './CadreOrganisateur';
+import { CartePosition } from './CartePosition';
 import s from './organisateur.module.css';
 
 interface Erreurs {
   debut?: string;
   fin?: string;
+  coordonnees?: string;
 }
 
 type EtatPage =
@@ -19,10 +30,11 @@ type EtatPage =
   | { etat: 'pret'; evenement: EvenementOrganisateur };
 
 /**
- * Modification d'un événement (PUT /events/{id}). Brouillon : tout, sauf le lieu. Publié :
- * titre et description seulement. Des billets ont pu être vendus pour ces dates et les
- * acheteurs ne seraient pas prévenus ; les dates sont donc affichées sans champ, et
- * renvoyées telles que reçues. Annulé ou terminé : plus rien n'est modifiable.
+ * Modification d'un événement (PUT /events/{id}). Brouillon : tout, sauf le nom et l'adresse
+ * du lieu. Publié : titre et description seulement. Des billets ont pu être vendus pour ces
+ * dates et les acheteurs ne seraient pas prévenus ; les dates sont donc affichées sans champ,
+ * et renvoyées telles que reçues. La position GPS reste modifiable dans les deux cas (route
+ * distincte, appelée seulement si elle a changé). Annulé ou terminé : plus rien n'est modifiable.
  */
 export function ModifierEvenementPage() {
   const { id = '' } = useParams();
@@ -33,6 +45,8 @@ export function ModifierEvenementPage() {
   const [categorie, setCategorie] = useState<CategorieEvenement>('AUTRE');
   const [debut, setDebut] = useState('');
   const [fin, setFin] = useState('');
+  const [lieu, setLieu] = useState<Lieu | null>(null);
+  const [coordonnees, setCoordonnees] = useState('');
   const [erreurs, setErreurs] = useState<Erreurs>({});
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
@@ -40,8 +54,14 @@ export function ModifierEvenementPage() {
   useEffect(() => {
     let annule = false;
     lireEvenement(id)
-      .then((evenement) => {
+      .then(async (evenement) => {
+        // Sans le lieu, l'événement reste modifiable : la carte s'ouvre seulement sans repère.
+        const lieuLu = await lireLieu(evenement.venueId).catch(() => null);
         if (annule) return;
+        setLieu(lieuLu);
+        if (lieuLu?.latitude != null && lieuLu.longitude != null) {
+          setCoordonnees(`${lieuLu.latitude}, ${lieuLu.longitude}`);
+        }
         setTitre(evenement.titre);
         setDescription(evenement.description ?? '');
         setCategorie(evenement.categorie ?? 'AUTRE');
@@ -91,18 +111,25 @@ export function ModifierEvenementPage() {
     setErreur(null);
     let debuteLe = evenement.debuteLe;
     let termineLe = evenement.termineLe;
+    const nouvelles: Erreurs = {};
+    const saisie = coordonnees.trim();
+    const gps = saisie ? lireCoordonnees(saisie) : null;
+    if (saisie && !gps) nouvelles.coordonnees = 'Format attendu : latitude, longitude (par exemple 14.6928, -17.4467).';
+    if (!saisie && lieu?.latitude != null) nouvelles.coordonnees = 'La position peut être déplacée, mais pas retirée.';
     if (brouillon) {
-      const nouvelles: Erreurs = {};
       const d = heureDakarVersInstant(debut);
       const f = fin ? heureDakarVersInstant(fin) : null;
       if (!d) nouvelles.debut = 'Indiquez la date et l’heure de début.';
       if (fin && !f) nouvelles.fin = 'Date de fin invalide.';
       if (d && f && f < d) nouvelles.fin = 'La fin ne peut pas précéder le début.';
-      setErreurs(nouvelles);
-      if (Object.keys(nouvelles).length > 0 || !d) return;
-      debuteLe = d;
-      termineLe = f;
+      if (d) {
+        debuteLe = d;
+        termineLe = f;
+      }
     }
+    setErreurs(nouvelles);
+    if (Object.keys(nouvelles).length > 0) return;
+    const positionChangee = gps !== null && (gps.latitude !== lieu?.latitude || gps.longitude !== lieu?.longitude);
     setEnvoi(true);
     try {
       await modifierEvenement(evenement.id, {
@@ -112,6 +139,7 @@ export function ModifierEvenementPage() {
         termineLe,
         categorie,
       });
+      if (positionChangee) await definirPosition(evenement.id, gps);
       navigate(retour, { replace: true, state: { modifie: true } });
     } catch (e2) {
       setErreur(messageErreur(e2));
@@ -200,7 +228,11 @@ export function ModifierEvenementPage() {
                   </Avis>
                 </>
               )}
-              <p className={s.texte}>Le lieu ne se modifie pas : il est fixé à la création.</p>
+            </Panneau>
+
+            <Panneau titre="Position du lieu" id="position">
+              <p className={s.texte}>Le nom et l'adresse du lieu sont fixés à la création. Seule sa position peut changer.</p>
+              <CartePosition valeur={coordonnees} onChange={setCoordonnees} erreur={erreurs.coordonnees} />
             </Panneau>
 
             {erreur && (

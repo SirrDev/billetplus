@@ -4,6 +4,7 @@ import com.billetplus.events.application.AffectationAgentRepository;
 import com.billetplus.events.domain.AffectationAgent;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -34,5 +35,15 @@ class JpaAffectationAgentRepositoryAdapter implements AffectationAgentRepository
     @Override
     public void supprimer(UUID eventId, UUID agentId) {
         springRepo.deleteById(new AffectationAgent.Cle(eventId, agentId));
+    }
+
+    @Override
+    public void supprimerToutes(UUID agentId) {
+        springRepo.supprimerToutes(agentId);
+    }
+
+    @Override
+    public List<UUID> listerAgents(UUID eventId) {
+        return springRepo.listerAgents(eventId);
     }
 }

@@ -1,10 +1,48 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { Routage } from '@/App';
 import { effacerJetons, enregistrerJetons, lireJetons } from '@/commun/session';
 
 /* Espace organisateur de bout en bout, backend simulé au niveau de fetch. */
+
+/*
+ * Fausse carte : jsdom ne dessine rien. Elle garde l'écouteur de clic et les positions du
+ * repère, pour vérifier le lien carte <-> champ. Le vrai Leaflet se vérifie dans un navigateur.
+ */
+const carte = vi.hoisted(() => ({
+  clic: null as null | ((e: unknown) => void),
+  repere: [] as unknown[],
+}));
+vi.mock('./pages/carteLeaflet', () => {
+  const map = {
+    setView: () => map,
+    on: (_: string, f: (e: unknown) => void) => {
+      carte.clic = f;
+      return map;
+    },
+    remove: () => undefined,
+    getBounds: () => ({ contains: () => true }),
+    getZoom: () => 12,
+  };
+  const marker = (position: unknown) => {
+    carte.repere.push(position);
+    const m = {
+      addTo: () => m,
+      on: () => m,
+      remove: () => undefined,
+      setLatLng: (p: unknown) => {
+        carte.repere.push(p);
+        return m;
+      },
+    };
+    return m;
+  };
+  return { L: { map: () => map, tileLayer: () => ({ addTo: () => undefined }), divIcon: () => ({}), marker } };
+});
+const cliquerCarte = (lat: number, lng: number) => {
+  act(() => carte.clic?.({ latlng: { wrap: () => ({ lat, lng }) } }));
+};
 
 const ORGANISATEUR = { id: 'o1', email: 'orga@test.sn', nomComplet: 'Orga Test', role: 'ORGANISATEUR' };
 const EVENEMENT = {
@@ -55,7 +93,11 @@ function connecte() {
 const jetonDe = (init?: RequestInit) => (init?.headers as Record<string, string> | undefined)?.Authorization;
 const corpsDe = (init?: RequestInit) => JSON.parse(String(init?.body)) as unknown;
 
-beforeEach(() => effacerJetons());
+beforeEach(() => {
+  effacerJetons();
+  carte.clic = null;
+  carte.repere = [];
+});
 
 describe('Connexion', () => {
   it("renvoie un anonyme vers la connexion, puis vers l'espace après connexion", async () => {
@@ -109,6 +151,12 @@ describe('Connexion', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Créer mon compte' }));
     expect(screen.getByRole('alert')).toHaveTextContent('Entre 8 et 72 caractères.');
     expect(appels).not.toHaveBeenCalled();
+  });
+
+  it.each(['/organisateur/connexion', '/organisateur/inscription'])("propose un retour à l'accueil sur %s", async (adresse) => {
+    backend({});
+    ouvrir(adresse);
+    expect(await screen.findByRole('link', { name: "Retour à l'accueil" })).toHaveAttribute('href', '/');
   });
 });
 
@@ -260,6 +308,7 @@ describe('Création et gestion d’un événement', () => {
       [`GET /api/events/${EVENEMENT.id}/categories`]: () => [],
       [`GET /api/events/${EVENEMENT.id}/tableau-de-bord`]: () => TABLEAU_VIDE,
       'GET /api/agents': () => [{ id: 'a1', email: 'agent@test.sn', nomComplet: 'Awa Agent', creeLe: '2026-10-30T10:00:00Z' }],
+      [`GET /api/events/${EVENEMENT.id}/agents`]: () => [],
       [`PUT /api/events/${EVENEMENT.id}/agents/a1`]: () => undefined,
     });
     ouvrir(`/organisateur/evenements/${EVENEMENT.id}`);
@@ -267,6 +316,115 @@ describe('Création et gestion d’un événement', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Affecter' }));
     expect(await screen.findByText('Awa Agent peut contrôler les entrées de cet événement.')).toBeInTheDocument();
     expect(appels.mock.calls.some(([u, i]) => String(u).endsWith('/agents/a1') && i?.method === 'PUT')).toBe(true);
+  });
+});
+
+describe('Agents affectés à un événement', () => {
+  const AWA = { id: 'a1', email: 'awa@test.sn', nomComplet: 'Awa Agent', creeLe: '2026-10-30T10:00:00Z' };
+  const MOUSSA = { id: 'a2', email: 'moussa@test.sn', nomComplet: 'Moussa Diop', creeLe: '2026-10-30T10:00:00Z' };
+
+  it("liste les affectés, retire en un clic et ne propose que les autres à l'affectation", async () => {
+    connecte();
+    const appels = backend({
+      'GET /api/auth/me': () => ORGANISATEUR,
+      [`GET /api/events/${EVENEMENT.id}`]: () => ({ ...EVENEMENT, status: 'PUBLIE' }),
+      [`GET /api/events/${EVENEMENT.id}/categories`]: () => [],
+      [`GET /api/events/${EVENEMENT.id}/tableau-de-bord`]: () => TABLEAU_VIDE,
+      'GET /api/agents': () => [AWA, MOUSSA],
+      [`GET /api/events/${EVENEMENT.id}/agents`]: () => ['a1'],
+      [`DELETE /api/events/${EVENEMENT.id}/agents/a1`]: () => undefined,
+    });
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}`);
+
+    const liste = await screen.findByRole('list', { name: 'Agents affectés' });
+    expect(within(liste).getByText('Awa Agent')).toBeInTheDocument();
+    expect(within(liste).queryByText('Moussa Diop')).not.toBeInTheDocument();
+    const choix = screen.getByLabelText('Agent');
+    expect(within(choix).queryByRole('option', { name: /Awa Agent/ })).not.toBeInTheDocument();
+    expect(within(choix).getByRole('option', { name: /Moussa Diop/ })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Retirer Awa Agent de cet événement' }));
+    expect(await screen.findByText('Awa Agent ne contrôle plus cet événement.')).toBeInTheDocument();
+    expect(screen.getByText('Aucun agent affecté à cet événement.')).toBeInTheDocument();
+    expect(within(screen.getByLabelText('Agent')).getByRole('option', { name: /Awa Agent/ })).toBeInTheDocument();
+    expect(appels.mock.calls.some(([u, i]) => String(u).endsWith('/agents/a1') && i?.method === 'DELETE')).toBe(true);
+  });
+});
+
+describe('Position GPS sur la carte', () => {
+  const LIEU_SANS_POSITION = { id: 'v1', nom: 'Grand Théâtre', adresse: 'Dakar', latitude: null, longitude: null, seatingPlan: null };
+
+  it('envoie à la création la position choisie en touchant la carte', async () => {
+    connecte();
+    const appels = backend({
+      'GET /api/auth/me': () => ORGANISATEUR,
+      'POST /api/venues': () => LIEU_SANS_POSITION,
+      'POST /api/events': () => EVENEMENT,
+      [`GET /api/events/${EVENEMENT.id}`]: () => EVENEMENT,
+      [`GET /api/events/${EVENEMENT.id}/categories`]: () => [],
+      [`GET /api/events/${EVENEMENT.id}/tableau-de-bord`]: () => TABLEAU_VIDE,
+      'GET /api/agents': () => [],
+    });
+    ouvrir('/organisateur/evenements/nouveau');
+    await userEvent.type(await screen.findByLabelText('Titre'), 'Nuit du Mbalax');
+    fireEvent.change(screen.getByLabelText('Début'), { target: { value: '2099-11-14T21:00' } });
+    await userEvent.type(screen.getByLabelText('Nom du lieu'), 'Grand Théâtre');
+    await userEvent.type(screen.getByLabelText('Adresse'), 'Dakar');
+
+    await waitFor(() => expect(carte.clic).not.toBeNull());
+    cliquerCarte(14.7, -17.45);
+    expect(screen.getByLabelText(/^Coordonnées GPS/)).toHaveValue('14.700000, -17.450000');
+    await waitFor(() => expect(carte.repere).toHaveLength(1));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Créer le brouillon' }));
+    await screen.findByRole('heading', { level: 1, name: 'Nuit du Mbalax' });
+    const lieu = appels.mock.calls.find(([u, i]) => String(u) === '/api/venues' && i?.method === 'POST');
+    expect(corpsDe(lieu?.[1])).toMatchObject({ latitude: 14.7, longitude: -17.45 });
+  });
+
+  const routesModification = (lieu: object, evenement: object = EVENEMENT) => ({
+    'GET /api/auth/me': () => ORGANISATEUR,
+    [`GET /api/events/${EVENEMENT.id}`]: () => evenement,
+    [`GET /api/events/${EVENEMENT.id}/categories`]: () => [],
+    [`GET /api/events/${EVENEMENT.id}/tableau-de-bord`]: () => TABLEAU_VIDE,
+    'GET /api/agents': () => [],
+    'GET /api/venues/v1': () => lieu,
+    [`PUT /api/events/${EVENEMENT.id}`]: () => evenement,
+    [`PUT /api/events/${EVENEMENT.id}/position`]: () => evenement,
+  });
+  const appelPosition = (appels: ReturnType<typeof backend>) =>
+    appels.mock.calls.find(([u, i]) => String(u).endsWith('/position') && i?.method === 'PUT');
+
+  it('ajoute une position à un événement publié créé sans elle', async () => {
+    connecte();
+    const appels = backend(routesModification(LIEU_SANS_POSITION, { ...EVENEMENT, status: 'PUBLIE' }));
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}/modifier`);
+    await screen.findByLabelText(/^Coordonnées GPS/);
+    await waitFor(() => expect(carte.clic).not.toBeNull());
+    cliquerCarte(14.7, -17.45);
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    await screen.findByText('Modifications enregistrées.');
+    expect(corpsDe(appelPosition(appels)?.[1])).toEqual({ latitude: 14.7, longitude: -17.45 });
+  });
+
+  it("préremplit la position et ne l'envoie pas si elle n'a pas changé", async () => {
+    connecte();
+    const appels = backend(routesModification({ ...LIEU_SANS_POSITION, latitude: 14.6928123, longitude: -17.4467 }));
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}/modifier`);
+    expect(await screen.findByLabelText(/^Coordonnées GPS/)).toHaveValue('14.6928123, -17.4467');
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    await screen.findByText('Modifications enregistrées.');
+    expect(appelPosition(appels)).toBeUndefined();
+  });
+
+  it('refuse de retirer une position existante, sans rien envoyer', async () => {
+    connecte();
+    const appels = backend(routesModification({ ...LIEU_SANS_POSITION, latitude: 14.69, longitude: -17.44 }));
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}/modifier`);
+    await userEvent.clear(await screen.findByLabelText(/^Coordonnées GPS/));
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    expect(await screen.findByText('La position peut être déplacée, mais pas retirée.')).toBeInTheDocument();
+    expect(appels.mock.calls.some(([, i]) => i?.method === 'PUT')).toBe(false);
   });
 });
 
@@ -396,6 +554,68 @@ describe('Équipe', () => {
     expect(await screen.findByRole('table', { name: 'Agents de contrôle' })).toHaveTextContent('Moussa Diop');
     const creation = appels.mock.calls.find(([u, i]) => String(u) === '/api/agents' && i?.method === 'POST');
     expect(corpsDe(creation?.[1])).toEqual({ email: 'moussa@test.sn', motDePasse: 'MotDePasse123', nomComplet: 'Moussa Diop' });
+  });
+
+  const AWA = { id: 'a1', email: 'awa@test.sn', nomComplet: 'Awa Agent', creeLe: '2026-10-30T10:00:00Z' };
+
+  it("modifie le nom et l'e-mail d'un agent", async () => {
+    connecte();
+    const appels = backend({
+      'GET /api/auth/me': () => ORGANISATEUR,
+      'GET /api/agents': () => [AWA],
+      'PUT /api/agents/a1': (init) => ({ ...AWA, ...(corpsDe(init) as object) }),
+    });
+    ouvrir('/organisateur/equipe');
+    await userEvent.click(await screen.findByRole('button', { name: 'Modifier Awa Agent' }));
+    const nom = screen.getByLabelText("Nom de l'agent");
+    expect(nom).toHaveValue('Awa Agent');
+    await userEvent.clear(nom);
+    await userEvent.type(nom, 'Awa Ndiaye');
+    await userEvent.clear(screen.getByLabelText("E-mail de l'agent"));
+    await userEvent.type(screen.getByLabelText("E-mail de l'agent"), 'awa.ndiaye@test.sn');
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(await screen.findByText('Compte de Awa Ndiaye modifié.')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Agents de contrôle' })).toHaveTextContent('awa.ndiaye@test.sn');
+    const envoi = appels.mock.calls.find(([, i]) => i?.method === 'PUT');
+    expect(corpsDe(envoi?.[1])).toEqual({ email: 'awa.ndiaye@test.sn', nomComplet: 'Awa Ndiaye' });
+  });
+
+  it("affiche le refus d'un e-mail déjà utilisé et garde le formulaire ouvert", async () => {
+    connecte();
+    backend({
+      'GET /api/auth/me': () => ORGANISATEUR,
+      'GET /api/agents': () => [AWA],
+      'PUT /api/agents/a1': () => erreur(400, 'Un compte existe déjà avec cet email'),
+    });
+    ouvrir('/organisateur/equipe');
+    await userEvent.click(await screen.findByRole('button', { name: 'Modifier Awa Agent' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    expect(await screen.findByText('Un compte existe déjà avec cet email')).toBeInTheDocument();
+    expect(screen.getByLabelText("Nom de l'agent")).toBeInTheDocument();
+  });
+
+  it('demande confirmation avant de retirer un agent', async () => {
+    connecte();
+    const appels = backend({
+      'GET /api/auth/me': () => ORGANISATEUR,
+      'GET /api/agents': () => [AWA],
+      'DELETE /api/agents/a1': () => undefined,
+    });
+    ouvrir('/organisateur/equipe');
+    await userEvent.click(await screen.findByRole('button', { name: 'Retirer Awa Agent' }));
+    expect(appels.mock.calls.some(([, i]) => i?.method === 'DELETE')).toBe(false);
+    // Les entrées hors ligne en attente seraient refusées après le retrait : on prévient avant.
+    expect(screen.getByText(/Faites d'abord synchroniser son téléphone/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: "Garder l'agent" }));
+    expect(appels.mock.calls.some(([, i]) => i?.method === 'DELETE')).toBe(false);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Retirer Awa Agent' }));
+    await userEvent.click(screen.getByRole('button', { name: "Oui, retirer l'agent" }));
+    expect(await screen.findByText("Awa Agent ne fait plus partie de l'équipe.")).toBeInTheDocument();
+    expect(screen.getByText("Aucun agent pour l'instant.")).toBeInTheDocument();
+    expect(appels.mock.calls.some(([u, i]) => String(u) === '/api/agents/a1' && i?.method === 'DELETE')).toBe(true);
   });
 
   it('ferme la session et renvoie à la connexion', async () => {

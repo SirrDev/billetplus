@@ -35,6 +35,10 @@ public class AuthService {
         if (!passwordEncoder.matches(motDePasse, user.getMotDePasseHash())) {
             throw new BadCredentialsException("Identifiants invalides");
         }
+        // Agent retiré : même réponse que des identifiants faux.
+        if (!user.estActif()) {
+            throw new BadCredentialsException("Identifiants invalides");
+        }
 
         return new TokenPair(
             tokenProvider.generateAccessToken(user),
@@ -64,7 +68,9 @@ public class AuthService {
         }
 
         UUID userId = tokenProvider.getUserId(claims);
+        // Agent retiré : le jeton de rafraîchissement, non révocable, ne doit plus rien émettre.
         User user = userRepository.findById(userId)
+            .filter(User::estActif)
             .orElseThrow(() -> new BadCredentialsException("Utilisateur introuvable"));
 
         return new TokenPair(
@@ -73,10 +79,22 @@ public class AuthService {
         );
     }
 
+    /**
+     * Compte du jeton. Un agent retiré garde un jeton d'accès valide jusqu'à 15 minutes :
+     * 401 plutôt que ses données, la PWA tente alors un rafraîchissement, refusé lui aussi,
+     * et ferme la session. Couvre aussi le changement de mot de passe, qui passe par ici.
+     *
+     * @throws java.util.NoSuchElementException si le compte n'existe plus (404)
+     * @throws BadCredentialsException          si le compte a été désactivé (401)
+     */
     @Transactional(readOnly = true)
     public User getCurrentUser(UUID userId) {
-        return userRepository.findById(userId)
+        User user = userRepository.findById(userId)
             .orElseThrow(() -> new java.util.NoSuchElementException("Utilisateur introuvable"));
+        if (!user.estActif()) {
+            throw new BadCredentialsException("Compte désactivé");
+        }
+        return user;
     }
 
     /**

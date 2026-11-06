@@ -97,6 +97,28 @@ public class EventService {
     }
 
     /**
+     * Définit la position GPS d'un de SES événements. Le lieu n'a pas de propriétaire et
+     * POST /api/events accepte n'importe quel venueId : le modifier sur place pourrait déplacer
+     * l'événement d'un autre organisateur. L'événement reçoit donc une copie à la nouvelle position.
+     * Chaque copie est une ligne venues de plus : aucune pour une position identique, et la
+     * route est limitée en débit (application.yml, position-evenement).
+     *
+     * @throws com.billetplus.shared.exception.BusinessConflictException si l'événement est annulé ou terminé (HTTP 409)
+     */
+    @Transactional
+    public Event definirPosition(UUID eventId, double latitude, double longitude, UUID requestingUserId) {
+        Event event = get(eventId);
+        verifierProprietaire(event, requestingUserId);
+        event.verifierLieuModifiable();
+        Venue lieu = event.getVenue();
+        if (Double.valueOf(latitude).equals(lieu.getLatitude()) && Double.valueOf(longitude).equals(lieu.getLongitude())) {
+            return event;
+        }
+        event.changerLieu(venueRepository.save(lieu.copieA(latitude, longitude)));
+        return eventRepository.save(event);
+    }
+
+    /**
      * Publie {@link EvenementAnnule} dans la même transaction (ADR 0005) : les
      * modules qui écoutent (tickets annule les billets) agissent avant la
      * validation. Si l'un d'eux échoue, l'annulation de l'événement est annulée

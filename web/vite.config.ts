@@ -19,7 +19,15 @@ export default defineConfig({
         // que jsPDF ne charge que pour .html() et le SVG, inutilisés par le billet PDF (≈ 110 Ko
         // gzippés économisés à chaque installation, en données mobiles). Ils restent dans le build.
         // Le morceau billetPdf, lui, RESTE précaché : le PDF se génère sans réseau.
-        globIgnores: ['**/*-vietnamese-*.woff2', '**/*-cyrillic-*.woff2', '**/*-greek-*.woff2', '**/jspdf-optionnel-*.js'],
+        // Hors précache également : la carte de l'organisateur (Leaflet), qui ne sert à rien sans
+        // réseau puisque ses tuiles viennent d'OpenStreetMap, et qu'un acheteur n'ouvre jamais.
+        globIgnores: [
+          '**/*-vietnamese-*.woff2',
+          '**/*-cyrillic-*.woff2',
+          '**/*-greek-*.woff2',
+          '**/jspdf-optionnel-*.js',
+          '**/carteLeaflet-*.{js,css}',
+        ],
         // Jamais de cache sur les commandes et les billets : réponses no-store, jeton en en-tête.
         // Les billets hors ligne viennent d'IndexedDB (espaces/acheteur/commandesLocales.ts).
         // Lectures PUBLIQUES des événements seulement, jamais une requête authentifiée :

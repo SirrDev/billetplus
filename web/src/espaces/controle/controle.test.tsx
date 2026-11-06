@@ -132,6 +132,12 @@ describe('Connexion et choix de l’événement', () => {
     expect(await screen.findByText('Ce compte ne peut pas contrôler les entrées.')).toBeInTheDocument();
     expect(lireJetons()).toBeNull();
   });
+
+  it("propose un retour à l'accueil sur la page de connexion", async () => {
+    backend({});
+    ouvrir('/scanner/connexion');
+    expect(await screen.findByRole('link', { name: "Retour à l'accueil" })).toHaveAttribute('href', '/');
+  });
 });
 
 describe('Réouverture sans réseau', () => {

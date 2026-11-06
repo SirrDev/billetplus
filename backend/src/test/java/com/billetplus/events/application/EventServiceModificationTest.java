@@ -2,6 +2,7 @@ package com.billetplus.events.application;
 
 import com.billetplus.events.domain.Event;
 import com.billetplus.events.domain.Venue;
+import com.billetplus.shared.exception.BusinessConflictException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -40,6 +41,64 @@ class EventServiceModificationTest {
 
     private Event brouillonDe(UUID proprietaire) {
         return new Event("Concert", null, DEBUT, null, new Venue("Sorano", "Dakar", null, null), proprietaire);
+    }
+
+    @Test
+    void la_position_passe_par_une_copie_du_lieu_sans_toucher_l_original() {
+        UUID orga = UUID.randomUUID();
+        Event event = brouillonDe(orga);
+        Venue original = event.getVenue();
+        when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+        when(venueRepository.save(any(Venue.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(eventRepository.save(event)).thenReturn(event);
+
+        Event modifie = service().definirPosition(event.getId(), 14.7, -17.4, orga);
+
+        assertThat(modifie.getVenue()).isNotSameAs(original);
+        assertThat(modifie.getVenue().getNom()).isEqualTo("Sorano");
+        assertThat(modifie.getVenue().getLatitude()).isEqualTo(14.7);
+        assertThat(modifie.getVenue().getLongitude()).isEqualTo(-17.4);
+        assertThat(original.getLatitude()).isNull();
+    }
+
+    @Test
+    void un_autre_organisateur_ne_change_pas_la_position() {
+        Event event = brouillonDe(UUID.randomUUID());
+        when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+
+        assertThatThrownBy(() -> service().definirPosition(event.getId(), 14.7, -17.4, UUID.randomUUID()))
+            .isInstanceOf(NoSuchElementException.class);
+
+        verify(venueRepository, never()).save(any());
+        verify(eventRepository, never()).save(any());
+    }
+
+    @Test
+    void un_evenement_annule_ne_change_plus_de_position() {
+        UUID orga = UUID.randomUUID();
+        Event event = brouillonDe(orga);
+        event.annuler();
+        when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+
+        assertThatThrownBy(() -> service().definirPosition(event.getId(), 14.7, -17.4, orga))
+            .isInstanceOf(BusinessConflictException.class);
+
+        // Refus constaté AVANT la copie : aucune ligne venues écrite, même annulée ensuite.
+        verify(venueRepository, never()).save(any());
+        verify(eventRepository, never()).save(any());
+    }
+
+    @Test
+    void une_position_identique_ne_cree_pas_de_lieu() {
+        UUID orga = UUID.randomUUID();
+        Event event = new Event("Concert", null, DEBUT, null, new Venue("Sorano", "Dakar", 14.7, -17.4), orga);
+        when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+
+        Event resultat = service().definirPosition(event.getId(), 14.7, -17.4, orga);
+
+        assertThat(resultat.getVenue()).isSameAs(event.getVenue());
+        verify(venueRepository, never()).save(any());
+        verify(eventRepository, never()).save(any());
     }
 
     @Test

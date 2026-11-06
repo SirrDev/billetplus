@@ -1,6 +1,7 @@
 package com.billetplus.events.api;
 
 import com.billetplus.events.api.dto.CreateEventRequest;
+import com.billetplus.events.api.dto.DefinirPositionRequest;
 import com.billetplus.events.api.dto.EvenementPublicDto;
 import com.billetplus.events.api.dto.EventDto;
 import com.billetplus.events.api.dto.PageEvenementsPublicsDto;
@@ -114,6 +115,15 @@ public class EventController {
         return ResponseEntity.ok(EventDto.from(event));
     }
 
+    /** Définit la position GPS d'un de SES événements. Annulé ou terminé → 409. */
+    @PutMapping("/{id}/position")
+    @PreAuthorize("hasRole('ORGANISATEUR')")
+    public ResponseEntity<EventDto> definirPosition(@PathVariable UUID id, @Valid @RequestBody DefinirPositionRequest request,
+                                                    Authentication auth) {
+        Event event = eventService.definirPosition(id, request.latitude(), request.longitude(), (UUID) auth.getPrincipal());
+        return ResponseEntity.ok(EventDto.from(event));
+    }
+
     @PostMapping("/{id}/publier")
     @PreAuthorize("hasRole('ORGANISATEUR')")
     public ResponseEntity<EventDto> publier(@PathVariable UUID id, Authentication auth) {
@@ -126,6 +136,13 @@ public class EventController {
     public ResponseEntity<EventDto> annuler(@PathVariable UUID id, Authentication auth) {
         UUID requestingUserId = (UUID) auth.getPrincipal();
         return ResponseEntity.ok(EventDto.from(eventService.annuler(id, requestingUserId)));
+    }
+
+    /** Identifiants des agents affectés à un de SES événements. Jeton exigé aussi par SecurityConfig. */
+    @GetMapping("/{id}/agents")
+    @PreAuthorize("hasRole('ORGANISATEUR')")
+    public ResponseEntity<List<UUID>> agentsAffectes(@PathVariable UUID id, Authentication auth) {
+        return ResponseEntity.ok(affectationAgentService.listerAgents(id, (UUID) auth.getPrincipal()));
     }
 
     /**
