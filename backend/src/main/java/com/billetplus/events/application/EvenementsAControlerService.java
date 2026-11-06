@@ -1,5 +1,6 @@
 package com.billetplus.events.application;
 
+import com.billetplus.auth.api.publique.Comptes;
 import com.billetplus.events.domain.Event;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,10 +29,12 @@ public class EvenementsAControlerService {
     public static final Duration DUREE_SANS_FIN_CONNUE = Duration.ofHours(24);
 
     private final EventRepository eventRepository;
+    private final Comptes comptes;
     private final Clock clock;
 
-    public EvenementsAControlerService(EventRepository eventRepository, Clock clock) {
+    public EvenementsAControlerService(EventRepository eventRepository, Comptes comptes, Clock clock) {
         this.eventRepository = eventRepository;
+        this.comptes = comptes;
         this.clock = clock;
     }
 
@@ -39,6 +42,10 @@ public class EvenementsAControlerService {
     public List<Event> pourLAgent(UUID agentId) {
         if (agentId == null) {
             throw new IllegalArgumentException("agentId est obligatoire");
+        }
+        // Agent retiré : aucune liste, même si une affectation est restée en base (même règle que le scan).
+        if (!comptes.estAgentActif(agentId)) {
+            return List.of();
         }
         Instant maintenant = Instant.now(clock);
         return eventRepository.findAffectesA(agentId, maintenant.minus(DUREE_SANS_FIN_CONNUE), maintenant);

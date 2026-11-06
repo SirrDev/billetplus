@@ -47,6 +47,26 @@ class ComptesServiceTest {
     }
 
     @Test
+    void seul_un_agent_non_retire_est_actif() {
+        UUID organisateur = UUID.randomUUID();
+        User actif = User.agentCreePar(organisateur, "actif@billetplus.sn", "hash", "Actif");
+        User retire = User.agentCreePar(organisateur, "retire@billetplus.sn", "hash", "Retire");
+        retire.desactiver();
+        User orga = new User("orga@billetplus.sn", "hash", "Orga", Role.ORGANISATEUR);
+        UUID inconnu = UUID.randomUUID();
+        when(userRepository.findById(actif.getId())).thenReturn(Optional.of(actif));
+        when(userRepository.findById(retire.getId())).thenReturn(Optional.of(retire));
+        when(userRepository.findById(orga.getId())).thenReturn(Optional.of(orga));
+        when(userRepository.findById(inconnu)).thenReturn(Optional.empty());
+
+        assertThat(service().estAgentActif(actif.getId())).isTrue();
+        assertThat(service().estAgentActif(retire.getId())).isFalse();
+        assertThat(service().estAgentActif(orga.getId())).isFalse();
+        assertThat(service().estAgentActif(inconnu)).isFalse();
+        assertThat(service().estAgentActif(null)).isFalse();
+    }
+
+    @Test
     void un_identifiant_absent_n_est_jamais_reconnu_sans_lire_la_base() {
         assertThat(service().estAgentCreePar(null, UUID.randomUUID())).isFalse();
         assertThat(service().estAgentCreePar(UUID.randomUUID(), null)).isFalse();
