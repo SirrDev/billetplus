@@ -90,7 +90,7 @@ public class EventController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<EventDto> get(@PathVariable UUID id, @AuthenticationPrincipal UUID viewerId) {
-        return ResponseEntity.ok(EventDto.from(eventService.getVisible(id, viewerId)));
+        return ResponseEntity.ok(EventDto.pourLeVisiteur(eventService.getVisible(id, viewerId), viewerId));
     }
 
     @GetMapping("/mine")
