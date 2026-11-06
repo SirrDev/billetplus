@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class EventTest {
 
     private Venue venue() {
-        return new Venue("Grand Théâtre", "Dakar", null, null);
+        return new Venue("Grand Théâtre", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.dakar());
     }
 
     @Test
@@ -47,6 +47,26 @@ class EventTest {
 
         assertThat(event.getStatus()).isEqualTo(EventStatus.PUBLIE);
         assertThat(event.estPublie()).isTrue();
+    }
+
+    /** ADR 0011, point 9 : la vente n'est ouverte qu'au Sénégal pour l'instant. */
+    @Test
+    void un_evenement_hors_du_senegal_ne_se_publie_pas_et_reste_brouillon() {
+        Venue abidjan = new Venue("Palais de la culture", "Treichville", null, null,
+            new Ville("CI-ABIDJAN", "Abidjan", Pays.CI, 1));
+        Event event = new Event("Concert", null, Instant.now(), null, abidjan, UUID.randomUUID());
+
+        assertThatThrownBy(event::publier)
+            .isInstanceOf(BusinessConflictException.class)
+            .hasMessage("La vente hors du Sénégal n'est pas encore ouverte");
+        assertThat(event.getStatus()).isEqualTo(EventStatus.BROUILLON);
+    }
+
+    @Test
+    void une_copie_du_lieu_garde_sa_ville() {
+        Venue thies = new Venue("Stade", "Route de Dakar", null, null, new Ville("SN-THIES", "Thiès", Pays.SN, 2));
+
+        assertThat(thies.copieA(14.79, -16.93).getVille().getCode()).isEqualTo("SN-THIES");
     }
 
     @Test

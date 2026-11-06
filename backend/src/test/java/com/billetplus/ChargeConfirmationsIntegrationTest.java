@@ -66,7 +66,7 @@ class ChargeConfirmationsIntegrationTest extends ContexteCompletTestBase {
         });
 
         UUID lieu = UUID.randomUUID();
-        jdbc.update("INSERT INTO venues (id, nom, adresse) VALUES (?, 'Stade', 'Dakar')", lieu);
+        jdbc.update("INSERT INTO venues (id, nom, adresse, ville_code) VALUES (?, 'Stade', 'Dakar', 'SN-DAKAR')", lieu);
         UUID evenement = UUID.randomUUID();
         jdbc.update("INSERT INTO events (id, titre, debute_le, venue_id, organizer_id, status) VALUES (?, ?, ?, ?, ?, 'PUBLIE')",
             evenement, "Finale " + evenement, Timestamp.from(Instant.now().plus(10, ChronoUnit.DAYS)), lieu, UUID.randomUUID());

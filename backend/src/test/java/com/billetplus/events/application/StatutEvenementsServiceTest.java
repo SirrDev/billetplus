@@ -31,7 +31,7 @@ class StatutEvenementsServiceTest {
     }
 
     private Event evenement() {
-        return new Event("Concert", null, Instant.now(), null, new Venue("Grand Theatre", "Dakar", null, null), UUID.randomUUID());
+        return new Event("Concert", null, Instant.now(), null, new Venue("Grand Theatre", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.dakar()), UUID.randomUUID());
     }
 
     @Test
@@ -69,7 +69,7 @@ class StatutEvenementsServiceTest {
     void reconnait_l_organisateur_et_lui_seul() {
         UUID organisateur = UUID.randomUUID();
         Event event = new Event("Concert", null, Instant.now(), null,
-            new Venue("Grand Theatre", "Dakar", null, null), organisateur);
+            new Venue("Grand Theatre", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.dakar()), organisateur);
         when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
 
         assertThat(service().estOrganisateur(event.getId(), organisateur)).isTrue();

@@ -48,7 +48,7 @@ class EvenementsAffectesHttpIntegrationTest extends ContexteCompletTestBase {
     }
 
     private Event evenement(UUID organisateur, String titre, Instant debut, Instant fin) {
-        UUID lieu = venueService.create("Sorano " + titre, "Dakar", null, null).getId();
+        UUID lieu = venueService.create("Sorano " + titre, "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.DAKAR).getId();
         return eventService.create(titre, null, debut, fin, lieu, organisateur, null);
     }
 

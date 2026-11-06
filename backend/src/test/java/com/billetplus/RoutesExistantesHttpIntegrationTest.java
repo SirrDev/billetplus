@@ -57,7 +57,8 @@ class RoutesExistantesHttpIntegrationTest extends ContexteCompletTestBase {
     private String creerLieu(String jeton) throws Exception {
         String reponse = mvc.perform(post("/api/venues").header(HttpHeaders.AUTHORIZATION, jeton)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"nom\":\"Grand Theatre\",\"adresse\":\"Dakar\",\"latitude\":14.7,\"longitude\":-17.4}"))
+                .content("{\"nom\":\"Grand Theatre\",\"adresse\":\"Dakar\",\"latitude\":14.7,\"longitude\":-17.4,"
+                    + "\"villeCode\":\"SN-DAKAR\"}"))
             .andExpect(status().isCreated())
             .andReturn().getResponse().getContentAsString();
         return JsonPath.read(reponse, "$.id");
@@ -257,7 +258,7 @@ class RoutesExistantesHttpIntegrationTest extends ContexteCompletTestBase {
                 .content("{\"nom\":\"X\",\"adresse\":\"Dakar\"}"))
             .andExpect(status().isUnauthorized());
         mvc.perform(post("/api/venues").header(HttpHeaders.AUTHORIZATION, orga).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"nom\":\"X\",\"adresse\":\"Dakar\",\"latitude\":91}"))
+                .content("{\"nom\":\"X\",\"adresse\":\"Dakar\",\"latitude\":91,\"villeCode\":\"SN-DAKAR\"}"))
             .andExpect(status().isBadRequest());
     }
 

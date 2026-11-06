@@ -51,7 +51,7 @@ class EventServiceAccessTest {
     }
 
     private Event brouillonDe(UUID proprietaire) {
-        Venue venue = new Venue("Grand Theatre", "Dakar", null, null);
+        Venue venue = new Venue("Grand Theatre", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.dakar());
         return new Event("Concert", null, Instant.now(), null, venue, proprietaire);
     }
 

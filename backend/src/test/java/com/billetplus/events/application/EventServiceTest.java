@@ -35,7 +35,7 @@ class EventServiceTest {
     }
 
     private Venue venue() {
-        return new Venue("Grand Théâtre", "Dakar", null, null);
+        return new Venue("Grand Théâtre", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.dakar());
     }
 
     @Test

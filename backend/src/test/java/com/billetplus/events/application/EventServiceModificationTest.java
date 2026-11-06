@@ -40,7 +40,7 @@ class EventServiceModificationTest {
     }
 
     private Event brouillonDe(UUID proprietaire) {
-        return new Event("Concert", null, DEBUT, null, new Venue("Sorano", "Dakar", null, null), proprietaire);
+        return new Event("Concert", null, DEBUT, null, new Venue("Sorano", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.dakar()), proprietaire);
     }
 
     @Test
@@ -107,7 +107,7 @@ class EventServiceModificationTest {
     @Test
     void une_position_identique_ne_cree_pas_de_lieu() {
         UUID orga = UUID.randomUUID();
-        Event event = new Event("Concert", null, DEBUT, null, new Venue("Sorano", "Dakar", 14.7, -17.4), orga);
+        Event event = new Event("Concert", null, DEBUT, null, new Venue("Sorano", "Dakar", 14.7, -17.4, com.billetplus.events.domain.VillesDeTest.dakar()), orga);
         when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
 
         Event resultat = service().definirPosition(event.getId(), 14.7, -17.4, orga);

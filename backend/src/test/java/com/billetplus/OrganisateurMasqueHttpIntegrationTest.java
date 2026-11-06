@@ -32,7 +32,7 @@ class OrganisateurMasqueHttpIntegrationTest extends ContexteCompletTestBase {
     }
 
     private Event evenementPublie(UUID orga) {
-        UUID lieu = venueService.create("Sorano", "Dakar", null, null).getId();
+        UUID lieu = venueService.create("Sorano", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.DAKAR).getId();
         Event e = eventService.create("Concert", null, Instant.now().plus(3, ChronoUnit.DAYS), null, lieu, orga, null);
         eventService.publier(e.getId(), orga);
         return e;

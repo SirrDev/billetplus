@@ -17,7 +17,7 @@ class EventModificationTest {
     private static final Instant FIN = Instant.parse("2026-12-06T02:00:00Z");
 
     private Event brouillon() {
-        return new Event("Concert", "Avant", DEBUT, FIN, new Venue("Sorano", "Dakar", null, null), UUID.randomUUID());
+        return new Event("Concert", "Avant", DEBUT, FIN, new Venue("Sorano", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.dakar()), UUID.randomUUID());
     }
 
     @Test

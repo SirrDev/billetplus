@@ -48,7 +48,7 @@ class ModificationEvenementEtMotDePasseHttpIntegrationTest extends ContexteCompl
     }
 
     private Event brouillon(UUID orga) {
-        UUID lieu = venueService.create("Sorano " + UUID.randomUUID(), "Dakar", null, null).getId();
+        UUID lieu = venueService.create("Sorano " + UUID.randomUUID(), "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.DAKAR).getId();
         return eventService.create("Concert", "Avant", Instant.parse(DEBUT), Instant.parse(FIN), lieu, orga, null);
     }
 
