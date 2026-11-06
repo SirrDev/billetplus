@@ -79,10 +79,22 @@ public class AuthService {
         );
     }
 
+    /**
+     * Compte du jeton. Un agent retiré garde un jeton d'accès valide jusqu'à 15 minutes :
+     * 401 plutôt que ses données, la PWA tente alors un rafraîchissement, refusé lui aussi,
+     * et ferme la session. Couvre aussi le changement de mot de passe, qui passe par ici.
+     *
+     * @throws java.util.NoSuchElementException si le compte n'existe plus (404)
+     * @throws BadCredentialsException          si le compte a été désactivé (401)
+     */
     @Transactional(readOnly = true)
     public User getCurrentUser(UUID userId) {
-        return userRepository.findById(userId)
+        User user = userRepository.findById(userId)
             .orElseThrow(() -> new java.util.NoSuchElementException("Utilisateur introuvable"));
+        if (!user.estActif()) {
+            throw new BadCredentialsException("Compte désactivé");
+        }
+        return user;
     }
 
     /**

@@ -43,6 +43,16 @@ public class User {
     /** Date du retrait d'un agent par son organisateur (V14). Null : compte actif. */
     private Instant desactiveLe;
 
+    /**
+     * Verrouillage optimiste (V15). Hibernate réécrit toute la ligne : sans version, un
+     * changement de mot de passe concurrent d'un retrait remettait desactive_le à null.
+     * Conflit → 409 (OptimisticLockingFailureException, GlobalExceptionHandler).
+     * Wrapper null à la création : persist au lieu de merge.
+     */
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
     protected User() {
         // requis par JPA
     }

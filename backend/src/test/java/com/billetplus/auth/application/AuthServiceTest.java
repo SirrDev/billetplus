@@ -74,6 +74,19 @@ class AuthServiceTest {
             .hasMessage("Identifiants invalides");
     }
 
+    /** Son jeton d'accès vit encore : ni /me ni changement de mot de passe (getCurrentUser). */
+    @Test
+    void un_agent_retire_n_accede_plus_a_son_compte_avec_un_jeton_encore_valide() {
+        User agent = agentRetire();
+        when(userRepository.findById(agent.getId())).thenReturn(Optional.of(agent));
+
+        assertThatThrownBy(() -> service().getCurrentUser(agent.getId()))
+            .isInstanceOf(org.springframework.security.authentication.BadCredentialsException.class);
+        assertThatThrownBy(() -> service().changerMotDePasse(agent.getId(), "ancien", "nouveaumotdepasse"))
+            .isInstanceOf(org.springframework.security.authentication.BadCredentialsException.class);
+        verify(userRepository, never()).save(any());
+    }
+
     @Test
     void un_agent_retire_ne_rafraichit_plus_ses_jetons() {
         User agent = agentRetire();
