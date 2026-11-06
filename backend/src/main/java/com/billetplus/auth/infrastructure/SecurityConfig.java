@@ -50,6 +50,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/events/affectes").authenticated()
                         // Agents affectés à un événement : réservé à son organisateur, jamais public.
                         .requestMatchers(HttpMethod.GET, "/api/events/*/agents").authenticated()
+                        // Recettes et commission d'un événement : réservées à son organisateur.
+                        .requestMatchers(HttpMethod.GET, "/api/events/*/recettes").authenticated()
                         // Parcourir les événements/lieux ne requiert pas de compte (acheteur anonyme).
                         // Créer/publier/annuler reste protégé par @PreAuthorize sur les controllers.
                         .requestMatchers(HttpMethod.GET, "/api/events/**", "/api/venues/**").permitAll()
