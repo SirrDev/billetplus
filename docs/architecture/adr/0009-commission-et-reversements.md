@@ -2,7 +2,7 @@
 
 ## Statut
 
-Proposée — 6 novembre 2026 (choix de SirrDev : commission déduite de l'organisateur, 5 % par défaut figés dans chaque commande, arrondi au franc inférieur, frais UnitechPay absorbés, reversements suivis à la main)
+Acceptée — 6 novembre 2026 (choix de SirrDev : commission déduite de l'organisateur, 5 % par défaut figés dans chaque commande, arrondi au franc inférieur, frais UnitechPay absorbés, reversements suivis à la main)
 
 ## Contexte
 
@@ -24,10 +24,12 @@ Contraintes existantes :
 3. **Calcul par commande, arrondi au franc inférieur** (domaine `Order`) : `commission = plancher(montant × taux / 10 000)`, `net = montant − commission`. Le franc d'écart revient à l'organisateur. Une commande gratuite a une commission nulle.
 4. **Seules les commandes `PAYEE` d'un événement non annulé comptent.** Une commande `PAYEE_SANS_BILLET`, ou une commande payée d'un événement annulé, est remboursée en entier à l'acheteur : ni commission ni net. Un billet transféré ne change rien (il reste attaché à sa commande, ADR 0008).
 5. **Frais UnitechPay absorbés par Billet+.** L'organisateur voit « montant − 5 % ». Les frais de la passerelle sont pris sur la commission ; leur taux réel est **à confirmer** auprès d'Unitech.
-6. **Recettes d'un événement** (module `orders`, lecture de niveau 1) : `GET /api/events/{id}/recettes`, réservé à l'organisateur de l'événement (même 404 qu'un événement inconnu sinon, propriété lue par le port public `StatutEvenements`, ADR 0005). Réponse : brut, commission, net, déjà reversé, reste à reverser. Le tableau de bord de la PWA l'affiche à côté des chiffres du module `tickets`, qui ne change pas : le module `tickets` ne dépend pas de `orders`.
+6. **Recettes d'un événement** (module `orders`, lecture de niveau 1) : totaux **calculés en base** (une requête qui regroupe par commande, pour arrondir la commission commande par commande, puis par événement ; aucune commande chargée en mémoire). Route `GET /api/events/{id}/recettes`, réservé à l'organisateur de l'événement (même 404 qu'un événement inconnu sinon, propriété lue par le port public `StatutEvenements`, ADR 0005). Réponse : brut, commission, net, déjà reversé, reste à reverser. Le tableau de bord de la PWA l'affiche à côté des chiffres du module `tickets`, qui ne change pas : le module `tickets` ne dépend pas de `orders`.
 7. **Reversements suivis à la main** (administrateur seulement) :
    - **liste** `GET /api/admin/reversements` : par événement ayant des commandes payées, brut, commission, net, total reversé, reste à reverser ;
    - **enregistrement** `POST /api/admin/reversements` : événement, montant, référence du virement (Wave, Orange Money), date. Table `reversements` (V16), une ligne par virement : **plusieurs reversements par événement** (un acompte, puis le solde après des ventes tardives). Un reversement ne se modifie ni ne se supprime ; une erreur se corrige par un reversement négatif motivé ;
+   - **un virement ne s'enregistre qu'une fois** : même événement et même référence refusés (409, contrainte `uq_reversements_event_reference`), contre le double clic, le rejeu d'une requête dont la réponse s'est perdue, ou deux administrateurs qui saisissent le même virement ;
+   - **aucun virement positif vers l'organisateur d'un événement annulé** (409) : seule une correction (négative, motivée) reste possible ; l'écran demande une confirmation si le montant dépasse le reste à reverser ;
    - aucun virement n'est déclenché par Billet+ : l'administrateur paie lui-même, puis l'enregistre.
 
 ## Alternatives considérées
@@ -44,5 +46,6 @@ Contraintes existantes :
 - **Négatives et limites connues** :
   - **Événement annulé après un reversement** : les acheteurs sont remboursés en entier, mais l'organisateur a déjà reçu son net. Le reste à reverser devient négatif (« trop reversé ») : à récupérer hors de Billet+.
   - **Frais UnitechPay d'une commande remboursée** : à la charge de Billet+ (pas de commission pour les couvrir).
+  - **Deux virements réels différents saisis avec la même référence** : refusés ; l'administrateur précise la référence (par exemple avec un suffixe).
   - **Commandes antérieures à V16** : elles reçoivent le taux de 5 % par la migration (données de développement uniquement à ce jour).
   - **Brut du tableau de bord et brut des recettes** : le premier compte les billets valables (module `tickets`), le second les commandes payées (module `orders`). Ils coïncident tant que chaque commande payée a ses billets émis ; un écart signale une commande `PAYEE` sans billets, à examiner.
