@@ -605,6 +605,8 @@ describe('Équipe', () => {
     ouvrir('/organisateur/equipe');
     await userEvent.click(await screen.findByRole('button', { name: 'Retirer Awa Agent' }));
     expect(appels.mock.calls.some(([, i]) => i?.method === 'DELETE')).toBe(false);
+    // Les entrées hors ligne en attente seraient refusées après le retrait : on prévient avant.
+    expect(screen.getByText(/Faites d'abord synchroniser son téléphone/)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: "Garder l'agent" }));
     expect(appels.mock.calls.some(([, i]) => i?.method === 'DELETE')).toBe(false);

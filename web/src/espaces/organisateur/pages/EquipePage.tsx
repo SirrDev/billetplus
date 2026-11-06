@@ -121,6 +121,11 @@ export function EquipePage() {
               <strong>Retirer {aRetirer.nomComplet} de l'équipe ?</strong> Cet agent ne pourra plus se connecter et quitte
               tous vos événements. Cette action est définitive : son e-mail ne pourra pas servir à un nouveau compte.
             </p>
+            <p>
+              <strong>A-t-il contrôlé des entrées sans réseau ?</strong> Faites d'abord synchroniser son téléphone :
+              après le retrait, les entrées encore en attente sur l'appareil seront refusées, et ces billets resteront
+              valables pour une autre entrée.
+            </p>
             <div className={s.actions}>
               <Bouton onClick={() => void retirer(aRetirer)} disabled={retrait}>
                 {retrait ? 'Retrait…' : "Oui, retirer l'agent"}
