@@ -135,8 +135,8 @@ export function Routage() {
 
 export default function App() {
   return (
-    // Comportements de React Router 7 activés dès maintenant : la montée de version n'y changera rien.
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    // React Router 7 : transitions et chemins relatifs des routes « * » sont le comportement par défaut.
+    <BrowserRouter>
       <Routage />
     </BrowserRouter>
   );
