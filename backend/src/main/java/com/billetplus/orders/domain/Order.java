@@ -43,6 +43,8 @@ public class Order {
     private final String empreinteJeton;
     private final Instant creeLe;
     private final Instant expireLe;
+    /** Taux de commission figé à la création (ADR 0009) : un changement de taux ne touche pas les ventes passées. */
+    private final TauxCommission tauxCommission;
     private OrderStatus status;
     private Instant payeeLe;
     private MotifSansBillet motifSansBillet;
@@ -63,6 +65,18 @@ public class Order {
      */
     public static CommandeCreee creer(UUID eventId, NumeroTelephone telephone, List<OrderLine> lignes,
                                       Instant maintenant, Duration dureeValidite) {
+        return creer(eventId, telephone, lignes, maintenant, dureeValidite, TauxCommission.CINQ_POUR_CENT);
+    }
+
+    /**
+     * @param tauxCommission taux courant (configuration), recopié dans la commande (ADR 0009)
+     * @throws IllegalArgumentException si un invariant de création n'est pas respecté
+     */
+    public static CommandeCreee creer(UUID eventId, NumeroTelephone telephone, List<OrderLine> lignes,
+                                      Instant maintenant, Duration dureeValidite, TauxCommission tauxCommission) {
+        if (tauxCommission == null) {
+            throw new IllegalArgumentException("Le taux de commission est obligatoire");
+        }
         if (eventId == null) {
             throw new IllegalArgumentException("eventId est obligatoire");
         }
@@ -95,7 +109,7 @@ public class Order {
         Instant creeLe = maintenant.truncatedTo(ChronoUnit.MICROS);
         JetonAcces jeton = JetonAcces.generer();
         Order commande = new Order(UUID.randomUUID(), eventId, telephone, List.copyOf(lignes), jeton.empreinte(),
-            creeLe, creeLe.plus(dureeValidite).truncatedTo(ChronoUnit.MICROS),
+            creeLe, creeLe.plus(dureeValidite).truncatedTo(ChronoUnit.MICROS), tauxCommission,
             OrderStatus.EN_ATTENTE_PAIEMENT, null, null, null);
         return new CommandeCreee(commande, jeton);
     }
@@ -107,13 +121,22 @@ public class Order {
     public static Order reconstituer(UUID id, UUID eventId, NumeroTelephone telephone, List<OrderLine> lignes,
                                      String empreinteJeton, Instant creeLe, Instant expireLe, OrderStatus status,
                                      Instant payeeLe, MotifSansBillet motifSansBillet, Paiement paiement) {
+        return reconstituer(id, eventId, telephone, lignes, empreinteJeton, creeLe, expireLe,
+            TauxCommission.CINQ_POUR_CENT, status, payeeLe, motifSansBillet, paiement);
+    }
+
+    /** Reconstruction depuis la persistance, avec le taux de commission enregistré (V16). */
+    public static Order reconstituer(UUID id, UUID eventId, NumeroTelephone telephone, List<OrderLine> lignes,
+                                     String empreinteJeton, Instant creeLe, Instant expireLe,
+                                     TauxCommission tauxCommission, OrderStatus status, Instant payeeLe,
+                                     MotifSansBillet motifSansBillet, Paiement paiement) {
         return new Order(id, eventId, telephone, List.copyOf(lignes), empreinteJeton, creeLe, expireLe,
-            status, payeeLe, motifSansBillet, paiement);
+            tauxCommission, status, payeeLe, motifSansBillet, paiement);
     }
 
     private Order(UUID id, UUID eventId, NumeroTelephone telephone, List<OrderLine> lignes, String empreinteJeton,
-                  Instant creeLe, Instant expireLe, OrderStatus status, Instant payeeLe,
-                  MotifSansBillet motifSansBillet, Paiement paiement) {
+                  Instant creeLe, Instant expireLe, TauxCommission tauxCommission, OrderStatus status,
+                  Instant payeeLe, MotifSansBillet motifSansBillet, Paiement paiement) {
         this.id = id;
         this.eventId = eventId;
         this.telephone = telephone;
@@ -121,6 +144,7 @@ public class Order {
         this.empreinteJeton = empreinteJeton;
         this.creeLe = creeLe;
         this.expireLe = expireLe;
+        this.tauxCommission = tauxCommission;
         this.status = status;
         this.payeeLe = payeeLe;
         this.motifSansBillet = motifSansBillet;
@@ -130,6 +154,16 @@ public class Order {
     /** Somme des lignes, recalculée à chaque appel : aucun total stocké ne peut diverger des lignes. */
     public Money montantTotal() {
         return lignes.stream().map(OrderLine::sousTotal).reduce(Money.ofFcfa(0), Money::plus);
+    }
+
+    /** Commission de Billet+ sur cette commande, au taux figé, arrondie au franc inférieur (ADR 0009). */
+    public Money commission() {
+        return tauxCommission.commissionSur(montantTotal());
+    }
+
+    /** Part de l'organisateur : montant payé moins la commission. */
+    public Money montantNet() {
+        return montantTotal().moins(commission());
     }
 
     /** Vrai si le délai de paiement est écoulé : la commande ne peut plus être payée à temps. */
@@ -281,6 +315,10 @@ public class Order {
 
     public Instant getExpireLe() {
         return expireLe;
+    }
+
+    public TauxCommission getTauxCommission() {
+        return tauxCommission;
     }
 
     public OrderStatus getStatus() {

@@ -66,6 +66,10 @@ billetplus:
   # Commandes sans compte (ADR 0006). Le délai de paiement doit rester strictement
   # inférieur à reservation.duree (vérifié au démarrage par CreateOrderUseCase) :
   # la marge absorbe la latence du webhook Wave.
+  # Commission de Billet+ (ADR 0009), en points de base : 500 = 5 %. Recopiée dans chaque
+  # commande à sa création : la changer ne modifie aucune vente passée.
+  commission:
+    taux-points-base: 500
   commande:
     delai-paiement: 4m
     max-en-attente-par-telephone: 3

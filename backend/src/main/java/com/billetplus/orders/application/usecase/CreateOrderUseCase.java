@@ -1,6 +1,7 @@
 package com.billetplus.orders.application.usecase;
 
 import com.billetplus.orders.application.port.OrderRepository;
+import com.billetplus.orders.domain.TauxCommission;
 import com.billetplus.orders.domain.NumeroTelephone;
 import com.billetplus.orders.domain.Order;
 import com.billetplus.orders.domain.OrderLine;
@@ -54,11 +55,15 @@ public class CreateOrderUseCase {
     private final Clock clock;
     private final Duration delaiPaiement;
     private final int maxEnAttenteParTelephone;
+    private final TauxCommission tauxCommission;
 
     public CreateOrderUseCase(OrderRepository orderRepository, PlacesEnVente placesEnVente, Clock clock,
                               @Value("${billetplus.commande.delai-paiement:4m}") Duration delaiPaiement,
                               @Value("${billetplus.reservation.duree:5m}") Duration dureeReservation,
-                              @Value("${billetplus.commande.max-en-attente-par-telephone:3}") int maxEnAttenteParTelephone) {
+                              @Value("${billetplus.commande.max-en-attente-par-telephone:3}") int maxEnAttenteParTelephone,
+                              @Value("${billetplus.commission.taux-points-base:500}") int tauxCommissionPointsBase) {
+        // Taux invalide dans la configuration : refus au démarrage, pas à la première vente.
+        this.tauxCommission = new TauxCommission(tauxCommissionPointsBase);
         if (delaiPaiement.isZero() || delaiPaiement.isNegative() || delaiPaiement.compareTo(dureeReservation) >= 0) {
             // Échec au démarrage plutôt qu'en production : sinon un paiement dans le
             // délai pourrait arriver après l'expiration des places (payé sans billet).
@@ -120,7 +125,7 @@ public class CreateOrderUseCase {
             throw new TropDeCommandesEnAttenteException();
         }
 
-        Order.CommandeCreee creee = Order.creer(eventId, telephone, lignes, maintenant, delaiPaiement);
+        Order.CommandeCreee creee = Order.creer(eventId, telephone, lignes, maintenant, delaiPaiement, tauxCommission);
         Order commande = orderRepository.save(creee.commande());
 
         reserverLesPlaces(commande);

@@ -105,6 +105,22 @@ class OrderPersistenceIntegrationTest {
         assertThat(relue.accepteLeJeton(creee.jeton().enClair())).isTrue();
     }
 
+    /** Le taux de commission figé dans la commande survit à la base (V16, ADR 0009). */
+    @Test
+    void le_taux_de_commission_est_enregistre_et_relu() {
+        Order commande = Order.creer(UUID.randomUUID(), NumeroTelephone.depuis("77 123 45 67"),
+            List.of(new OrderLine(UUID.randomUUID(), 1, Money.ofFcfa(3333))), MAINTENANT, Duration.ofMinutes(4),
+            new com.billetplus.orders.domain.TauxCommission(750)).commande();
+        enregistrer(commande);
+
+        Order relue = commandes.findById(commande.getId()).orElseThrow();
+
+        assertThat(relue.getTauxCommission().pointsBase()).isEqualTo(750);
+        assertThat(relue.commission()).isEqualTo(Money.ofFcfa(249));
+        assertThat(jdbc.queryForObject("SELECT taux_commission_points_base FROM orders WHERE id = ?", Integer.class,
+            commande.getId())).isEqualTo(750);
+    }
+
     @Test
     void la_base_ne_contient_que_l_empreinte_du_jeton() {
         Order.CommandeCreee creee = nouvelle();
@@ -268,7 +284,7 @@ class OrderPersistenceIntegrationTest {
 
     private void insererCommande(UUID id, String telephone, String statut, Instant payeeLe, String motif) {
         jdbc.update("INSERT INTO orders (id, event_id, telephone, empreinte_jeton, status, cree_le, expire_le, "
-                + "payee_le, motif_sans_billet) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                + "payee_le, motif_sans_billet, taux_commission_points_base) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 500)",
             id, UUID.randomUUID(), telephone, "a".repeat(64), statut, Timestamp.from(MAINTENANT),
             Timestamp.from(MAINTENANT.plusSeconds(240)), payeeLe == null ? null : Timestamp.from(payeeLe), motif);
     }

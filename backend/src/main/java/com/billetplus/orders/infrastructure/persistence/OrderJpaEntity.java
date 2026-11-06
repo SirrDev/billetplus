@@ -40,6 +40,10 @@ class OrderJpaEntity {
     @Column(nullable = false)
     private OrderStatus status;
 
+    /** Taux de commission figé à la création (V16, ADR 0009), en points de base. */
+    @Column(name = "taux_commission_points_base", nullable = false, updatable = false)
+    private int tauxCommissionPointsBase;
+
     @Column(nullable = false, updatable = false)
     private Instant creeLe;
 
@@ -83,7 +87,8 @@ class OrderJpaEntity {
 
     OrderJpaEntity(UUID id, UUID eventId, String telephone, String empreinteJeton, OrderStatus status,
                    Instant creeLe, Instant expireLe, Instant payeeLe, MotifSansBillet motifSansBillet,
-                   List<OrderLineEmbeddable> lignes) {
+                   List<OrderLineEmbeddable> lignes, int tauxCommissionPointsBase) {
+        this.tauxCommissionPointsBase = tauxCommissionPointsBase;
         this.id = id;
         this.eventId = eventId;
         this.telephone = telephone;
@@ -94,6 +99,10 @@ class OrderJpaEntity {
         this.payeeLe = payeeLe;
         this.motifSansBillet = motifSansBillet;
         this.lignes = new ArrayList<>(lignes);
+    }
+
+    int getTauxCommissionPointsBase() {
+        return tauxCommissionPointsBase;
     }
 
     UUID getId() {

@@ -65,7 +65,7 @@ class CreateOrderUseCaseTest {
     @BeforeEach
     void setUp() {
         useCase = new CreateOrderUseCase(orderRepository, placesEnVente, Clock.fixed(MAINTENANT, ZoneOffset.UTC),
-            Duration.ofMinutes(4), Duration.ofMinutes(5), 3);
+            Duration.ofMinutes(4), Duration.ofMinutes(5), 3, 750);
         TransactionSynchronizationManager.initSynchronization();
     }
 
@@ -109,6 +109,8 @@ class CreateOrderUseCaseTest {
         assertThat(commande.getTelephone().valeur()).isEqualTo("+221771234567");
         assertThat(commande.getExpireLe()).isEqualTo(MAINTENANT.plus(Duration.ofMinutes(4)));
         assertThat(commande.accepteLeJeton(creee.jeton().enClair())).isTrue();
+        // Taux de la configuration (750 dans ce test), recopié dans la commande (ADR 0009).
+        assertThat(commande.getTauxCommission().pointsBase()).isEqualTo(750);
 
         InOrder ordre = inOrder(orderRepository, placesEnVente);
         ordre.verify(orderRepository).save(any(Order.class));
@@ -214,13 +216,17 @@ class CreateOrderUseCaseTest {
     void un_delai_de_paiement_qui_n_est_pas_plus_court_que_la_reservation_empeche_le_demarrage() {
         Clock horloge = Clock.fixed(MAINTENANT, ZoneOffset.UTC);
         assertThatThrownBy(() -> new CreateOrderUseCase(orderRepository, placesEnVente, horloge,
-                Duration.ofMinutes(5), Duration.ofMinutes(5), 3))
+                Duration.ofMinutes(5), Duration.ofMinutes(5), 3, 500))
             .isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(() -> new CreateOrderUseCase(orderRepository, placesEnVente, horloge,
-                Duration.ZERO, Duration.ofMinutes(5), 3))
+                Duration.ZERO, Duration.ofMinutes(5), 3, 500))
             .isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(() -> new CreateOrderUseCase(orderRepository, placesEnVente, horloge,
-                Duration.ofMinutes(4), Duration.ofMinutes(5), 0))
+                Duration.ofMinutes(4), Duration.ofMinutes(5), 0, 500))
             .isInstanceOf(IllegalStateException.class);
+        // Taux de commission invalide dans la configuration : refus au démarrage (ADR 0009).
+        assertThatThrownBy(() -> new CreateOrderUseCase(orderRepository, placesEnVente, horloge,
+                Duration.ofMinutes(4), Duration.ofMinutes(5), 3, 10_001))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 }
