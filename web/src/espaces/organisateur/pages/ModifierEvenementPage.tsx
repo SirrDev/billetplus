@@ -240,11 +240,14 @@ export function ModifierEvenementPage() {
                   </p>
                   <CartePosition valeur={coordonnees} onChange={setCoordonnees} erreur={erreurs.coordonnees} />
                 </>
-              ) : (
+              ) : coordonnees ? (
                 <p className={s.texte}>
                   La position du lieu est fixée depuis la publication, comme les dates : des billets ont pu être vendus
-                  pour ce lieu.
-                  {coordonnees && <> Coordonnées : {coordonnees}.</>}
+                  pour ce lieu. Coordonnées : {coordonnees}.
+                </p>
+              ) : (
+                <p className={s.texte}>
+                  Aucune position n'a été définie avant la publication : elle ne peut plus être ajoutée.
                 </p>
               )}
             </Panneau>

@@ -465,6 +465,14 @@ describe('Position GPS sur la carte', () => {
     expect(appelPosition(appels)).toBeUndefined();
   });
 
+  it('le dit clairement quand un événement publié n a jamais eu de position', async () => {
+    connecte();
+    backend(routesModification(LIEU_SANS_POSITION, { ...EVENEMENT, status: 'PUBLIE' }));
+    ouvrir(`/organisateur/evenements/${EVENEMENT.id}/modifier`);
+    expect(await screen.findByText(/Aucune position n.a été définie avant la publication/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Coordonnées GPS/)).not.toBeInTheDocument();
+  });
+
   it('ajoute une position à un brouillon créé sans elle', async () => {
     connecte();
     const appels = backend(routesModification(LIEU_SANS_POSITION));
