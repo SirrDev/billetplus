@@ -174,4 +174,14 @@ class UnitechPayPasserelleTest {
             .hasMessageContaining("UNITECHPAY_API_KEY");
         autre.verify();
     }
+
+    /** Un numéro recopié dans un message d'erreur de la passerelle ne part pas dans les journaux. */
+    @Test
+    void les_messages_journalises_masquent_les_numeros_et_sont_tronques() {
+        assertThat(UnitechPayPasserelle.tronquer("Numero 771234567 invalide")).isEqualTo("Numero ••• invalide");
+        assertThat(UnitechPayPasserelle.tronquer("+221771234567")).isEqualTo("+•••");
+        assertThat(UnitechPayPasserelle.tronquer("montant 5000 refuse")).isEqualTo("montant 5000 refuse");
+        assertThat(UnitechPayPasserelle.tronquer(null)).isEmpty();
+        assertThat(UnitechPayPasserelle.tronquer("x".repeat(500))).endsWith("…").hasSizeLessThan(500);
+    }
 }

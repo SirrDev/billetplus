@@ -69,6 +69,8 @@ class PremierAdminInitializer implements ApplicationRunner {
                 "BILLETPLUS_ADMIN_EMAIL est déjà utilisé par un compte qui n'est pas ADMIN");
         }
         userRepository.save(new User(email, passwordEncoder.encode(motDePasse), "Administrateur", Role.ADMIN));
-        LOG.info("Premier compte ADMIN créé ({})", email);
+        // Sans l'e-mail : c'est l'identifiant du compte le plus privilégié, et les journaux
+        // partent souvent vers un outil tiers.
+        LOG.info("Premier compte ADMIN créé");
     }
 }
