@@ -134,6 +134,16 @@ billetplus:
       # creation-commande, sans bloquer un groupe derrière une même IP d'opérateur.
       - { nom: entree-libre,       methode: POST, chemin: /api/orders/entree-libre, cle: IP,     limite: 20,  fenetre: 10m }
       - { nom: recharge-credit,    methode: POST, chemin: /api/credit/recharges,   cle: COMPTE, limite: 10,  fenetre: 1h }
+      # Lectures publiques (sans compte) : limites larges, pour freiner un script qui aspire
+      # le catalogue sans gêner un groupe d'acheteurs derrière la même IP d'opérateur. Toutes
+      # les règles qui correspondent s'appliquent : /api/events/mine et /affectes sont aussi
+      # comptés par lecture-evenement (300 par minute et par IP, sans gêne en pratique).
+      - { nom: liste-evenements,   methode: GET,  chemin: /api/events,              cle: IP,     limite: 300, fenetre: 1m }
+      - { nom: lecture-evenement,  methode: GET,  chemin: /api/events/*,            cle: IP,     limite: 300, fenetre: 1m }
+      - { nom: categories-evenement, methode: GET, chemin: /api/events/*/categories, cle: IP,    limite: 300, fenetre: 1m }
+      - { nom: lecture-lieu,       methode: GET,  chemin: /api/venues/*,            cle: IP,     limite: 300, fenetre: 1m }
+      # Liste en cache une heure dans le navigateur : 60 par minute suffisent largement.
+      - { nom: liste-villes,       methode: GET,  chemin: /api/villes,              cle: IP,     limite: 60,  fenetre: 1m }
 
 springdoc:
   api-docs:
