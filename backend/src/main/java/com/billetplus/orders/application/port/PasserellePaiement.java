@@ -15,12 +15,24 @@ import java.util.UUID;
  */
 public interface PasserellePaiement {
 
+    /** Page de la PWA où revient le payeur : sa commande, ou le crédit de l'organisateur (ADR 0010). */
+    enum Retour {
+        COMMANDE,
+        RECHARGE
+    }
+
     /**
-     * @param orderId     identifiant de la commande, pour les liens de retour vers la PWA
-     * @param description texte affiché à l'acheteur par la passerelle (sans donnée personnelle)
+     * @param orderId     identifiant de la commande (ou de la recharge), pour les liens de retour vers la PWA
+     * @param description texte affiché au payeur par la passerelle (sans donnée personnelle)
      */
     record DemandePaiement(UUID orderId, MoyenPaiement moyen, Money montant, NumeroTelephone telephone,
-                           String description) {
+                           String description, Retour retour) {
+
+        /** Paiement d'une commande de billets. */
+        public DemandePaiement(UUID orderId, MoyenPaiement moyen, Money montant, NumeroTelephone telephone,
+                               String description) {
+            this(orderId, moyen, montant, telephone, description, Retour.COMMANDE);
+        }
     }
 
     /** @param reference référence générée par la passerelle, clé de rapprochement du webhook */

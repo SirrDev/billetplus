@@ -1,5 +1,6 @@
 package com.billetplus.events.api.publique;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -24,6 +25,13 @@ public interface StatutEvenements {
      * Faux pour un identifiant absent ou inconnu.
      */
     boolean estOrganisateur(UUID eventId, UUID userId);
+
+    /**
+     * Organisateur de l'événement, s'il existe (quel que soit son statut) : le module
+     * orders débite son crédit pour une entrée libre (ADR 0010). Vide pour un
+     * identifiant absent ou inconnu.
+     */
+    Optional<UUID> organisateurDe(UUID eventId);
 
     /**
      * Vrai si l'événement existe et accepte encore la configuration de sa

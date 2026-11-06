@@ -52,12 +52,16 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/events/*/agents").authenticated()
                         // Recettes et commission d'un événement : réservées à son organisateur.
                         .requestMatchers(HttpMethod.GET, "/api/events/*/recettes").authenticated()
+                        // Crédit prépayé de l'organisateur (ADR 0010) : le sien seulement.
+                        .requestMatchers("/api/credit/**").authenticated()
                         // Parcourir les événements/lieux ne requiert pas de compte (acheteur anonyme).
                         // Créer/publier/annuler reste protégé par @PreAuthorize sur les controllers.
                         .requestMatchers(HttpMethod.GET, "/api/events/**", "/api/venues/**").permitAll()
                         // Achat sans compte (ADR 0006) : créer une commande et la relire avec son
                         // jeton ne demandent aucun compte. Le jeton est contrôlé par le cas d'usage.
                         .requestMatchers(HttpMethod.POST, "/api/orders").permitAll()
+                        // Entrée libre (ADR 0010) : billets gratuits, sans compte, comme une commande.
+                        .requestMatchers(HttpMethod.POST, "/api/orders/entree-libre").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/orders/*", "/api/orders/*/billets").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/orders/*/paiement").permitAll()
                         // Transfert d'un billet (ADR 0008) : l'acheteur s'authentifie par le jeton de

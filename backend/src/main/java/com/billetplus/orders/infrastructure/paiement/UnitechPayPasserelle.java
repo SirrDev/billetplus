@@ -51,23 +51,32 @@ class UnitechPayPasserelle implements PasserellePaiement {
     private final String cleApi;
     private final String urlRetourSucces;
     private final String urlRetourAnnulation;
+    private final String urlRetourRecharge;
 
     @Autowired
     UnitechPayPasserelle(RestClient.Builder builder,
                          @Value("${billetplus.paiement.unitechpay.url-api:https://api.unitech.sn}") String urlApi,
                          @Value("${billetplus.paiement.unitechpay.cle-api:}") String cleApi,
                          @Value("${billetplus.paiement.unitechpay.url-retour-succes:}") String urlRetourSucces,
-                         @Value("${billetplus.paiement.unitechpay.url-retour-annulation:}") String urlRetourAnnulation) {
+                         @Value("${billetplus.paiement.unitechpay.url-retour-annulation:}") String urlRetourAnnulation,
+                         @Value("${billetplus.paiement.unitechpay.url-retour-recharge:}") String urlRetourRecharge) {
         this(builder.baseUrl(urlApi).requestFactory(fabriqueAvecDelais()).build(),
-            cleApi, urlRetourSucces, urlRetourAnnulation);
+            cleApi, urlRetourSucces, urlRetourAnnulation, urlRetourRecharge);
     }
 
     /** Pour les tests : un RestClient déjà construit (lié à un faux serveur). */
     UnitechPayPasserelle(RestClient client, String cleApi, String urlRetourSucces, String urlRetourAnnulation) {
+        this(client, cleApi, urlRetourSucces, urlRetourAnnulation, "");
+    }
+
+    /** Pour les tests : avec le lien de retour d'une recharge (ADR 0010). */
+    UnitechPayPasserelle(RestClient client, String cleApi, String urlRetourSucces, String urlRetourAnnulation,
+                         String urlRetourRecharge) {
         this.client = client;
         this.cleApi = cleApi;
         this.urlRetourSucces = urlRetourSucces;
         this.urlRetourAnnulation = urlRetourAnnulation;
+        this.urlRetourRecharge = urlRetourRecharge;
     }
 
     private static JdkClientHttpRequestFactory fabriqueAvecDelais() {
@@ -88,8 +97,14 @@ class UnitechPayPasserelle implements PasserellePaiement {
         // Format des exemples de la documentation : 9 chiffres, sans indicatif (771234567).
         corps.put("customer_number", demande.telephone().valeur().substring("+221".length()));
         corps.put("description", demande.description());
-        ajouterSiPresent(corps, "callback_success", lien(urlRetourSucces, demande.orderId()));
-        ajouterSiPresent(corps, "callback_cancel", lien(urlRetourAnnulation, demande.orderId()));
+        if (demande.retour() == Retour.RECHARGE) {
+            // Retour vers l'écran du crédit, dans les deux cas : il affiche l'état de la recharge.
+            ajouterSiPresent(corps, "callback_success", lien(urlRetourRecharge, demande.orderId()));
+            ajouterSiPresent(corps, "callback_cancel", lien(urlRetourRecharge, demande.orderId()));
+        } else {
+            ajouterSiPresent(corps, "callback_success", lien(urlRetourSucces, demande.orderId()));
+            ajouterSiPresent(corps, "callback_cancel", lien(urlRetourAnnulation, demande.orderId()));
+        }
 
         JsonNode reponse;
         try {

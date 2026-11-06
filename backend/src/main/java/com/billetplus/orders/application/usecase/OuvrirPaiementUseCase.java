@@ -83,8 +83,8 @@ public class OuvrirPaiementUseCase {
         }
         commande.verifierPeutOuvrirUnPaiement(Instant.now(clock), margeMinimale);
         if (commande.montantTotal().valeur().signum() == 0) {
-            // Une passerelle n'encaisse pas 0 F : la confirmation d'une commande gratuite
-            // reste à concevoir (voir HANDOFF, section 7).
+            // Une passerelle n'encaisse pas 0 F. Plus aucune commande gratuite n'attend de
+            // paiement (entrée libre, ADR 0010) ; garde-fou pour les commandes antérieures.
             throw new TransitionCommandeInterditeException("Une commande gratuite ne passe pas par le paiement");
         }
 

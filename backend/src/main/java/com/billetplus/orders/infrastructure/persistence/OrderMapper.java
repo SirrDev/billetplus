@@ -8,7 +8,7 @@ import com.billetplus.orders.domain.Paiement;
 import com.billetplus.shared.Money;
 
 /**
- * Conversion domaine ↔ entité JPA pour les commandes. Seuls status, payeeLe,
+ * Conversion domaine ↔ entité JPA pour les commandes. Seuls status, payeeLe, le tarif d'entrée libre,
  * motifSansBillet et le paiement changent après la création : ce sont les seuls
  * champs recopiés par {@link #copierDans}. Les lignes ne sont jamais réécrites.
  */
@@ -35,7 +35,8 @@ final class OrderMapper {
             entity.getMotifSansBillet(),
             entity.getPaiementReference() == null ? null : new Paiement(entity.getPaiementMoyen(),
                 entity.getPaiementReference(), entity.getPaiementTransactionId(), entity.getPaiementUrl(),
-                entity.getPaiementOuvertLe())
+                entity.getPaiementOuvertLe()),
+            entity.getTarifEntreeLibreFcfa() == null ? null : Money.ofFcfa(entity.getTarifEntreeLibreFcfa())
         );
     }
 
@@ -57,7 +58,13 @@ final class OrderMapper {
             order.getTauxCommission().pointsBase()
         );
         copierPaiement(order, entity);
+        copierTarif(order, entity);
         return entity;
+    }
+
+    private static void copierTarif(Order order, OrderJpaEntity entity) {
+        Money tarif = order.getTarifEntreeLibre();
+        entity.setTarifEntreeLibreFcfa(tarif == null ? null : tarif.valeur().intValueExact());
     }
 
     private static void copierPaiement(Order order, OrderJpaEntity entity) {
@@ -79,5 +86,6 @@ final class OrderMapper {
         entity.setPayeeLe(order.getPayeeLe());
         entity.setMotifSansBillet(order.getMotifSansBillet());
         copierPaiement(order, entity);
+        copierTarif(order, entity);
     }
 }

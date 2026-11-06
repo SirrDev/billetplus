@@ -49,6 +49,13 @@ class PlacesEnVenteService implements PlacesEnVente {
     }
 
     @Override
+    public long placesTotales(UUID eventId) {
+        return categoryRepository.findByEventId(eventId).stream()
+            .mapToLong(TicketCategory::getQuotaTotal)
+            .sum();
+    }
+
+    @Override
     public void liberer(UUID categoryId, UUID orderId) {
         releaseSeats.execute(categoryId, orderId);
     }

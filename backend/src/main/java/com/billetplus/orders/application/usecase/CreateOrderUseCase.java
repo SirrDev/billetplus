@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -93,6 +94,22 @@ public class CreateOrderUseCase {
      */
     @Transactional
     public Order.CommandeCreee execute(UUID eventId, String telephoneSaisi, List<LigneDemandee> demandees) {
+        return creerEtReserver(eventId, telephoneSaisi, demandees, false);
+    }
+
+    /**
+     * Même création, pour une commande ENTIÈREMENT gratuite (ADR 0010) : la commande est
+     * enregistrée en attente et ses places réservées, dans la transaction de l'appelant
+     * (CreerEntreeLibreUseCase), qui la confirme, débite le crédit et émet les billets.
+     * Mêmes exceptions que {@link #execute}.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Order.CommandeCreee creerPourEntreeLibre(UUID eventId, String telephoneSaisi, List<LigneDemandee> demandees) {
+        return creerEtReserver(eventId, telephoneSaisi, demandees, true);
+    }
+
+    private Order.CommandeCreee creerEtReserver(UUID eventId, String telephoneSaisi, List<LigneDemandee> demandees,
+                                                boolean entreeLibre) {
         if (eventId == null) {
             throw new IllegalArgumentException("eventId est obligatoire");
         }
@@ -115,6 +132,16 @@ public class CreateOrderUseCase {
             Money prix = placesEnVente.prixSiEnVente(eventId, demandee.categoryId())
                 .orElseThrow(() -> new NoSuchElementException("Catégorie de billet introuvable : " + demandee.categoryId()));
             lignes.add(new OrderLine(demandee.categoryId(), demandee.quantite(), prix));
+        }
+
+        boolean gratuite = lignes.stream().allMatch(l -> l.prixUnitaire().valeur().signum() == 0);
+        if (entreeLibre && !gratuite) {
+            throw new IllegalArgumentException("Seuls des billets gratuits se demandent en entrée libre");
+        }
+        if (!entreeLibre && gratuite) {
+            // Une passerelle n'encaisse pas 0 F, et l'entrée libre a sa propre route,
+            // limitée plus strictement : chaque billet gratuit coûte à l'organisateur.
+            throw new IllegalArgumentException("Les billets gratuits se demandent par l'entrée libre");
         }
 
         Instant maintenant = Instant.now(clock);

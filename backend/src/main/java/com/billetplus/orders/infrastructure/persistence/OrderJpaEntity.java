@@ -69,6 +69,10 @@ class OrderJpaEntity {
 
     private Instant paiementOuvertLe;
 
+    /** Tarif d'un billet gratuit (V17, ADR 0010), null pour une commande payante. */
+    @Column(name = "tarif_entree_libre_fcfa")
+    private Integer tarifEntreeLibreFcfa;
+
     @ElementCollection
     @CollectionTable(name = "order_lines", joinColumns = @JoinColumn(name = "order_id"))
     private List<OrderLineEmbeddable> lignes = new ArrayList<>();
@@ -139,6 +143,14 @@ class OrderJpaEntity {
 
     Instant getPayeeLe() {
         return payeeLe;
+    }
+
+    Integer getTarifEntreeLibreFcfa() {
+        return tarifEntreeLibreFcfa;
+    }
+
+    void setTarifEntreeLibreFcfa(Integer tarifEntreeLibreFcfa) {
+        this.tarifEntreeLibreFcfa = tarifEntreeLibreFcfa;
     }
 
     void setPayeeLe(Instant payeeLe) {

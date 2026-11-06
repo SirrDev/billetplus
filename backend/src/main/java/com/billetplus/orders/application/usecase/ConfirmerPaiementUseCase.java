@@ -45,8 +45,9 @@ import java.util.Optional;
  *   répond 5xx et pourra être rejoué, rien n'est classé « sans billet » à tort.
  *
  * Paiement échoué ou expiré (ECHOUE) : commande en attente → annulée et ses places
- * rendues ; sinon rien. Référence inconnue : journalisée en ERROR (paiement orphelin,
- * voir OuvrirPaiementUseCase), sans erreur pour la passerelle.
+ * rendues ; sinon rien. Référence d'une recharge du crédit : confiée à
+ * ConfirmerRechargeUseCase (ADR 0010). Référence inconnue : journalisée en ERROR
+ * (paiement orphelin, voir OuvrirPaiementUseCase), sans erreur pour la passerelle.
  */
 @Service
 public class ConfirmerPaiementUseCase {
@@ -65,7 +66,9 @@ public class ConfirmerPaiementUseCase {
         /** Rien à faire : déjà traité, ou événement sans effet. */
         SANS_EFFET,
         /** Aucune commande pour cette référence (paiement orphelin). */
-        COMMANDE_INCONNUE
+        COMMANDE_INCONNUE,
+        /** La référence désignait une recharge du crédit (ADR 0010), traitée par ConfirmerRechargeUseCase. */
+        RECHARGE
     }
 
     private final OrderRepository orderRepository;
@@ -74,10 +77,13 @@ public class ConfirmerPaiementUseCase {
     private final DelaiAttenteVerrous delaiAttenteVerrous;
     private final TransactionTemplate transaction;
     private final Clock clock;
+    private final ConfirmerRechargeUseCase confirmerRecharge;
 
     public ConfirmerPaiementUseCase(OrderRepository orderRepository, EmissionBillets emissionBillets,
                                     PlacesEnVente placesEnVente, DelaiAttenteVerrous delaiAttenteVerrous,
-                                    PlatformTransactionManager transactionManager, Clock clock) {
+                                    PlatformTransactionManager transactionManager, Clock clock,
+                                    ConfirmerRechargeUseCase confirmerRecharge) {
+        this.confirmerRecharge = confirmerRecharge;
         this.orderRepository = orderRepository;
         this.emissionBillets = emissionBillets;
         this.placesEnVente = placesEnVente;
@@ -89,6 +95,12 @@ public class ConfirmerPaiementUseCase {
     public Resultat traiter(NotificationPaiement notification) {
         Optional<Order> trouvee = orderRepository.findByReferencePaiement(notification.reference());
         if (trouvee.isEmpty()) {
+            // Pas une commande : peut-être une recharge du crédit d'un organisateur (ADR 0010),
+            // reconnue elle aussi par sa seule référence signée.
+            ConfirmerRechargeUseCase.Resultat recharge = confirmerRecharge.traiter(notification);
+            if (recharge != ConfirmerRechargeUseCase.Resultat.INCONNUE) {
+                return Resultat.RECHARGE;
+            }
             if (notification.type() == NotificationPaiement.Type.PAYE) {
                 LOG.error("Paiement reçu pour une référence sans commande ({}, {} FCFA) : à rembourser à la main",
                     notification.reference(), notification.montant());
