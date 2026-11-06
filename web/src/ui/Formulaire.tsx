@@ -107,7 +107,7 @@ export function ChampTexte({
   libelle: string;
   valeur: string;
   onChange: (valeur: string) => void;
-  type?: 'text' | 'email' | 'password' | 'number' | 'datetime-local';
+  type?: 'text' | 'email' | 'password' | 'number' | 'date' | 'datetime-local';
   multiligne?: boolean;
   aide?: string;
   erreur?: string;

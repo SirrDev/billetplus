@@ -173,3 +173,32 @@
 .carteDetails dd {
   margin: 0;
 }
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Navigation entre les écrans de l'administration : passe à la ligne sur téléphone. */
+.navAdmin {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.lienAdmin {
+  padding: 8px 14px;
+  border: 1px solid var(--bp-line-strong);
+  border-radius: 999px;
+  background: var(--bp-white);
+  color: var(--bp-ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.lienActif {
+  border-color: var(--bp-accent-text);
+  color: var(--bp-accent-text);
+}

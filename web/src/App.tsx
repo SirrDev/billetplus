@@ -40,6 +40,7 @@ const espaceAdmin = () => import('@/espaces/admin');
 const CompteAdminPage = lazy(() => espaceAdmin().then((m) => ({ default: m.CompteAdminPage })));
 const ConnexionAdminPage = lazy(() => espaceAdmin().then((m) => ({ default: m.ConnexionAdminPage })));
 const RemboursementsPage = lazy(() => espaceAdmin().then((m) => ({ default: m.RemboursementsPage })));
+const ReversementsPage = lazy(() => espaceAdmin().then((m) => ({ default: m.ReversementsPage })));
 
 const enChargement = (
   <Cadre sansNav>
@@ -125,6 +126,7 @@ export function Routage() {
           }
         />
         <Route path="/admin" element={admin(<RemboursementsPage />)} />
+        <Route path="/admin/reversements" element={admin(<ReversementsPage />)} />
         <Route path="/admin/compte" element={admin(<CompteAdminPage />)} />
 
         <Route path="*" element={<PageIntrouvable />} />

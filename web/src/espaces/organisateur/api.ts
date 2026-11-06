@@ -210,6 +210,24 @@ export function lireTableauDeBord(eventId: string): Promise<TableauDeBord> {
   return http<TableauDeBord>(`/events/${encodeURIComponent(eventId)}/tableau-de-bord`, avecJeton);
 }
 
+/**
+ * RecettesDto (orders/api/dto, ADR 0009) : ventes encaissées, commission de Billet+ déduite
+ * commande par commande, part de l'organisateur, déjà reversé, reste à recevoir (négatif :
+ * trop perçu, par exemple après l'annulation de l'événement).
+ */
+export interface Recettes {
+  commandes: number;
+  brutFcfa: number;
+  commissionFcfa: number;
+  netFcfa: number;
+  reverseFcfa: number;
+  resteAReverserFcfa: number;
+}
+
+export function lireRecettes(eventId: string): Promise<Recettes> {
+  return http<Recettes>(`/events/${encodeURIComponent(eventId)}/recettes`, avecJeton);
+}
+
 export function mesAgents(): Promise<Agent[]> {
   return http<Agent[]>('/agents', avecJeton);
 }

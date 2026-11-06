@@ -2,3 +2,4 @@
 export { CompteAdminPage } from './pages/CompteAdminPage';
 export { ConnexionAdminPage } from './pages/ConnexionAdminPage';
 export { RemboursementsPage } from './pages/RemboursementsPage';
+export { ReversementsPage } from './pages/ReversementsPage';
