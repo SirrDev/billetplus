@@ -228,6 +228,50 @@ export function lireRecettes(eventId: string): Promise<Recettes> {
   return http<Recettes>(`/events/${encodeURIComponent(eventId)}/recettes`, avecJeton);
 }
 
+/**
+ * CreditDto (orders/api/dto, ADR 0010) : crédit prépayé de l'entrée libre. Chaque billet
+ * gratuit émis est débité au tarif en vigueur (petit tarif jusqu'à seuilPlaces places,
+ * toutes catégories de l'événement confondues).
+ */
+export interface Credit {
+  soldeFcfa: number;
+  tarif: { seuilPlaces: number; tarifPetitFcfa: number; tarifGrandFcfa: number };
+  rechargeMinFcfa: number;
+  rechargeMaxFcfa: number;
+  mouvements: Array<{
+    id: string;
+    type: 'RECHARGE' | 'ENTREE_LIBRE';
+    montantFcfa: number;
+    orderId: string | null;
+    creeLe: string;
+  }>;
+  recharges: Array<{
+    id: string;
+    montantFcfa: number;
+    status: 'EN_ATTENTE' | 'PAYEE' | 'ECHOUEE' | 'ANOMALIE';
+    moyen: 'WAVE' | 'ORANGE_MONEY' | null;
+    creeLe: string;
+    traiteeLe: string | null;
+  }>;
+}
+
+export function lireCredit(): Promise<Credit> {
+  return http<Credit>('/credit', avecJeton);
+}
+
+/** Ouvre le paiement d'une recharge ; le solde n'augmente qu'à la confirmation de la passerelle. */
+export function recharger(corps: {
+  montantFcfa: number;
+  moyen: 'WAVE' | 'ORANGE_MONEY';
+  telephone: string;
+}): Promise<{ rechargeId: string; moyen: string; url: string }> {
+  return http<{ rechargeId: string; moyen: string; url: string }>('/credit/recharges', {
+    ...avecJeton,
+    method: 'POST',
+    body: JSON.stringify(corps),
+  });
+}
+
 export function mesAgents(): Promise<Agent[]> {
   return http<Agent[]>('/agents', avecJeton);
 }

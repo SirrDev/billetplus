@@ -11,6 +11,7 @@ import com.billetplus.orders.api.dto.TransfererBilletRequest;
 import com.billetplus.orders.application.usecase.ConsulterBilletsUseCase;
 import com.billetplus.orders.application.usecase.ConsulterCommandeUseCase;
 import com.billetplus.orders.application.usecase.CreateOrderUseCase;
+import com.billetplus.orders.application.usecase.CreerEntreeLibreUseCase;
 import com.billetplus.orders.application.usecase.OuvrirPaiementUseCase;
 import com.billetplus.orders.application.usecase.TransfererBilletUseCase;
 import com.billetplus.orders.domain.Order;
@@ -42,10 +43,12 @@ public class OrderController {
     private final OuvrirPaiementUseCase ouvrirPaiement;
     private final ConsulterBilletsUseCase consulterBillets;
     private final TransfererBilletUseCase transfererBillet;
+    private final CreerEntreeLibreUseCase creerEntreeLibre;
 
     public OrderController(CreateOrderUseCase createOrder, ConsulterCommandeUseCase consulterCommande,
                            OuvrirPaiementUseCase ouvrirPaiement, ConsulterBilletsUseCase consulterBillets,
-                           TransfererBilletUseCase transfererBillet) {
+                           TransfererBilletUseCase transfererBillet, CreerEntreeLibreUseCase creerEntreeLibre) {
+        this.creerEntreeLibre = creerEntreeLibre;
         this.createOrder = createOrder;
         this.consulterCommande = consulterCommande;
         this.ouvrirPaiement = ouvrirPaiement;
@@ -56,6 +59,21 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<CommandeCreeeResponse> creer(@Valid @RequestBody CreateOrderRequest request) {
         Order.CommandeCreee creee = createOrder.execute(request.eventId(), request.telephone(),
+            request.lignes().stream()
+                .map(l -> new CreateOrderUseCase.LigneDemandee(l.categoryId(), l.quantite()))
+                .toList());
+        return ResponseEntity.created(URI.create("/api/orders/" + creee.commande().getId()))
+            .cacheControl(CacheControl.noStore())
+            .body(CommandeCreeeResponse.from(creee));
+    }
+
+    /**
+     * Entrée libre (ADR 0010) : commande entièrement gratuite, confirmée tout de suite,
+     * billets émis. Même corps que la création d'une commande payante.
+     */
+    @PostMapping("/entree-libre")
+    public ResponseEntity<CommandeCreeeResponse> entreeLibre(@Valid @RequestBody CreateOrderRequest request) {
+        Order.CommandeCreee creee = creerEntreeLibre.execute(request.eventId(), request.telephone(),
             request.lignes().stream()
                 .map(l -> new CreateOrderUseCase.LigneDemandee(l.categoryId(), l.quantite()))
                 .toList());

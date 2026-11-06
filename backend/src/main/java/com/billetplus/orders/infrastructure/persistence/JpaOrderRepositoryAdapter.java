@@ -66,6 +66,11 @@ class JpaOrderRepositoryAdapter implements OrderRepository {
     }
 
     @Override
+    public long compterBilletsGratuits(NumeroTelephone telephone, UUID eventId) {
+        return springRepo.compterBilletsGratuits(telephone.valeur(), eventId);
+    }
+
+    @Override
     public Optional<Order> findByReferencePaiement(String reference) {
         return springRepo.findByPaiementReference(reference).map(OrderMapper::versDomaine);
     }

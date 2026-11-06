@@ -3,7 +3,7 @@ import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { estMobileSenegalais, formatDateCourte, versE164 } from '@/commun/format';
 import { messageErreur } from '@/commun/http';
 import { Avis, Bouton, Cadre, ChampTelephone, Chargement, Panneau, Recapitulatif } from '@/ui';
-import { creerCommande, ouvrirPaiement, type MoyenPaiement } from '../api';
+import { creerCommande, creerEntreeLibre, ouvrirPaiement, type MoyenPaiement } from '../api';
 import { enregistrerCommande, verifierStockage } from '../commandesLocales';
 import { ChoixMoyen, Etapes } from './paiement';
 import { allerPayer, nomDuMoyen } from './paiementOutils';
@@ -50,6 +50,8 @@ export function PaiementPage() {
     .filter((c) => (quantites[c.id] ?? 0) > 0)
     .map((c) => ({ categorie: c, quantite: quantites[c.id] ?? 0 }));
   const total = apercuTotal(categories, quantites);
+  // Entrée libre (ADR 0010) : billets gratuits seulement, confirmés sans paiement.
+  const gratuite = lignes.length > 0 && lignes.every((l) => l.categorie.prixFcfa === 0);
 
   const payer = async (e: FormEvent) => {
     e.preventDefault();
@@ -74,7 +76,7 @@ export function PaiementPage() {
 
     let creee: Awaited<ReturnType<typeof creerCommande>>;
     try {
-      creee = await creerCommande(
+      creee = await (gratuite ? creerEntreeLibre : creerCommande)(
         evenement.id,
         versE164(telephone),
         lignes.map((l) => ({ categoryId: l.categorie.id, quantite: l.quantite })),
@@ -101,9 +103,17 @@ export function PaiementPage() {
     } catch {
       // Cas résiduel (quota atteint entre la vérification et l'écriture) : le dire tel quel.
       setErreur(
-        "Votre commande a été créée mais ce navigateur n'a pas pu l'enregistrer : aucun paiement n'a été demandé. Les places seront libérées automatiquement dans quelques minutes ; libérez de l'espace puis recommencez.",
+        gratuite
+          ? "Vos billets gratuits ont été émis mais ce navigateur n'a pas pu les enregistrer. Libérez de l'espace puis rouvrez Billet+ : en cas de difficulté, contactez l'organisateur."
+          : "Votre commande a été créée mais ce navigateur n'a pas pu l'enregistrer : aucun paiement n'a été demandé. Les places seront libérées automatiquement dans quelques minutes ; libérez de l'espace puis recommencez.",
       );
       setEnvoi(false);
+      return;
+    }
+
+    if (gratuite) {
+      // Commande déjà confirmée, billets émis : on les affiche.
+      navigate(`/commandes/${commandeId}`, { replace: true });
       return;
     }
 
@@ -123,8 +133,8 @@ export function PaiementPage() {
         <div className={s.formulaireEtAside}>
           <Panneau>
             <form className={s.formulaire} onSubmit={payer} noValidate>
-              <h1 className={s.titrePage}>Paiement</h1>
-              <ChoixMoyen valeur={moyen} onChange={setMoyen} />
+              <h1 className={s.titrePage}>{gratuite ? 'Vos billets gratuits' : 'Paiement'}</h1>
+              {!gratuite && <ChoixMoyen valeur={moyen} onChange={setMoyen} />}
               <ChampTelephone
                 valeur={telephone}
                 onChange={setTelephone}
@@ -143,7 +153,13 @@ export function PaiementPage() {
                 </Avis>
               )}
               <Bouton type="submit" grand pleineLargeur disabled={envoi}>
-                {envoi ? 'Redirection vers le paiement…' : `Payer avec ${nomDuMoyen(moyen)}`}
+                {gratuite
+                  ? envoi
+                    ? 'Émission des billets…'
+                    : 'Obtenir mes billets'
+                  : envoi
+                    ? 'Redirection vers le paiement…'
+                    : `Payer avec ${nomDuMoyen(moyen)}`}
               </Bouton>
             </form>
           </Panneau>
@@ -159,9 +175,9 @@ export function PaiementPage() {
                   montantFcfa: l.categorie.prixFcfa * l.quantite,
                 }))}
                 totalFcfa={total}
-                libelleTotal="Total estimé"
+                libelleTotal={gratuite ? 'Total' : 'Total estimé'}
               />
-              <p className={s.note}>Le montant définitif est confirmé à la création de la commande.</p>
+              {!gratuite && <p className={s.note}>Le montant définitif est confirmé à la création de la commande.</p>}
             </Panneau>
           </aside>
         </div>

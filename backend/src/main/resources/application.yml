@@ -67,6 +67,19 @@ billetplus:
   # commande à sa création : la changer ne modifie aucune vente passée.
   commission:
     taux-points-base: 500
+  # Entrée libre (ADR 0010) : l'organisateur paie chaque billet gratuit émis sur son crédit
+  # prépayé, au tarif-petit si l'événement a seuil-places places ou moins (toutes
+  # catégories), sinon au tarif-grand. Tarif figé dans chaque commande.
+  entree-libre:
+    seuil-places: 100
+    tarif-petit: 75
+    tarif-grand: 50
+    # Plafond de billets gratuits par numéro et par événement (le numéro n'est pas vérifié).
+    max-billets-par-telephone: 10
+  # Recharge du crédit par UnitechPay (ADR 0010), bornes incluses, en FCFA.
+  credit:
+    recharge-min: 1000
+    recharge-max: 1000000
   # Commandes sans compte (ADR 0006). Le délai de paiement doit rester strictement
   # inférieur à reservation.duree (vérifié au démarrage par CreateOrderUseCase) :
   # la marge absorbe la latence du webhook Wave.
@@ -86,6 +99,8 @@ billetplus:
       # Pages de la PWA après le paiement ; {orderId} est remplacé. Vides : non envoyées.
       url-retour-succes: ${UNITECHPAY_URL_RETOUR_SUCCES:}
       url-retour-annulation: ${UNITECHPAY_URL_RETOUR_ANNULATION:}
+      # Écran du crédit de l'organisateur après une recharge (ADR 0010). Vide : non envoyée.
+      url-retour-recharge: ${UNITECHPAY_URL_RETOUR_RECHARGE:}
   # Limitation de débit (shared.limitation). Fenêtres fixes ; clé IP ou COMPTE
   # (compte authentifié, à défaut l'IP). Au-delà : 429 avec Retry-After.
   # Attention au NAT des opérateurs mobiles : beaucoup d'acheteurs peuvent partager
@@ -115,6 +130,10 @@ billetplus:
       # Chaque nouvelle position crée une ligne venues (copie du lieu, voir EventService) :
       # « * » ne couvre qu'un segment, la règle ci-dessus ne s'applique donc pas ici.
       - { nom: position-evenement, methode: PUT,  chemin: /api/events/*/position,  cle: COMPTE, limite: 30,  fenetre: 1h }
+      # Chaque billet gratuit coûte à l'organisateur (ADR 0010) : limite plus stricte que
+      # creation-commande, sans bloquer un groupe derrière une même IP d'opérateur.
+      - { nom: entree-libre,       methode: POST, chemin: /api/orders/entree-libre, cle: IP,     limite: 20,  fenetre: 10m }
+      - { nom: recharge-credit,    methode: POST, chemin: /api/credit/recharges,   cle: COMPTE, limite: 10,  fenetre: 1h }
 
 springdoc:
   api-docs:

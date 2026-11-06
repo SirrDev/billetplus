@@ -114,7 +114,7 @@ export function LigneCategorie({
     <div className={s.ligne}>
       <div className={s.ligneInfo}>
         <p className={s.ligneNom}>{nom}</p>
-        <p className={s.ligneDetail}>{formatFcfa(prixFcfa)}</p>
+        <p className={s.ligneDetail}>{prixFcfa === 0 ? 'Gratuit' : formatFcfa(prixFcfa)}</p>
       </div>
       {disponible ? (
         <SelecteurQuantite nom={nom} valeur={quantite} max={max} onChange={onChange} />

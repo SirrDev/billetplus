@@ -53,6 +53,7 @@ export const navOrganisateur: ReadonlyArray<LienNav> = [
   { vers: '/organisateur', libelle: 'Mes événements', libelleCourt: 'Événements', icone: 'calendrier', exact: true },
   { vers: '/organisateur/evenements/nouveau', libelle: 'Nouvel événement', libelleCourt: 'Créer', icone: 'plus' },
   { vers: '/organisateur/equipe', libelle: 'Équipe', icone: 'bouclier' },
+  { vers: '/organisateur/credit', libelle: 'Crédit entrée libre', libelleCourt: 'Crédit', icone: 'billet' },
   { vers: '/organisateur/compte', libelle: 'Mon compte', libelleCourt: 'Compte', icone: 'compte' },
 ];
 

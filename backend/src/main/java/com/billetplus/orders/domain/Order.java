@@ -49,6 +49,8 @@ public class Order {
     private Instant payeeLe;
     private MotifSansBillet motifSansBillet;
     private Paiement paiement;
+    /** Tarif d'un billet gratuit, figé à la confirmation (ADR 0010) ; null pour une commande payante. */
+    private Money tarifEntreeLibre;
 
     /**
      * Le résultat d'une création : la commande, et son jeton d'accès EN CLAIR, à
@@ -84,6 +86,7 @@ public class Order {
             throw new IllegalArgumentException("Une commande contient au plus %d catégories".formatted(LIGNES_MAX));
         }
         Set<UUID> categories = new HashSet<>();
+        int gratuites = 0;
         for (OrderLine ligne : lignes) {
             if (ligne == null) {
                 throw new IllegalArgumentException("Ligne de commande absente");
@@ -93,6 +96,14 @@ public class Order {
                 // et l'émission (une par couple commande, catégorie) la refuserait.
                 throw new IllegalArgumentException("Une catégorie apparaît plusieurs fois dans la commande");
             }
+            if (ligne.prixUnitaire().valeur().signum() == 0) {
+                gratuites++;
+            }
+        }
+        if (gratuites > 0 && gratuites < lignes.size()) {
+            // ADR 0010 : un paiement encaissé ne doit jamais dépendre du crédit de l'organisateur.
+            throw new IllegalArgumentException(
+                "Les billets gratuits et payants se commandent séparément : passez deux commandes");
         }
         if (maintenant == null) {
             throw new IllegalArgumentException("La date de création est obligatoire");
@@ -104,26 +115,27 @@ public class Order {
         JetonAcces jeton = JetonAcces.generer();
         Order commande = new Order(UUID.randomUUID(), eventId, telephone, List.copyOf(lignes), jeton.empreinte(),
             creeLe, creeLe.plus(dureeValidite).truncatedTo(ChronoUnit.MICROS), tauxCommission,
-            OrderStatus.EN_ATTENTE_PAIEMENT, null, null, null);
+            OrderStatus.EN_ATTENTE_PAIEMENT, null, null, null, null);
         return new CommandeCreee(commande, jeton);
     }
 
     /**
      * Reconstruction depuis la persistance — ne revalide pas les invariants
-     * de création, l'état est supposé déjà cohérent en base.
+     * de création, l'état est supposé déjà cohérent en base. Taux de commission
+     * enregistré (V16) ; tarif d'entrée libre (V17), null pour une commande payante.
      */
-    /** Reconstruction depuis la persistance, avec le taux de commission enregistré (V16). */
     public static Order reconstituer(UUID id, UUID eventId, NumeroTelephone telephone, List<OrderLine> lignes,
                                      String empreinteJeton, Instant creeLe, Instant expireLe,
                                      TauxCommission tauxCommission, OrderStatus status, Instant payeeLe,
-                                     MotifSansBillet motifSansBillet, Paiement paiement) {
+                                     MotifSansBillet motifSansBillet, Paiement paiement, Money tarifEntreeLibre) {
         return new Order(id, eventId, telephone, List.copyOf(lignes), empreinteJeton, creeLe, expireLe,
-            tauxCommission, status, payeeLe, motifSansBillet, paiement);
+            tauxCommission, status, payeeLe, motifSansBillet, paiement, tarifEntreeLibre);
     }
 
     private Order(UUID id, UUID eventId, NumeroTelephone telephone, List<OrderLine> lignes, String empreinteJeton,
                   Instant creeLe, Instant expireLe, TauxCommission tauxCommission, OrderStatus status,
-                  Instant payeeLe, MotifSansBillet motifSansBillet, Paiement paiement) {
+                  Instant payeeLe, MotifSansBillet motifSansBillet, Paiement paiement, Money tarifEntreeLibre) {
+        this.tarifEntreeLibre = tarifEntreeLibre;
         this.id = id;
         this.eventId = eventId;
         this.telephone = telephone;
@@ -151,6 +163,47 @@ public class Order {
     /** Part de l'organisateur : montant payé moins la commission. */
     public Money montantNet() {
         return montantTotal().moins(commission());
+    }
+
+    /** Vrai si toutes les lignes sont à 0 FCFA (une commande n'est jamais mixte, ADR 0010). */
+    public boolean estGratuite() {
+        return montantTotal().valeur().signum() == 0;
+    }
+
+    /** Nombre de billets de la commande, toutes lignes confondues. */
+    public int nombreBillets() {
+        return lignes.stream().mapToInt(OrderLine::quantite).sum();
+    }
+
+    /**
+     * Ce que l'organisateur paie à Billet+ pour cette commande gratuite (ADR 0010) :
+     * tarif figé × nombre de billets. Zéro pour une commande payante.
+     */
+    public Money fraisEntreeLibre() {
+        return tarifEntreeLibre == null ? Money.ofFcfa(0) : tarifEntreeLibre.fois(nombreBillets());
+    }
+
+    /**
+     * Entrée libre : la commande gratuite est confirmée sans passerelle (ADR 0010), au
+     * tarif en vigueur, que l'appelant débite du crédit de l'organisateur dans la même
+     * transaction.
+     *
+     * @param tarifParBillet tarif d'un billet gratuit pour cet événement, à cet instant
+     * @throws IllegalArgumentException             si la commande n'est pas gratuite ou si le tarif est nul
+     * @throws TransitionCommandeInterditeException si la commande n'attend plus de confirmation
+     */
+    public void confirmerEntreeLibre(Money tarifParBillet, Instant maintenant) {
+        if (!estGratuite()) {
+            throw new IllegalArgumentException("Seule une commande gratuite se confirme sans paiement");
+        }
+        if (tarifParBillet == null || tarifParBillet.valeur().signum() <= 0) {
+            throw new IllegalArgumentException("Le tarif de l'entrée libre doit être positif");
+        }
+        if (paiement != null) {
+            throw new TransitionCommandeInterditeException("Un paiement est déjà ouvert pour cette commande");
+        }
+        marquerPayee(maintenant);
+        tarifEntreeLibre = tarifParBillet;
     }
 
     /** Vrai si le délai de paiement est écoulé : la commande ne peut plus être payée à temps. */
@@ -323,5 +376,10 @@ public class Order {
     /** Le paiement ouvert chez la passerelle, ou null s'il n'y en a pas encore. */
     public Paiement getPaiement() {
         return paiement;
+    }
+
+    /** Tarif d'un billet gratuit figé à la confirmation, ou null pour une commande payante. */
+    public Money getTarifEntreeLibre() {
+        return tarifEntreeLibre;
     }
 }

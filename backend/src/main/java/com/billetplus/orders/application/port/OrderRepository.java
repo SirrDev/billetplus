@@ -30,6 +30,13 @@ public interface OrderRepository {
      */
     long compterEnAttente(NumeroTelephone telephone, UUID eventId, Instant maintenant);
 
+    /**
+     * Billets gratuits déjà obtenus par ce numéro pour cet événement (ADR 0010, plafond par
+     * numéro). À lire après CreditRepository.verrouillerEntreesLibres, sinon deux commandes
+     * simultanées du même numéro liraient le même total.
+     */
+    long compterBilletsGratuits(NumeroTelephone telephone, UUID eventId);
+
     /** Commande dont le paiement porte cette référence de passerelle (unique, V9). */
     Optional<Order> findByReferencePaiement(String reference);
 

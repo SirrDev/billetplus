@@ -46,6 +46,12 @@ class StatutEvenementsService implements StatutEvenements {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<UUID> organisateurDe(UUID eventId) {
+        return lire(eventId).map(Event::getOrganizerId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public boolean accepteDesCategories(UUID eventId) {
         return lire(eventId)
             .map(event -> event.getStatus() == EventStatus.BROUILLON || event.getStatus() == EventStatus.PUBLIE)

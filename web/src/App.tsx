@@ -15,6 +15,7 @@ import {
 import {
   ComptePage,
   ConnexionPage,
+  CreditPage,
   EquipePage,
   EvenementOrganisateurPage,
   InscriptionPage,
@@ -104,6 +105,7 @@ export function Routage() {
         <Route path="/organisateur/evenements/:id/modifier" element={organisateur(<ModifierEvenementPage />)} />
         <Route path="/organisateur/equipe" element={organisateur(<EquipePage />)} />
         <Route path="/organisateur/compte" element={organisateur(<ComptePage />)} />
+        <Route path="/organisateur/credit" element={organisateur(<CreditPage />)} />
 
         <Route
           path="/scanner/connexion"

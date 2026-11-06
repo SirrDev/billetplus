@@ -225,6 +225,8 @@ export function EvenementOrganisateurPage() {
             <p>
               <strong>Annuler « {evenement.titre} » ?</strong> La vente s'arrête et les billets émis sont annulés. Les
               remboursements sont traités manuellement. Cette action est définitive.
+              {categories.some((c) => c.prixFcfa === 0) &&
+                " Le crédit débité pour les billets gratuits déjà émis n'est pas rendu."}
             </p>
             <div className={s.actions}>
               <Bouton onClick={() => void changerStatut('annuler')} disabled={action}>
@@ -385,6 +387,15 @@ function AjoutCategorie({ eventId, onAjout }: { eventId: string; onAjout: () => 
           <ChampTexte libelle="Prix (FCFA)" valeur={prix} onChange={setPrix} requis inputMode="numeric" erreur={erreurs.prix} />
           <ChampTexte libelle="Places" valeur={quota} onChange={setQuota} requis inputMode="numeric" erreur={erreurs.quota} />
         </div>
+        {entier(prix) === 0 && (
+          <Avis>
+            <p>
+              Entrée libre : chaque billet gratuit émis est payé sur votre{' '}
+              <Link to="/organisateur/credit">crédit entrée libre</Link>. Sans crédit suffisant, les participants ne
+              peuvent pas obtenir leur billet.
+            </p>
+          </Avis>
+        )}
         {erreur && (
           <Avis ton="danger">
             <p>{erreur}</p>

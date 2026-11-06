@@ -175,6 +175,21 @@ export function creerCommande(
   });
 }
 
+/**
+ * Entrée libre (ADR 0010) : billets gratuits seulement, commande confirmée tout de suite
+ * (status PAYEE, billets émis), sans paiement. 409 si les entrées gratuites sont épuisées.
+ */
+export function creerEntreeLibre(
+  eventId: string,
+  telephone: string,
+  lignes: ReadonlyArray<{ categoryId: string; quantite: number }>,
+): Promise<CommandeCreee> {
+  return http<CommandeCreee>('/orders/entree-libre', {
+    method: 'POST',
+    body: JSON.stringify({ eventId, telephone, lignes }),
+  });
+}
+
 export function lireCommande(id: string, jeton: string): Promise<Commande> {
   return http<Commande>(`/orders/${encodeURIComponent(id)}`, { headers: { [EN_TETE_JETON]: jeton } });
 }
