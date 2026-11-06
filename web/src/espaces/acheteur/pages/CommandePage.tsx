@@ -88,6 +88,8 @@ export function CommandePage() {
 
   const enAttente = commande?.status === 'EN_ATTENTE_PAIEMENT';
   const payee = commande?.status === 'PAYEE';
+  // Entrée libre (ADR 0010) : rien n'a été payé, rien n'est à rembourser.
+  const gratuite = commande?.montantTotalFcfa === 0;
 
   useEffect(() => {
     if (!enAttente && !(payee && !billets)) return;
@@ -203,9 +205,11 @@ export function CommandePage() {
 
         {(payee || (horsLigne && billetsAffiches)) && (
           <>
-            {payee && <Etapes courante={3} />}
+            {payee && <Etapes courante={3} gratuit={gratuite} />}
             <div>
-              <p className={s.surtitre}>{payee ? 'Paiement confirmé' : 'Billets enregistrés'}</p>
+              <p className={s.surtitre}>
+                {payee ? (gratuite ? 'Billets gratuits confirmés' : 'Paiement confirmé') : 'Billets enregistrés'}
+              </p>
               <h1 className={s.titrePage}>Vos billets</h1>
             </div>
             {billetsAffiches?.some((b) => b.statut === 'ANNULE') && (
@@ -213,9 +217,17 @@ export function CommandePage() {
               // la commande payée rejoint alors la liste des remboursements de l'administrateur.
               <Avis ton="danger" icone="croix">
                 <p>
-                  <strong>Événement annulé.</strong> Vos billets ne sont plus valables. Votre paiement
-                  {commande ? ` de ${formatFcfa(commande.montantTotalFcfa)}` : ''} est remboursé par l'équipe Billet+,
-                  sur le numéro qui a payé, par le même moyen de paiement.
+                  <strong>Événement annulé.</strong> Vos billets ne sont plus valables.
+                  {gratuite ? (
+                    ' Ces billets étaient gratuits : il n’y a rien à rembourser.'
+                  ) : (
+                    <>
+                      {' '}
+                      Votre paiement
+                      {commande ? ` de ${formatFcfa(commande.montantTotalFcfa)}` : ''} est remboursé par l'équipe
+                      Billet+, sur le numéro qui a payé, par le même moyen de paiement.
+                    </>
+                  )}
                 </p>
               </Avis>
             )}
@@ -252,10 +264,7 @@ export function CommandePage() {
                       action={
                         (b.statut === 'EMIS' && b.qr && !horsLigne) ||
                         (b.statut === 'TRANSFERE' && locale.liensTransfert?.[b.id]) ? (
-                          <BoutonLien
-                            to={`/commandes/${locale.id}/billets/${b.id}/transfert`}
-                            variante="secondaire"
-                          >
+                          <BoutonLien to={`/commandes/${locale.id}/billets/${b.id}/transfert`} variante="secondaire">
                             {b.statut === 'TRANSFERE' ? 'Renvoyer le lien' : 'Transférer ce billet'}
                           </BoutonLien>
                         ) : undefined

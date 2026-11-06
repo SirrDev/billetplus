@@ -129,7 +129,7 @@ export function PaiementPage() {
   return (
     <Cadre sansNav etroit fondGris>
       <div className={s.pile}>
-        <Etapes courante={2} />
+        <Etapes courante={2} gratuit={gratuite} />
         <div className={s.formulaireEtAside}>
           <Panneau>
             <form className={s.formulaire} onSubmit={payer} noValidate>

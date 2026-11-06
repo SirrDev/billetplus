@@ -21,8 +21,16 @@ import s from './organisateur.module.css';
 type Moyen = 'WAVE' | 'ORANGE_MONEY';
 
 const MOYENS: ReadonlyArray<OptionCarte<Moyen>> = [
-  { valeur: 'WAVE', titre: 'Wave', detail: "Validation dans l'application Wave" },
-  { valeur: 'ORANGE_MONEY', titre: 'Orange Money', detail: 'Confirmation sur votre téléphone' },
+  {
+    valeur: 'WAVE',
+    titre: 'Wave',
+    detail: "Validation dans l'application Wave",
+  },
+  {
+    valeur: 'ORANGE_MONEY',
+    titre: 'Orange Money',
+    detail: 'Confirmation sur votre téléphone',
+  },
 ];
 
 const STATUTS_RECHARGE: Record<Credit['recharges'][number]['status'], { libelle: string; ton: TonPastille }> = {
@@ -103,13 +111,11 @@ function ContenuCredit({ credit, onActualiser }: { credit: Credit; onActualiser:
       <Panneau titre="Solde" id="solde">
         <p className={s.titrePage}>{formatFcfa(credit.soldeFcfa)}</p>
         <p className={s.ligneDetail}>
-          Chaque billet gratuit émis coûte {formatFcfa(tarif.tarifPetitFcfa)} si l'événement a {tarif.seuilPlaces} places
-          ou moins (toutes catégories confondues), {formatFcfa(tarif.tarifGrandFcfa)} au-delà. Le montant est débité à
-          l'émission du billet. Sans crédit suffisant, les entrées gratuites sont refusées aux participants.
+          Chaque billet gratuit émis coûte {formatFcfa(tarif.tarifPetitFcfa)} si l'événement a {tarif.seuilPlaces}{' '}
+          places gratuites ou moins, {formatFcfa(tarif.tarifGrandFcfa)} au-delà. Le montant est débité à l'émission du
+          billet. Sans crédit suffisant, les entrées gratuites sont refusées aux participants.
         </p>
-        <p className={s.ligneDetail}>
-          Le crédit n'est pas remboursable et reste dû si un événement est annulé.
-        </p>
+        <p className={s.ligneDetail}>Le crédit n'est pas remboursable et reste dû si un événement est annulé.</p>
         {enAttente && (
           <Avis>
             <p>Une recharge attend la confirmation du paiement. Le solde se met à jour dès sa réception.</p>
@@ -124,40 +130,49 @@ function ContenuCredit({ credit, onActualiser }: { credit: Credit; onActualiser:
 
       <FormulaireRecharge min={credit.rechargeMinFcfa} max={credit.rechargeMaxFcfa} />
 
-      <Panneau titre="Mouvements" id="mouvements">
+      <Panneau>
         {credit.mouvements.length === 0 ? (
           <p className={s.ligneDetail}>Aucun mouvement pour l'instant.</p>
         ) : (
           <Tableau
-            legende="Mouvements du crédit"
+            legende="Mouvements"
             cle={(m) => m.id}
             lignes={credit.mouvements}
             colonnes={[
-              { titre: 'Date', cellule: (m) => formatDateCourte(m.creeLe) },
-              { titre: 'Opération', cellule: (m) => (m.type === 'RECHARGE' ? 'Recharge' : 'Billets gratuits émis') },
               {
                 titre: 'Montant',
                 nombre: true,
                 cellule: (m) => `${m.montantFcfa > 0 ? '+' : '−'} ${formatFcfa(Math.abs(m.montantFcfa))}`,
               },
+              {
+                titre: 'Opération',
+                cellule: (m) => (m.type === 'RECHARGE' ? 'Recharge' : 'Billets gratuits'),
+              },
+              { titre: 'Date', cellule: (m) => formatDateCourte(m.creeLe) },
             ]}
           />
         )}
       </Panneau>
 
       {credit.recharges.length > 0 && (
-        <Panneau titre="Recharges" id="recharges">
+        <Panneau>
           <Tableau
-            legende="Recharges du crédit"
+            legende="Recharges"
             cle={(r) => r.id}
             lignes={credit.recharges}
             colonnes={[
-              { titre: 'Date', cellule: (r) => formatDateCourte(r.creeLe) },
-              { titre: 'Montant', nombre: true, cellule: (r) => formatFcfa(r.montantFcfa) },
+              {
+                titre: 'Montant',
+                nombre: true,
+                cellule: (r) => formatFcfa(r.montantFcfa),
+              },
               {
                 titre: 'État',
-                cellule: (r) => <Pastille ton={STATUTS_RECHARGE[r.status].ton}>{STATUTS_RECHARGE[r.status].libelle}</Pastille>,
+                cellule: (r) => (
+                  <Pastille ton={STATUTS_RECHARGE[r.status].ton}>{STATUTS_RECHARGE[r.status].libelle}</Pastille>
+                ),
               },
+              { titre: 'Date', cellule: (r) => formatDateCourte(r.creeLe) },
             ]}
           />
           {credit.recharges.some((r) => r.status === 'ANOMALIE') && (
@@ -178,7 +193,10 @@ function FormulaireRecharge({ min, max }: { min: number; max: number }) {
   const [montant, setMontant] = useState('');
   const [moyen, setMoyen] = useState<Moyen>('WAVE');
   const [telephone, setTelephone] = useState('');
-  const [erreurs, setErreurs] = useState<{ montant?: string; telephone?: string }>({});
+  const [erreurs, setErreurs] = useState<{
+    montant?: string;
+    telephone?: string;
+  }>({});
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
 
@@ -197,7 +215,11 @@ function FormulaireRecharge({ min, max }: { min: number; max: number }) {
     if (Object.keys(nouvelles).length > 0) return;
     setEnvoi(true);
     try {
-      const lien = await recharger({ montantFcfa: valeur, moyen, telephone: versE164(telephone) });
+      const lien = await recharger({
+        montantFcfa: valeur,
+        moyen,
+        telephone: versE164(telephone),
+      });
       allerPayer(lien.url);
     } catch (e2) {
       setErreur(messageErreur(e2));
@@ -217,7 +239,13 @@ function FormulaireRecharge({ min, max }: { min: number; max: number }) {
           erreur={erreurs.montant}
           aide={`Entre ${formatFcfa(min)} et ${formatFcfa(max)}.`}
         />
-        <ChoixCartes legende="Moyen de paiement" nom="moyen-recharge" options={MOYENS} valeur={moyen} onChange={setMoyen} />
+        <ChoixCartes
+          legende="Moyen de paiement"
+          nom="moyen-recharge"
+          options={MOYENS}
+          valeur={moyen}
+          onChange={setMoyen}
+        />
         <ChampTelephone
           valeur={telephone}
           onChange={setTelephone}

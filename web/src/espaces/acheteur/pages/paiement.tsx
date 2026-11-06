@@ -30,8 +30,9 @@ export function ChoixMoyen({ valeur, onChange }: { valeur: MoyenPaiement; onChan
   return <ChoixCartes legende="Moyen de paiement" nom="moyen" options={MOYENS} valeur={valeur} onChange={onChange} />;
 }
 
-export function Etapes({ courante }: { courante: 1 | 2 | 3 }) {
-  const etapes = ['Billets', 'Paiement', 'Billets reçus'];
+/** gratuit : entrée libre (ADR 0010), sans étape de paiement. */
+export function Etapes({ courante, gratuit = false }: { courante: 1 | 2 | 3; gratuit?: boolean }) {
+  const etapes = ['Billets', gratuit ? 'Coordonnées' : 'Paiement', 'Billets reçus'];
   return (
     <ol className={s.etapes} aria-label="Étapes de l'achat">
       {etapes.map((nom, i) => {
