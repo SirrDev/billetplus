@@ -99,11 +99,18 @@ billetplus:
       - { nom: rafraichissement,   methode: POST, chemin: /api/auth/refresh,       cle: IP,     limite: 30,  fenetre: 1m }
       - { nom: scan,               methode: POST, chemin: /api/events/*/scans,     cle: COMPTE, limite: 120, fenetre: 1m }
       - { nom: creation-agent,     methode: POST, chemin: /api/agents,             cle: COMPTE, limite: 30,  fenetre: 1h }
+      # Modifier un agent répond 400 si l'e-mail est déjà pris : sans limite, un compte
+      # organisateur (inscription libre) testerait des e-mails à volonté.
+      - { nom: modification-agent, methode: PUT,  chemin: /api/agents/*,           cle: COMPTE, limite: 30,  fenetre: 1h }
+      - { nom: retrait-agent,      methode: DELETE, chemin: /api/agents/*,         cle: COMPTE, limite: 30,  fenetre: 1h }
       - { nom: evenements-affectes, methode: GET, chemin: /api/events/affectes,    cle: COMPTE, limite: 60,  fenetre: 1m }
       - { nom: transfert-billet,   methode: POST, chemin: /api/orders/*/billets/*/transfert, cle: IP, limite: 10, fenetre: 10m }
       - { nom: billet-recu,        methode: POST, chemin: /api/billets/*/consultation, cle: IP, limite: 30, fenetre: 10m }
       - { nom: changement-mot-de-passe, methode: POST, chemin: /api/auth/mot-de-passe, cle: COMPTE, limite: 5, fenetre: 15m }
       - { nom: modification-evenement, methode: PUT, chemin: /api/events/*,        cle: COMPTE, limite: 60,  fenetre: 1m }
+      # Chaque nouvelle position crée une ligne venues (copie du lieu, voir EventService) :
+      # « * » ne couvre qu'un segment, la règle ci-dessus ne s'applique donc pas ici.
+      - { nom: position-evenement, methode: PUT,  chemin: /api/events/*/position,  cle: COMPTE, limite: 30,  fenetre: 1h }
 
 springdoc:
   api-docs:
