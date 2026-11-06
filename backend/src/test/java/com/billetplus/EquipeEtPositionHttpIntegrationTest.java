@@ -162,6 +162,20 @@ class EquipeEtPositionHttpIntegrationTest extends ContexteCompletTestBase {
     }
 
     @Test
+    void un_evenement_publie_refuse_la_position_sans_ecrire_de_lieu() throws Exception {
+        UUID orga = organisateur();
+        Event e = evenement(orga, 14.7, -17.4);
+        eventService.publier(e.getId(), orga);
+        int avant = jdbc.queryForObject("SELECT count(*) FROM venues", Integer.class);
+
+        mvc.perform(put("/api/events/{id}/position", e.getId()).with(connecte(orga, "ORGANISATEUR"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"latitude\":14.8,\"longitude\":-17.4}"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value("La position d'un événement publié ne peut plus changer"));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM venues", Integer.class)).isEqualTo(avant);
+    }
+
+    @Test
     void un_evenement_annule_refuse_la_position_sans_ecrire_de_lieu() throws Exception {
         UUID orga = organisateur();
         Event e = evenement(orga, null, null);

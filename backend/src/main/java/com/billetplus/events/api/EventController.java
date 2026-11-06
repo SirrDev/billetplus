@@ -115,7 +115,7 @@ public class EventController {
         return ResponseEntity.ok(EventDto.from(event));
     }
 
-    /** Définit la position GPS d'un de SES événements. Annulé ou terminé → 409. */
+    /** Définit la position GPS d'un de SES événements, tant qu'il est un brouillon. Publié, annulé ou terminé → 409. */
     @PutMapping("/{id}/position")
     @PreAuthorize("hasRole('ORGANISATEUR')")
     public ResponseEntity<EventDto> definirPosition(@PathVariable UUID id, @Valid @RequestBody DefinirPositionRequest request,

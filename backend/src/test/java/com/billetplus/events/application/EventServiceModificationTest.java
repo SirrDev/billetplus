@@ -88,6 +88,22 @@ class EventServiceModificationTest {
         verify(eventRepository, never()).save(any());
     }
 
+    /** Décision du 06/11/2026 : une fois publié, le repère est figé, comme les dates. */
+    @Test
+    void la_position_d_un_evenement_publie_ne_change_plus() {
+        UUID orga = UUID.randomUUID();
+        Event event = brouillonDe(orga);
+        event.publier();
+        when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
+
+        assertThatThrownBy(() -> service().definirPosition(event.getId(), 14.7, -17.4, orga))
+            .isInstanceOf(BusinessConflictException.class)
+            .hasMessage("La position d'un événement publié ne peut plus changer");
+
+        verify(venueRepository, never()).save(any());
+        verify(eventRepository, never()).save(any());
+    }
+
     @Test
     void une_position_identique_ne_cree_pas_de_lieu() {
         UUID orga = UUID.randomUUID();

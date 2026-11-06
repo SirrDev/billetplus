@@ -172,11 +172,13 @@ public class Event {
     }
 
     /**
-     * Remplace le lieu, y compris pour un événement publié : corriger le repère sur la carte
-     * aide les acheteurs sans rien changer à ce qu'ils ont acheté. Le nom et l'adresse sont
-     * ceux du lieu d'origine (voir EventService#definirPosition).
+     * Remplace le lieu (nouvelle position GPS), seulement tant que l'événement est un
+     * brouillon. Une fois publié, la position est figée comme les dates : des acheteurs ont
+     * payé pour ce lieu, et un repère déplacé après les ventes les tromperait (décision de
+     * SirrDev du 06/11/2026). Le nom et l'adresse sont ceux du lieu d'origine
+     * (voir EventService#definirPosition).
      *
-     * @throws BusinessConflictException si l'événement est annulé ou terminé (HTTP 409)
+     * @throws BusinessConflictException si l'événement n'est plus un brouillon (HTTP 409)
      */
     public void changerLieu(Venue nouveauLieu) {
         verifierLieuModifiable();
@@ -189,11 +191,14 @@ public class Event {
     /**
      * À appeler avant de préparer un nouveau lieu, pour ne rien écrire si le changement sera refusé.
      *
-     * @throws BusinessConflictException si l'événement est annulé ou terminé (HTTP 409)
+     * @throws BusinessConflictException si l'événement n'est plus un brouillon (HTTP 409)
      */
     public void verifierLieuModifiable() {
         if (status == EventStatus.ANNULE || status == EventStatus.TERMINE) {
             throw new BusinessConflictException("Un événement annulé ou terminé ne peut plus être modifié");
+        }
+        if (status != EventStatus.BROUILLON) {
+            throw new BusinessConflictException("La position d'un événement publié ne peut plus changer");
         }
     }
 
