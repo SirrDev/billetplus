@@ -80,6 +80,7 @@ class SuitesRelectureEquipeHttpIntegrationTest extends ContexteCompletTestBase {
 
         // Avant : l'agent affecté voit son événement (le scan lui-même dépend du QR, simulé ici).
         mvc.perform(get("/api/events/affectes").with(connecte(agent, "AGENT")))
+            .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(1));
 
         jdbc.update("UPDATE users SET desactive_le = now() WHERE id = ?", agent);
@@ -90,6 +91,10 @@ class SuitesRelectureEquipeHttpIntegrationTest extends ContexteCompletTestBase {
                 .contentType(MediaType.APPLICATION_JSON).content(corps))
             .andExpect(status().isForbidden());
         mvc.perform(get("/api/events/affectes").with(connecte(agent, "AGENT")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+        // Ni listé parmi les affectés de l'événement.
+        mvc.perform(get("/api/events/{id}/agents", e.getId()).with(connecte(orga, "ORGANISATEUR")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(0));
     }
@@ -111,9 +116,13 @@ class SuitesRelectureEquipeHttpIntegrationTest extends ContexteCompletTestBase {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM users WHERE email = ?", Integer.class, email)).isEqualTo(1);
     }
 
-    /** Même doublon, découvert pendant une modification d'agent : 400, jamais 500. */
+    /**
+     * Doublon découvert à l'écriture d'une MODIFICATION (entité existante, merge puis flush) :
+     * même refus. La partie HTTP vérifie le contrôle préalable ; la vraie course à deux
+     * requêtes simultanées n'est pas reproduite.
+     */
     @Test
-    void un_doublon_decouvert_pendant_une_modification_repond_400() throws Exception {
+    void une_modification_vers_un_email_pris_est_refusee_a_l_ecriture_et_par_la_route() throws Exception {
         UUID orga = organisateur();
         UUID agent = agentDe(orga);
         String pris = "pris-" + UUID.randomUUID() + "@billetplus.sn";
