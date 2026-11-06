@@ -26,14 +26,18 @@ import java.util.UUID;
  *
  * Le @EntityGraph charge l'événement ET son lieu en une seule requête (jointure),
  * sans rendre la relation EAGER pour tous les autres usages.
+ *
+ * Toujours nommer aussi « venue.ville » (ADR 0011) : un graphe de type FETCH (le défaut)
+ * rend paresseux tout attribut qu'il ne cite pas, même déclaré EAGER ; la ville arriverait
+ * en proxy et les DTO, lus hors transaction, lèveraient une LazyInitializationException.
  */
 interface SpringDataEventRepository extends JpaRepository<Event, UUID> {
 
     @Override
-    @EntityGraph(attributePaths = "venue")
+    @EntityGraph(attributePaths = {"venue", "venue.ville"})
     Optional<Event> findById(UUID id);
 
-    @EntityGraph(attributePaths = "venue")
+    @EntityGraph(attributePaths = {"venue", "venue.ville"})
     List<Event> findByOrganizerId(UUID organizerId);
 
     /**
@@ -45,13 +49,15 @@ interface SpringDataEventRepository extends JpaRepository<Event, UUID> {
      * Le @EntityGraph charge le lieu dans la même requête : le DTO public lit son
      * nom hors transaction (open-in-view: false, voir findById).
      */
-    @EntityGraph(attributePaths = "venue")
+    @EntityGraph(attributePaths = {"venue", "venue.ville"})
     @Query(value = """
         select e from Event e
         where e.status = com.billetplus.events.domain.EventStatus.PUBLIE
           and (e.debuteLe > :maintenant or (e.termineLe is not null and e.termineLe > :maintenant))
           and e.titre ilike :motif escape '\\'
           and e.categorie in :categories
+          and (:ville is null or e.venue.ville.code = :ville)
+          and e.venue.ville.pays in :pays
         order by e.debuteLe asc, e.id asc
         """,
         countQuery = """
@@ -60,9 +66,13 @@ interface SpringDataEventRepository extends JpaRepository<Event, UUID> {
           and (e.debuteLe > :maintenant or (e.termineLe is not null and e.termineLe > :maintenant))
           and e.titre ilike :motif escape '\\'
           and e.categorie in :categories
+          and (:ville is null or e.venue.ville.code = :ville)
+          and e.venue.ville.pays in :pays
         """)
     Page<Event> rechercherPublies(@Param("motif") String motif,
                                   @Param("categories") Collection<CategorieEvenement> categories,
+                                  @Param("ville") String ville,
+                                  @Param("pays") Collection<com.billetplus.events.domain.Pays> pays,
                                   @Param("maintenant") Instant maintenant, Pageable pageable);
 
     /**
@@ -70,7 +80,7 @@ interface SpringDataEventRepository extends JpaRepository<Event, UUID> {
      * statut PUBLIE ; début récent ou à venir, ou fin encore à venir. Le lieu est chargé
      * dans la même requête (DTO lu hors transaction, voir findById).
      */
-    @EntityGraph(attributePaths = "venue")
+    @EntityGraph(attributePaths = {"venue", "venue.ville"})
     @Query("""
         select e from Event e
         where e.status = com.billetplus.events.domain.EventStatus.PUBLIE

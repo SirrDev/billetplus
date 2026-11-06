@@ -104,11 +104,16 @@ public class Event {
     }
 
     /**
-     * @throws BusinessConflictException si l'événement n'est pas en brouillon (traduit en HTTP 409)
+     * @throws BusinessConflictException si l'événement n'est pas en brouillon, ou si son lieu
+     *         n'est pas au Sénégal (ADR 0011, point 9) (traduit en HTTP 409)
      */
     public void publier() {
         if (status != EventStatus.BROUILLON) {
             throw new BusinessConflictException("Seul un événement en brouillon peut être publié");
+        }
+        // ADR 0011, point 9 : numéros, heure locale et paiement des autres pays restent à faire.
+        if (!venue.getVille().ouverteALaVente()) {
+            throw new BusinessConflictException("La vente hors du Sénégal n'est pas encore ouverte");
         }
         this.status = EventStatus.PUBLIE;
     }

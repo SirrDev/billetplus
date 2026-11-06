@@ -57,6 +57,8 @@ public class SecurityConfig {
                         // Parcourir les événements/lieux ne requiert pas de compte (acheteur anonyme).
                         // Créer/publier/annuler reste protégé par @PreAuthorize sur les controllers.
                         .requestMatchers(HttpMethod.GET, "/api/events/**", "/api/venues/**").permitAll()
+                        // Liste fermée des villes (ADR 0011) : publique, comme la liste des événements.
+                        .requestMatchers(HttpMethod.GET, "/api/villes").permitAll()
                         // Achat sans compte (ADR 0006) : créer une commande et la relire avec son
                         // jeton ne demandent aucun compte. Le jeton est contrôlé par le cas d'usage.
                         .requestMatchers(HttpMethod.POST, "/api/orders").permitAll()
