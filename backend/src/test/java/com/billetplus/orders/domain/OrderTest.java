@@ -277,7 +277,7 @@ class OrderTest {
 
         Order copie = Order.reconstituer(origine.getId(), origine.getEventId(), origine.getTelephone(),
             origine.getLignes(), origine.getEmpreinteJeton(), origine.getCreeLe(), origine.getExpireLe(), TauxCommission.CINQ_POUR_CENT,
-            origine.getStatus(), origine.getPayeeLe(), origine.getMotifSansBillet(), origine.getPaiement());
+            origine.getStatus(), origine.getPayeeLe(), origine.getMotifSansBillet(), origine.getPaiement(), null);
 
         assertThat(copie).usingRecursiveComparison().isEqualTo(origine);
     }

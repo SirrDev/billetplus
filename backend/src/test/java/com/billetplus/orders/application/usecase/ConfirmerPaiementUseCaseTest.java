@@ -62,7 +62,7 @@ class ConfirmerPaiementUseCaseTest {
 
         static Order copier(Order o) {
             return Order.reconstituer(o.getId(), o.getEventId(), o.getTelephone(), o.getLignes(), o.getEmpreinteJeton(),
-                o.getCreeLe(), o.getExpireLe(), o.getTauxCommission(), o.getStatus(), o.getPayeeLe(), o.getMotifSansBillet(), o.getPaiement());
+                o.getCreeLe(), o.getExpireLe(), o.getTauxCommission(), o.getStatus(), o.getPayeeLe(), o.getMotifSansBillet(), o.getPaiement(), o.getTarifEntreeLibre());
         }
 
         void debuter() {
@@ -86,6 +86,11 @@ class ConfirmerPaiementUseCaseTest {
 
         @Override
         public long compterEnAttente(NumeroTelephone telephone, UUID eventId, Instant maintenant) {
+            return 0;
+        }
+
+        @Override
+        public long compterBilletsGratuits(NumeroTelephone telephone, UUID eventId) {
             return 0;
         }
 
@@ -164,11 +169,14 @@ class ConfirmerPaiementUseCaseTest {
     private final EmissionBillets emission = mock(EmissionBillets.class);
     private final PlacesEnVente places = mock(PlacesEnVente.class);
     private final DelaiAttenteVerrous delai = mock(DelaiAttenteVerrous.class);
+    /** Aucune recharge ne porte les références de ces tests (ADR 0010). */
+    private final ConfirmerRechargeUseCase recharges =
+        mock(ConfirmerRechargeUseCase.class, invocation -> ConfirmerRechargeUseCase.Resultat.INCONNUE);
     private Order commande;
 
     private ConfirmerPaiementUseCase useCaseA(Instant maintenant) {
         return new ConfirmerPaiementUseCase(depot, emission, places, delai, transactions,
-            Clock.fixed(maintenant, ZoneOffset.UTC));
+            Clock.fixed(maintenant, ZoneOffset.UTC), recharges);
     }
 
     @BeforeEach
@@ -285,7 +293,7 @@ class ConfirmerPaiementUseCaseTest {
         autreDepot.save(DepotEnMemoire.copier(commande));
         doThrow(new OptimisticLockingFailureException("conflit")).when(emission).emettre(any(), any(), anyInt());
         ConfirmerPaiementUseCase toujoursEnConflit = new ConfirmerPaiementUseCase(autreDepot, emission, places, delai,
-            new TransactionsEnMemoire(autreDepot), Clock.fixed(CREATION.plusSeconds(60), ZoneOffset.UTC));
+            new TransactionsEnMemoire(autreDepot), Clock.fixed(CREATION.plusSeconds(60), ZoneOffset.UTC), recharges);
         assertThatThrownBy(() -> toujoursEnConflit.traiter(paye(25000)))
             .isInstanceOf(OptimisticLockingFailureException.class);
         // Rien n'est classé « sans billet » : la passerelle relancera.
@@ -332,6 +340,18 @@ class ConfirmerPaiementUseCaseTest {
                 .traiter(new NotificationPaiement(NotificationPaiement.Type.AUTRE, REFERENCE, 25000)))
             .isEqualTo(ConfirmerPaiementUseCase.Resultat.SANS_EFFET);
         assertThat(relue().getStatus()).isEqualTo(OrderStatus.EN_ATTENTE_PAIEMENT);
+        verify(emission, never()).emettre(any(), any(), anyInt());
+    }
+
+    @Test
+    void une_reference_sans_commande_mais_avec_recharge_donne_recharge() {
+        ConfirmerRechargeUseCase rechargeConnue = mock(ConfirmerRechargeUseCase.class);
+        when(rechargeConnue.traiter(any())).thenReturn(ConfirmerRechargeUseCase.Resultat.CREDITEE);
+        ConfirmerPaiementUseCase useCase = new ConfirmerPaiementUseCase(depot, emission, places, delai, transactions,
+            Clock.fixed(CREATION.plusSeconds(60), ZoneOffset.UTC), rechargeConnue);
+
+        assertThat(useCase.traiter(new NotificationPaiement(NotificationPaiement.Type.PAYE, "ref_recharge", 5000)))
+            .isEqualTo(ConfirmerPaiementUseCase.Resultat.RECHARGE);
         verify(emission, never()).emettre(any(), any(), anyInt());
     }
 }
