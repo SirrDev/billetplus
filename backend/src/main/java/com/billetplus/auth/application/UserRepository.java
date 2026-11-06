@@ -17,6 +17,14 @@ public interface UserRepository {
 
     Optional<User> findByEmail(String email);
 
+    /**
+     * Écrit le compte immédiatement (pas d'attente du commit).
+     *
+     * @throws IllegalArgumentException si l'e-mail est déjà pris : doublon apparu entre le
+     *         contrôle {@link #existsByEmail} et l'écriture (deux requêtes simultanées). Même
+     *         message qu'un doublon ordinaire. La transaction en cours est alors perdue : ne
+     *         pas attraper cette exception pour continuer dans la même transaction.
+     */
     User save(User user);
 
     boolean existsByEmail(String email);

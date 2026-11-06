@@ -48,8 +48,12 @@ class AffectationAgentServiceTest {
     @Test
     void liste_les_agents_affectes_apres_le_controle_de_propriete() {
         Event event = evenement();
-        when(affectationRepository.listerAgents(event.getId())).thenReturn(List.of(agent));
+        UUID retire = UUID.randomUUID();
+        when(affectationRepository.listerAgents(event.getId())).thenReturn(List.of(agent, retire));
+        when(comptes.estAgentActif(agent)).thenReturn(true);
+        when(comptes.estAgentActif(retire)).thenReturn(false);
 
+        // L'agent retiré dont l'affectation est restée en base n'est pas listé.
         assertThat(service().listerAgents(event.getId(), organisateur)).containsExactly(agent);
         verify(eventService).getPourSonOrganisateur(event.getId(), organisateur);
     }

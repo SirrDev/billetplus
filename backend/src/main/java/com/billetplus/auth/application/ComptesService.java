@@ -24,4 +24,12 @@ class ComptesService implements Comptes {
             .map(user -> user.getRole() == Role.AGENT && user.estActif() && organisateurId.equals(user.getCreePar()))
             .orElse(false);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean estAgentActif(UUID agentId) {
+        return agentId != null && userRepository.findById(agentId)
+            .map(user -> user.getRole() == Role.AGENT && user.estActif())
+            .orElse(false);
+    }
 }

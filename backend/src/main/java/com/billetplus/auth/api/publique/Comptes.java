@@ -14,4 +14,10 @@ public interface Comptes {
      * Faux pour tout autre cas (identifiant absent, inconnu, autre rôle, autre créateur, agent retiré).
      */
     boolean estAgentCreePar(UUID agentId, UUID organisateurId);
+
+    /**
+     * Vrai si {@code agentId} est un compte AGENT actif (jamais retiré par son organisateur).
+     * Faux pour tout autre cas (identifiant absent, inconnu, autre rôle, agent retiré).
+     */
+    boolean estAgentActif(UUID agentId);
 }

@@ -32,9 +32,10 @@ public interface StatutEvenements {
     boolean accepteDesCategories(UUID eventId);
 
     /**
-     * Vrai si {@code agentId} est affecté au contrôle d'entrée de l'événement :
-     * condition pour scanner ses billets (route de scan, contrat de
-     * ValidateTicketScanUseCase). Faux pour un identifiant absent ou inconnu.
+     * Vrai si {@code agentId} est affecté au contrôle d'entrée de l'événement ET que son
+     * compte est actif : condition pour scanner ses billets (route de scan, contrat de
+     * ValidateTicketScanUseCase). Faux pour un identifiant absent ou inconnu, ou pour un
+     * agent retiré, même si une affectation est restée en base.
      */
     boolean estAgentAffecte(UUID eventId, UUID agentId);
 

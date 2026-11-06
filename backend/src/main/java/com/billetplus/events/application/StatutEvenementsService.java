@@ -1,5 +1,6 @@
 package com.billetplus.events.application;
 
+import com.billetplus.auth.api.publique.Comptes;
 import com.billetplus.events.api.publique.StatutEvenements;
 import com.billetplus.events.domain.Event;
 import com.billetplus.events.domain.EventStatus;
@@ -18,10 +19,13 @@ class StatutEvenementsService implements StatutEvenements {
 
     private final EventRepository eventRepository;
     private final AffectationAgentRepository affectationRepository;
+    private final Comptes comptes;
 
-    StatutEvenementsService(EventRepository eventRepository, AffectationAgentRepository affectationRepository) {
+    StatutEvenementsService(EventRepository eventRepository, AffectationAgentRepository affectationRepository,
+                            Comptes comptes) {
         this.eventRepository = eventRepository;
         this.affectationRepository = affectationRepository;
+        this.comptes = comptes;
     }
 
     @Override
@@ -51,7 +55,11 @@ class StatutEvenementsService implements StatutEvenements {
     @Override
     @Transactional(readOnly = true)
     public boolean estAgentAffecte(UUID eventId, UUID agentId) {
-        return eventId != null && agentId != null && affectationRepository.existe(eventId, agentId);
+        // Compte actif vérifié EN PLUS de l'affectation : une affectation commencée avant un
+        // retrait peut s'écrire après lui (aucun verrou commun aux deux modules). Sans ce
+        // contrôle, l'agent retiré scannerait tant que son jeton d'accès vit (15 min).
+        return eventId != null && agentId != null && affectationRepository.existe(eventId, agentId)
+            && comptes.estAgentActif(agentId);
     }
 
     @Override

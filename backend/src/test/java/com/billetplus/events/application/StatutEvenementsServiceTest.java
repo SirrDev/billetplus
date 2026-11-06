@@ -1,5 +1,6 @@
 package com.billetplus.events.application;
 
+import com.billetplus.auth.api.publique.Comptes;
 import com.billetplus.events.domain.Event;
 import com.billetplus.events.domain.Venue;
 import org.junit.jupiter.api.Test;
@@ -22,9 +23,11 @@ class StatutEvenementsServiceTest {
     private EventRepository eventRepository;
     @Mock
     private AffectationAgentRepository affectationRepository;
+    @Mock
+    private Comptes comptes;
 
     private StatutEvenementsService service() {
-        return new StatutEvenementsService(eventRepository, affectationRepository);
+        return new StatutEvenementsService(eventRepository, affectationRepository, comptes);
     }
 
     private Event evenement() {
@@ -105,10 +108,22 @@ class StatutEvenementsServiceTest {
         UUID eventId = UUID.randomUUID();
         UUID affecte = UUID.randomUUID();
         when(affectationRepository.existe(eventId, affecte)).thenReturn(true);
+        when(comptes.estAgentActif(affecte)).thenReturn(true);
 
         assertThat(service().estAgentAffecte(eventId, affecte)).isTrue();
         assertThat(service().estAgentAffecte(eventId, UUID.randomUUID())).isFalse();
         assertThat(service().estAgentAffecte(null, affecte)).isFalse();
         assertThat(service().estAgentAffecte(eventId, null)).isFalse();
+    }
+
+    /** Affectation écrite après un retrait (course entre les deux) : le scan reste refusé. */
+    @Test
+    void un_agent_retire_n_est_plus_affecte_meme_si_l_affectation_est_restee() {
+        UUID eventId = UUID.randomUUID();
+        UUID retire = UUID.randomUUID();
+        when(affectationRepository.existe(eventId, retire)).thenReturn(true);
+        when(comptes.estAgentActif(retire)).thenReturn(false);
+
+        assertThat(service().estAgentAffecte(eventId, retire)).isFalse();
     }
 }

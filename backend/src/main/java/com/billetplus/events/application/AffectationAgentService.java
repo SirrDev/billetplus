@@ -70,7 +70,9 @@ public class AffectationAgentService {
     }
 
     /**
-     * Agents affectés à un de SES événements, par identifiant : le nom vient de GET /api/agents.
+     * Agents actifs affectés à un de SES événements, par identifiant : le nom vient de
+     * GET /api/agents. Une affectation écrite après un retrait (course entre les deux) ne
+     * donne aucun droit (StatutEvenements.estAgentAffecte) et n'est pas listée non plus.
      *
      * @throws NoSuchElementException si l'événement n'existe pas
      * @throws AccessDeniedException  si le demandeur n'est pas l'organisateur de l'événement
@@ -78,18 +80,13 @@ public class AffectationAgentService {
     @Transactional(readOnly = true)
     public List<UUID> listerAgents(UUID eventId, UUID organisateurId) {
         evenementDe(eventId, organisateurId);
-        return affectationRepository.listerAgents(eventId);
+        return affectationRepository.listerAgents(eventId).stream().filter(comptes::estAgentActif).toList();
     }
 
     /** Agent retiré par son organisateur (AgentRetire) : le module auth a contrôlé la propriété. */
     @Transactional
     public void retirerDeTousLesEvenements(UUID agentId) {
         affectationRepository.supprimerToutes(agentId);
-    }
-
-    @Transactional(readOnly = true)
-    public boolean estAffecte(UUID eventId, UUID agentId) {
-        return eventId != null && agentId != null && affectationRepository.existe(eventId, agentId);
     }
 
     private Event evenementDe(UUID eventId, UUID organisateurId) {
