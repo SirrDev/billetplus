@@ -36,7 +36,8 @@ class JpaReversementRepositoryAdapter implements ReversementRepository {
             return versDomaine(springRepo.saveAndFlush(versEntite(reversement)));
         } catch (DataIntegrityViolationException e) {
             if (violeLaContrainte(e, "uq_reversements_event_reference")) {
-                throw new BusinessConflictException("Ce virement est déjà enregistré pour cet événement");
+                throw new BusinessConflictException(
+                    "Ce virement est déjà enregistré pour cet événement (même référence). Une correction prend sa propre référence, par exemple CORR-...");
             }
             throw e;
         }

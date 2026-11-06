@@ -18,13 +18,14 @@ public record RecettesEvenement(long commandes, Money brut, Money commission, Mo
                                 long reverseFcfa, long resteAReverserFcfa) {
 
     /**
-     * @throws IllegalArgumentException si les totaux sont incohérents (commission supérieure
-     *                                  au brut, valeurs négatives) : défaut de calcul, à ne pas masquer
+     * @throws IllegalStateException si les totaux sont incohérents (commission supérieure au
+     *                               brut, valeurs négatives) : défaut interne de calcul, jamais une
+     *                               erreur du client (500 sans message, GlobalExceptionHandler)
      */
     public static RecettesEvenement depuisTotaux(long commandes, long brutFcfa, long commissionFcfa,
                                                  boolean evenementAnnule, long reverseFcfa) {
         if (commandes < 0 || brutFcfa < 0 || commissionFcfa < 0 || commissionFcfa > brutFcfa) {
-            throw new IllegalArgumentException("Totaux de commandes incohérents");
+            throw new IllegalStateException("Totaux de commandes incohérents");
         }
         Money brut = evenementAnnule ? Money.ofFcfa(0) : Money.ofFcfa(brutFcfa);
         Money commission = evenementAnnule ? Money.ofFcfa(0) : Money.ofFcfa(commissionFcfa);

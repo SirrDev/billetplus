@@ -46,6 +46,7 @@ Contraintes existantes :
 - **Négatives et limites connues** :
   - **Événement annulé après un reversement** : les acheteurs sont remboursés en entier, mais l'organisateur a déjà reçu son net. Le reste à reverser devient négatif (« trop reversé ») : à récupérer hors de Billet+.
   - **Frais UnitechPay d'une commande remboursée** : à la charge de Billet+ (pas de commission pour les couvrir).
-  - **Deux virements réels différents saisis avec la même référence** : refusés ; l'administrateur précise la référence (par exemple avec un suffixe).
+  - **Références normalisées** (majuscules, sans espaces) avant le contrôle d'unicité : « wave-123 » et « WAVE 123 » sont le même virement. Deux virements réels différents saisis avec la même référence sont refusés ; l'administrateur précise la référence (par exemple avec un suffixe). Une correction prend sa propre référence (« CORR-... »).
+  - **Annulation simultanée d'un virement** : le refus d'un virement positif sur un événement annulé lit le statut sans verrou. Si l'organisateur annule au même instant, le virement peut passer ; le reste devient négatif (« trop reversé ») et reste visible dans la liste de l'administrateur.
   - **Commandes antérieures à V16** : elles reçoivent le taux de 5 % par la migration (données de développement uniquement à ce jour).
   - **Brut du tableau de bord et brut des recettes** : le premier compte les billets valables (module `tickets`), le second les commandes payées (module `orders`). Ils coïncident tant que chaque commande payée a ses billets émis ; un écart signale une commande `PAYEE` sans billets, à examiner.

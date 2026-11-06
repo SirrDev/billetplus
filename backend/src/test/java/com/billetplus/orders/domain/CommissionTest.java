@@ -100,9 +100,9 @@ class CommissionTest {
     @Test
     void des_totaux_incoherents_sont_refuses_plutot_que_masques() {
         assertThatThrownBy(() -> RecettesEvenement.depuisTotaux(1, 100, 101, false, 0))
-            .isInstanceOf(IllegalArgumentException.class);
+            .isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(() -> RecettesEvenement.depuisTotaux(-1, 100, 5, false, 0))
-            .isInstanceOf(IllegalArgumentException.class);
+            .isInstanceOf(IllegalStateException.class);
     }
 
     // ---------------------------------------------------------------- reversement
@@ -114,6 +114,9 @@ class CommissionTest {
 
         assertThat(r.getId()).isNotNull();
         assertThat(r.getReference()).isEqualTo("WAVE-123");
+        // Même virement, autrement saisi : même référence canonique.
+        assertThat(Reversement.enregistrer(UUID.randomUUID(), 1_000, " wave - 123 ", null, LocalDate.of(2026, 11, 6),
+            UUID.randomUUID(), MAINTENANT).getReference()).isEqualTo("WAVE-123");
         assertThat(r.getMotif()).isNull();
         assertThat(r.getMontantFcfa()).isEqualTo(95_000);
     }

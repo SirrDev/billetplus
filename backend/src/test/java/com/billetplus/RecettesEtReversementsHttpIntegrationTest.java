@@ -147,7 +147,11 @@ class RecettesEtReversementsHttpIntegrationTest extends ContexteCompletTestBase 
         mvc.perform(post("/api/admin/reversements").with(connecte(UUID.randomUUID(), "ADMIN"))
                 .contentType(MediaType.APPLICATION_JSON).content(reversement(e.getId(), 19_000, "WAVE-UNIQUE", null)))
             .andExpect(status().isConflict())
-            .andExpect(jsonPath("$.message").value("Ce virement est déjà enregistré pour cet événement"));
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.startsWith("Ce virement est déjà enregistré")));
+        // Même virement saisi autrement (minuscules, espaces) : aussi refusé.
+        mvc.perform(post("/api/admin/reversements").with(connecte(admin, "ADMIN"))
+                .contentType(MediaType.APPLICATION_JSON).content(reversement(e.getId(), 19_000, "wave-unique ", null)))
+            .andExpect(status().isConflict());
 
         mvc.perform(get("/api/events/{id}/recettes", e.getId()).with(connecte(orga, "ORGANISATEUR")))
             .andExpect(jsonPath("$.reverseFcfa").value(19_000))
