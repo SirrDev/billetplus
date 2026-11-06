@@ -136,6 +136,8 @@ export function EvenementOrganisateurPage() {
 
   const { evenement, categories } = donnees;
   const statut = STATUTS[evenement.status];
+  // ADR 0011 : la vente n'est ouverte qu'au Sénégal (numéros, heure et paiement des autres pays à venir).
+  const horsSenegal = evenement.pays !== undefined && evenement.pays !== 'SN';
   const quotaTotal = tableau?.categories.reduce((n, c) => n + c.quotaTotal, 0) ?? 0;
 
   const changerStatut = async (operation: 'publier' | 'annuler') => {
@@ -182,7 +184,7 @@ export function EvenementOrganisateurPage() {
                 </BoutonLien>
               </>
             )}
-            {evenement.status === 'BROUILLON' && (
+            {evenement.status === 'BROUILLON' && !horsSenegal && (
               <Bouton onClick={() => void changerStatut('publier')} disabled={action || categories.length === 0}>
                 Publier
               </Bouton>
@@ -200,6 +202,14 @@ export function EvenementOrganisateurPage() {
           </div>
         </div>
 
+        {horsSenegal && evenement.status === 'BROUILLON' && (
+          <Avis ton="attention">
+            <p>
+              Lieu à {evenement.villeNom} : la vente hors du Sénégal n'est pas encore ouverte. Vous pouvez préparer
+              l'événement (catégories, équipe), mais pas encore le publier.
+            </p>
+          </Avis>
+        )}
         {vientDEtreCree && !message && evenement.status === 'BROUILLON' && (
           <Avis ton="succes">
             <p>Brouillon créé. Ajoutez au moins une catégorie de billets, puis publiez.</p>

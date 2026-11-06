@@ -221,12 +221,24 @@ export function ChampChoix<V extends string>({
   aide,
 }: {
   libelle: string;
-  options: ReadonlyArray<{ valeur: V; libelle: string }>;
+  /** groupe : options consécutives du même groupe réunies dans un <optgroup> (villes par pays). */
+  options: ReadonlyArray<{ valeur: V; libelle: string; groupe?: string }>;
   valeur: V;
   onChange: (valeur: V) => void;
   aide?: string;
 }) {
   const id = useId();
+  const groupes: Array<{ nom: string | undefined; options: Array<{ valeur: V; libelle: string }> }> = [];
+  for (const o of options) {
+    const dernier = groupes[groupes.length - 1];
+    if (dernier && dernier.nom === o.groupe) dernier.options.push(o);
+    else groupes.push({ nom: o.groupe, options: [o] });
+  }
+  const rendre = (o: { valeur: V; libelle: string }) => (
+    <option key={o.valeur} value={o.valeur}>
+      {o.libelle}
+    </option>
+  );
   return (
     <div className={s.champ}>
       <label htmlFor={id} className={s.libelle}>
@@ -240,11 +252,15 @@ export function ChampChoix<V extends string>({
           aria-describedby={aide ? `${id}-aide` : undefined}
           onChange={(e) => onChange(e.target.value as V)}
         >
-          {options.map((o) => (
-            <option key={o.valeur} value={o.valeur}>
-              {o.libelle}
-            </option>
-          ))}
+          {groupes.map((g, i) =>
+            g.nom === undefined ? (
+              g.options.map(rendre)
+            ) : (
+              <optgroup key={`${g.nom}-${i}`} label={g.nom}>
+                {g.options.map(rendre)}
+              </optgroup>
+            ),
+          )}
         </select>
       </div>
       {aide && (

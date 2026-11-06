@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { libelleCategorie } from '@/commun/categories';
 import { formatDateLongue, formatFcfa, formatHeure, majusculeInitiale } from '@/commun/format';
+import { libelleVille } from '@/commun/villes';
 import {
   Affiche,
   Avis,
@@ -125,7 +126,10 @@ export function EvenementPage() {
                 </span>
                 <div>
                   <p className={s.infoTitre}>{evenement.venueNom}</p>
-                  {lieu && <p className={s.infoDetail}>{lieu.adresse}</p>}
+                  <p className={s.infoDetail}>
+                    {lieu ? `${lieu.adresse}, ` : ''}
+                    {libelleVille(evenement)}
+                  </p>
                   {lieu && (
                     <a className={s.lienAide} href={lienCarte(lieu)} target="_blank" rel="noopener noreferrer">
                       Voir sur la carte

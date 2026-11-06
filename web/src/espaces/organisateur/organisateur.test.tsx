@@ -45,6 +45,12 @@ const cliquerCarte = (lat: number, lng: number) => {
 };
 
 const ORGANISATEUR = { id: 'o1', email: 'orga@test.sn', nomComplet: 'Orga Test', role: 'ORGANISATEUR' };
+/* Liste des villes (ADR 0011), telle que GET /api/villes la rend (extrait). */
+const VILLES = [
+  { code: 'SN', nom: 'Sénégal', villes: [{ code: 'SN-DAKAR', nom: 'Dakar' }, { code: 'SN-THIES', nom: 'Thiès' }] },
+  { code: 'CI', nom: "Côte d'Ivoire", villes: [{ code: 'CI-ABIDJAN', nom: 'Abidjan' }] },
+];
+
 const EVENEMENT = {
   id: '11111111-1111-1111-1111-111111111111',
   titre: 'Nuit du Mbalax',
@@ -165,6 +171,7 @@ describe('Création et gestion d’un événement', () => {
     connecte();
     const appels = backend({
       'GET /api/auth/me': () => ORGANISATEUR,
+      'GET /api/villes': () => VILLES,
       'POST /api/venues': () => ({ id: 'v1', nom: 'Grand Théâtre', adresse: 'Dakar', latitude: null, longitude: null, seatingPlan: null }),
       'POST /api/events': () => EVENEMENT,
       [`GET /api/events/${EVENEMENT.id}`]: () => EVENEMENT,
@@ -173,6 +180,7 @@ describe('Création et gestion d’un événement', () => {
       'GET /api/agents': () => [],
     });
     ouvrir('/organisateur/evenements/nouveau');
+    await userEvent.selectOptions(await screen.findByLabelText('Ville'), 'SN-DAKAR');
 
     await userEvent.type(await screen.findByLabelText('Titre'), 'Nuit du Mbalax');
     fireEvent.change(screen.getByLabelText('Début'), { target: { value: '2099-11-14T21:00' } });
@@ -197,8 +205,9 @@ describe('Création et gestion d’un événement', () => {
 
   it('refuse une fin avant le début sans rien envoyer', async () => {
     connecte();
-    const appels = backend({ 'GET /api/auth/me': () => ORGANISATEUR });
+    const appels = backend({ 'GET /api/auth/me': () => ORGANISATEUR, 'GET /api/villes': () => VILLES });
     ouvrir('/organisateur/evenements/nouveau');
+    await userEvent.selectOptions(await screen.findByLabelText('Ville'), 'SN-DAKAR');
     await userEvent.type(await screen.findByLabelText('Titre'), 'X');
     fireEvent.change(screen.getByLabelText('Début'), { target: { value: '2099-11-14T21:00' } });
     fireEvent.change(screen.getByLabelText(/^Fin/), { target: { value: '2099-11-14T20:00' } });
@@ -415,6 +424,7 @@ describe('Position GPS sur la carte', () => {
     connecte();
     const appels = backend({
       'GET /api/auth/me': () => ORGANISATEUR,
+      'GET /api/villes': () => VILLES,
       'POST /api/venues': () => LIEU_SANS_POSITION,
       'POST /api/events': () => EVENEMENT,
       [`GET /api/events/${EVENEMENT.id}`]: () => EVENEMENT,
@@ -423,6 +433,7 @@ describe('Position GPS sur la carte', () => {
       'GET /api/agents': () => [],
     });
     ouvrir('/organisateur/evenements/nouveau');
+    await userEvent.selectOptions(await screen.findByLabelText('Ville'), 'SN-DAKAR');
     await userEvent.type(await screen.findByLabelText('Titre'), 'Nuit du Mbalax');
     fireEvent.change(screen.getByLabelText('Début'), { target: { value: '2099-11-14T21:00' } });
     await userEvent.type(screen.getByLabelText('Nom du lieu'), 'Grand Théâtre');
