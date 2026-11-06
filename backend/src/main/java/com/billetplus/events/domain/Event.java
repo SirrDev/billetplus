@@ -114,11 +114,17 @@ public class Event {
     }
 
     /**
-     * @throws BusinessConflictException si l'événement est déjà terminé (traduit en HTTP 409)
+     * Refusé une seconde fois : l'annulation publie EvenementAnnule (billets annulés,
+     * commandes signalées pour remboursement) ; la rejouer relancerait ces effets.
+     *
+     * @throws BusinessConflictException si l'événement est déjà terminé ou déjà annulé (traduit en HTTP 409)
      */
     public void annuler() {
         if (status == EventStatus.TERMINE) {
             throw new BusinessConflictException("Impossible d'annuler un événement déjà terminé");
+        }
+        if (status == EventStatus.ANNULE) {
+            throw new BusinessConflictException("L'événement est déjà annulé");
         }
         this.status = EventStatus.ANNULE;
     }
