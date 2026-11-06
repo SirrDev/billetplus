@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { TEXTE_MAX, useSession } from '@/commun/auth';
 import { ApiError, messageErreur } from '@/commun/http';
+import { retourDansEspace } from '@/commun/retourInterne';
 import { Avis, Bouton, BoutonLien, Cadre, ChampTexte, Icone, Panneau } from '@/ui';
 import s from './controle.module.css';
 
@@ -34,7 +35,7 @@ export function ConnexionControlePage() {
         return;
       }
       // Adresse interne à l'espace de contrôle seulement.
-      navigate(depuis?.startsWith('/scanner') ? depuis : '/scanner', { replace: true });
+      navigate(retourDansEspace('/scanner', depuis), { replace: true });
     } catch (e2) {
       setErreur(e2 instanceof ApiError && e2.status === 401 ? 'E-mail ou mot de passe incorrect.' : messageErreur(e2));
       setEnvoi(false);

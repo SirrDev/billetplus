@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { TEXTE_MAX, useSession } from '@/commun/auth';
 import { ApiError, messageErreur } from '@/commun/http';
+import { retourDansEspace } from '@/commun/retourInterne';
 import { Avis, Bouton, Cadre, ChampTexte, Panneau } from '@/ui';
 import s from './admin.module.css';
 
@@ -35,7 +36,7 @@ export function ConnexionAdminPage() {
         setEnvoi(false);
         return;
       }
-      navigate(depuis?.startsWith('/admin') ? depuis : '/admin', { replace: true });
+      navigate(retourDansEspace('/admin', depuis), { replace: true });
     } catch (e2) {
       setErreur(e2 instanceof ApiError && e2.status === 401 ? 'E-mail ou mot de passe incorrect.' : messageErreur(e2));
       setEnvoi(false);
