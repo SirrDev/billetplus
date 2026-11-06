@@ -15,7 +15,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 /**
- * Réglage du profil prod (application.yml) : logServerErrorDetail=false. Contexte à part
+ * Effet du réglage du profil prod logServerErrorDetail=false sur le pilote PostgreSQL (sa présence
+ * dans application.yml est vérifiée par ConfigurationProductionTest). Contexte à part
  * (propriété différente, environ 25 s de démarrage en plus), accepté pour ce seul test :
  * il vérifie que l'e-mail ne figure plus dans le message d'erreur SQL, et que le doublon
  * est toujours reconnu par le nom de sa contrainte.
