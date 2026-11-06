@@ -176,13 +176,25 @@ class EntreeLibreHttpIntegrationTest extends ContexteCompletTestBase {
     }
 
     @Test
-    void au_dela_de_100_places_toutes_categories_un_billet_coute_50_f() throws Exception {
-        Evenement e = evenement(60, 41);  // 101 places
+    void au_dela_de_100_places_gratuites_un_billet_coute_50_f() throws Exception {
+        Evenement e = evenement(101, 10);  // 101 places gratuites
         recharger(e.organisateur(), 1_000);
 
         entreeLibre(commande(e.id(), telephone(), e.gratuite(), 3)).andExpect(status().isCreated());
 
         assertThat(solde(e.organisateur())).isEqualTo(850);
+        soldeEgaleLeJournal(e.organisateur());
+    }
+
+    /** Décision de SirrDev : des places payantes jamais vendues ne font pas baisser le tarif. */
+    @Test
+    void les_places_payantes_ne_comptent_pas_dans_le_seuil() throws Exception {
+        Evenement e = evenement(30, 100);  // 130 places, dont 30 gratuites
+        recharger(e.organisateur(), 1_000);
+
+        entreeLibre(commande(e.id(), telephone(), e.gratuite(), 2)).andExpect(status().isCreated());
+
+        assertThat(solde(e.organisateur())).isEqualTo(850);  // 2 × 75 F
         soldeEgaleLeJournal(e.organisateur());
     }
 

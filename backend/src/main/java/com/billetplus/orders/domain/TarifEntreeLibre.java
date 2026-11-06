@@ -5,7 +5,7 @@ import com.billetplus.shared.Money;
 /**
  * Domaine pur (niveau 3, voir ADR 0002) — ce que l'organisateur paie à Billet+ pour
  * chaque billet gratuit émis (ADR 0010) : {@code tarifPetitFcfa} si l'événement a
- * {@code seuilPlaces} places ou moins, toutes catégories confondues, sinon
+ * {@code seuilPlaces} places gratuites ou moins (les places payantes ne comptent pas), sinon
  * {@code tarifGrandFcfa}. Valeurs de la configuration, vérifiées au démarrage.
  *
  * @param seuilPlaces    nombre de places jusqu'auquel le petit tarif s'applique (inclus)
@@ -14,7 +14,7 @@ import com.billetplus.shared.Money;
  */
 public record TarifEntreeLibre(int seuilPlaces, int tarifPetitFcfa, int tarifGrandFcfa) {
 
-    /** Décision de SirrDev du 6 novembre 2026 : 75 F jusqu'à 100 places, 50 F au-delà. */
+    /** Décisions de SirrDev du 6 novembre 2026 : 75 F jusqu'à 100 places gratuites, 50 F au-delà. */
     public static final TarifEntreeLibre PAR_DEFAUT = new TarifEntreeLibre(100, 75, 50);
 
     public TarifEntreeLibre {
@@ -27,13 +27,13 @@ public record TarifEntreeLibre(int seuilPlaces, int tarifPetitFcfa, int tarifGra
     }
 
     /**
-     * @param placesTotales somme des quotas de toutes les catégories de l'événement
+     * @param placesGratuites somme des quotas des catégories gratuites de l'événement
      * @return le tarif d'un billet gratuit pour cet événement, à ce moment
      */
-    public Money tarifPour(long placesTotales) {
-        if (placesTotales < 0) {
+    public Money tarifPour(long placesGratuites) {
+        if (placesGratuites < 0) {
             throw new IllegalArgumentException("Le nombre de places ne peut pas être négatif");
         }
-        return Money.ofFcfa(placesTotales <= seuilPlaces ? tarifPetitFcfa : tarifGrandFcfa);
+        return Money.ofFcfa(placesGratuites <= seuilPlaces ? tarifPetitFcfa : tarifGrandFcfa);
     }
 }

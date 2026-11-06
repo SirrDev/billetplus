@@ -103,7 +103,7 @@ public class CreerEntreeLibreUseCase {
 
         UUID organisateur = statutEvenements.organisateurDe(eventId)
             .orElseThrow(() -> new NoSuchElementException("Événement introuvable"));
-        Money tarifParBillet = tarif.tarifPour(placesEnVente.placesTotales(eventId));
+        Money tarifParBillet = tarif.tarifPour(placesEnVente.placesGratuites(eventId));
 
         Instant maintenant = Instant.now(clock);
         commande.confirmerEntreeLibre(tarifParBillet, maintenant);

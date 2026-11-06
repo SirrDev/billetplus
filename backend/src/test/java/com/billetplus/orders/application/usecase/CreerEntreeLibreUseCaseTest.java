@@ -75,7 +75,7 @@ class CreerEntreeLibreUseCaseTest {
         when(orders.compterBilletsGratuits(any(), any())).thenReturn(0L);
         when(orders.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
         when(statuts.organisateurDe(EVENEMENT)).thenReturn(Optional.of(ORGANISATEUR));
-        when(places.placesTotales(EVENEMENT)).thenReturn(50L);
+        when(places.placesGratuites(EVENEMENT)).thenReturn(50L);
         when(credit.debiterEntreeLibre(any(), any(), any(), any())).thenReturn(true);
     }
 
@@ -90,7 +90,7 @@ class CreerEntreeLibreUseCaseTest {
 
     @Test
     void jusqu_au_seuil_le_petit_tarif_de_75_est_debite_par_billet() {
-        when(places.placesTotales(EVENEMENT)).thenReturn(100L);
+        when(places.placesGratuites(EVENEMENT)).thenReturn(100L);
 
         Order.CommandeCreee resultat = useCase.execute(EVENEMENT, TELEPHONE, demande);
 
@@ -100,7 +100,7 @@ class CreerEntreeLibreUseCaseTest {
 
     @Test
     void au_dela_du_seuil_le_grand_tarif_de_50_est_debite_par_billet() {
-        when(places.placesTotales(EVENEMENT)).thenReturn(101L);
+        when(places.placesGratuites(EVENEMENT)).thenReturn(101L);
 
         Order.CommandeCreee resultat = useCase.execute(EVENEMENT, TELEPHONE, demande);
 

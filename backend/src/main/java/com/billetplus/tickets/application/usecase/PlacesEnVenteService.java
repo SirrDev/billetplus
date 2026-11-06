@@ -49,8 +49,9 @@ class PlacesEnVenteService implements PlacesEnVente {
     }
 
     @Override
-    public long placesTotales(UUID eventId) {
+    public long placesGratuites(UUID eventId) {
         return categoryRepository.findByEventId(eventId).stream()
+            .filter(c -> c.getPrix().valeur().signum() == 0)
             .mapToLong(TicketCategory::getQuotaTotal)
             .sum();
     }

@@ -34,10 +34,11 @@ public interface PlacesEnVente {
     Instant reserver(UUID categoryId, UUID orderId, int quantite);
 
     /**
-     * Nombre total de places de l'événement : somme des quotas de toutes ses catégories,
-     * payantes comprises (tarif de l'entrée libre, ADR 0010). Zéro s'il n'en a aucune.
+     * Places gratuites de l'événement : somme des quotas de ses catégories à 0 FCFA, seules
+     * (tarif de l'entrée libre, ADR 0010 ; des places payantes ne changent pas ce tarif).
+     * Zéro s'il n'en a aucune.
      */
-    long placesTotales(UUID eventId);
+    long placesGratuites(UUID eventId);
 
     /** Rend les places de la commande. Idempotent. Contrat de l'appelant : voir ReleaseSeatsUseCase. */
     void liberer(UUID categoryId, UUID orderId);
