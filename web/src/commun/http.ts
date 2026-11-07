@@ -45,6 +45,20 @@ const MARGE_EXPIRATION_MS = 30_000;
  *   gardée (le jeton de rafraîchissement reste valable 7 jours), l'erreur remonte.
  */
 export async function http<T>(chemin: string, options: OptionsHttp = {}): Promise<T> {
+  const reponse = await executer(chemin, options);
+  const texte = await reponse.text();
+  return (texte ? JSON.parse(texte) : undefined) as T;
+}
+
+/**
+ * Même appel, pour un fichier (pièce d'un organisateur lue par l'administrateur, ADR 0012) :
+ * mêmes règles de jeton et d'erreur, corps rendu tel quel.
+ */
+export async function httpFichier(chemin: string, options: OptionsHttp = {}): Promise<Blob> {
+  return (await executer(chemin, options)).blob();
+}
+
+async function executer(chemin: string, options: OptionsHttp): Promise<Response> {
   const { authentifie = false, delaiMs, ...reste } = options;
   const init: RequestInit = delaiMs && !reste.signal ? { ...reste, signal: AbortSignal.timeout(delaiMs) } : reste;
   let jetons = authentifie ? lireJetons() : null;
@@ -61,15 +75,15 @@ export async function http<T>(chemin: string, options: OptionsHttp = {}): Promis
   if (!reponse.ok) {
     throw new ApiError(reponse.status, await messageDErreur(reponse));
   }
-  const texte = await reponse.text();
-  return (texte ? JSON.parse(texte) : undefined) as T;
+  return reponse;
 }
 
 function appeler(chemin: string, init: RequestInit, accessToken?: string): Promise<Response> {
   return fetch(`${API_BASE_URL}${chemin}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      // Un FormData (dépôt de fichier) porte son propre Content-Type, avec la délimitation des parties.
+      ...(init.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...init.headers,
     },

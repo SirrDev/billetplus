@@ -8,3 +8,4 @@ export { InscriptionPage } from './pages/InscriptionPage';
 export { MesEvenementsPage } from './pages/MesEvenementsPage';
 export { ModifierEvenementPage } from './pages/ModifierEvenementPage';
 export { NouvelEvenementPage } from './pages/NouvelEvenementPage';
+export { VerificationPage } from './pages/VerificationPage';

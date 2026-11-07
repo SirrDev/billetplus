@@ -57,7 +57,8 @@ public class RecettesController {
     public ResponseEntity<ReversementsDto.Enregistre> enregistrer(@Valid @RequestBody EnregistrerReversementRequest request,
                                                                   Authentication auth) {
         Reversement reversement = enregistrerReversement.execute(request.eventId(), request.montantFcfa(),
-            request.reference(), request.motif(), request.reverseLe(), (UUID) auth.getPrincipal());
+            request.reference(), request.motif(), request.reverseLe(), (UUID) auth.getPrincipal(),
+            request.derogationScans());
         return ResponseEntity.created(URI.create("/api/admin/reversements/" + reversement.getId()))
             .body(ReversementsDto.Enregistre.from(reversement));
     }

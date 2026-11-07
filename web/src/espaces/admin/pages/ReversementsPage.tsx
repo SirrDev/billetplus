@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { formatFcfa } from '@/commun/format';
+import { formatDateCourte, formatFcfa } from '@/commun/format';
 import { messageErreur } from '@/commun/http';
 import { Avis, Bouton, ChampTexte, Chargement, EtatVide, Panneau, Pastille, Tableau, type ColonneTableau } from '@/ui';
-import { enregistrerReversement, lireReversements, titreEvenement, type LigneReversement } from '../api';
+import { enregistrerReversement, suspendreEvenement, lireReversements, titreEvenement, type LigneReversement } from '../api';
 import { CadreAdmin } from './CadreAdmin';
 import s from './admin.module.css';
 
@@ -74,6 +74,23 @@ export function ReversementsPage() {
           <strong>{formatFcfa(l.recettes.resteAReverserFcfa)}</strong>
         ),
       nombre: true,
+    },
+    {
+      titre: 'Virement',
+      cellule: (l) =>
+        !l.numeroReversement ? (
+          <Pastille ton="danger">Organisateur non vérifié</Pastille>
+        ) : l.reversableLe && l.reversableLe > aujourdhui() ? (
+          <Pastille ton="attention">À partir du {formatDateCourte(l.reversableLe)}</Pastille>
+        ) : l.billetsScannes === 0 ? (
+          <Pastille ton="attention">Aucun billet scanné</Pastille>
+        ) : (
+          <span>
+            {l.numeroReversement}
+            <br />
+            {l.titulaireReversement}
+          </span>
+        ),
     },
     {
       titre: 'Action',
@@ -163,7 +180,10 @@ function FormulaireVirement({
   const [reference, setReference] = useState('');
   const [date, setDate] = useState(aujourdhui());
   const [motif, setMotif] = useState('');
-  const [erreurs, setErreurs] = useState<{ montant?: string; motif?: string }>({});
+  const [derogation, setDerogation] = useState('');
+  const [motifSuspension, setMotifSuspension] = useState('');
+  const [erreurs, setErreurs] = useState<{ montant?: string; motif?: string; derogation?: string }>({});
+  const sansScan = ligne.billetsScannes === 0;
   /** Montant au-delà du reste à reverser : enregistré seulement après une seconde validation. */
   const [confirmeDepassement, setConfirmeDepassement] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -173,9 +193,12 @@ function FormulaireVirement({
     e.preventDefault();
     setErreur(null);
     const valeur = entierSigne(montant);
-    const nouvelles: { montant?: string; motif?: string } = {};
+    const nouvelles: { montant?: string; motif?: string; derogation?: string } = {};
     if (valeur === null || valeur === 0) nouvelles.montant = 'Montant entier en FCFA, différent de 0.';
     if (valeur !== null && valeur < 0 && !motif.trim()) nouvelles.motif = 'Une correction (montant négatif) doit être motivée.';
+    if (valeur !== null && valeur > 0 && sansScan && !derogation.trim()) {
+      nouvelles.derogation = 'Aucun billet scanné : motivez la dérogation (entrée sans contrôle), ou ne virez pas.';
+    }
     setErreurs(nouvelles);
     if (Object.keys(nouvelles).length > 0 || valeur === null) return;
     if (valeur > Math.max(reste, 0) && !confirmeDepassement) {
@@ -190,6 +213,7 @@ function FormulaireVirement({
         reference: reference.trim(),
         motif: motif.trim() || null,
         reverseLe: date,
+        derogationScans: sansScan && valeur > 0 ? derogation.trim() : null,
       });
       onEnregistre(`Virement de ${formatFcfa(valeur)} enregistré pour ${titre}.`);
     } catch (e2) {
@@ -200,6 +224,18 @@ function FormulaireVirement({
 
   return (
     <Panneau titre={`Virement pour ${titre}`} id="virement">
+      {ligne.numeroReversement ? (
+        <Avis>
+          <p>
+            Virez uniquement vers le numéro vérifié : <strong>{ligne.numeroReversement}</strong> (
+            {ligne.titulaireReversement}).
+          </p>
+        </Avis>
+      ) : (
+        <Avis ton="danger">
+          <p>Organisateur non vérifié ou suspendu : aucun virement n'est possible, seulement une correction.</p>
+        </Avis>
+      )}
       <form className={s.formulaire} onSubmit={valider}>
         <ChampTexte
           libelle="Montant viré (FCFA)"
@@ -230,6 +266,16 @@ function FormulaireVirement({
           aide="Obligatoire pour une correction."
           erreur={erreurs.motif}
         />
+        {sansScan && (
+          <ChampTexte
+            libelle="Dérogation : aucun billet scanné"
+            valeur={derogation}
+            onChange={setDerogation}
+            maxLength={255}
+            aide="Seulement pour une entrée sans contrôle : expliquez (10 caractères au moins) pourquoi l'événement a bien eu lieu."
+            erreur={erreurs.derogation}
+          />
+        )}
         {confirmeDepassement && (
           <Avis ton="attention">
             <p>
@@ -252,6 +298,34 @@ function FormulaireVirement({
           </Bouton>
         </div>
       </form>
+      {!ligne.evenementAnnule && (
+        <div className={s.formulaire}>
+          <ChampTexte
+            libelle="Motif de la suspension de l'événement"
+            valeur={motifSuspension}
+            onChange={setMotifSuspension}
+            maxLength={500}
+            aide="Suspendre : vente fermée, billets annulés, acheteurs à rembourser. Définitif."
+          />
+          <div>
+            <Bouton
+              variante="secondaire"
+              disabled={envoi || !motifSuspension.trim()}
+              onClick={() => {
+                setEnvoi(true);
+                suspendreEvenement(ligne.eventId, motifSuspension.trim())
+                  .then(() => onEnregistre(`Événement ${titre} suspendu.`))
+                  .catch((e3: unknown) => {
+                    setErreur(messageErreur(e3));
+                    setEnvoi(false);
+                  });
+              }}
+            >
+              Suspendre l'événement
+            </Bouton>
+          </div>
+        </div>
+      )}
     </Panneau>
   );
 }

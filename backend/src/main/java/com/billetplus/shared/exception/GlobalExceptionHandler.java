@@ -52,6 +52,21 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
+    /** Fichier au-delà de spring.servlet.multipart.max-file-size (pièces des organisateurs, ADR 0012). */
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleFichierTropLourd(
+            org.springframework.web.multipart.MaxUploadSizeExceededException e) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Le fichier doit faire 5 Mo au plus");
+    }
+
+    /** Requête multipart sans le fichier attendu, ou illisible. */
+    @ExceptionHandler({org.springframework.web.multipart.support.MissingServletRequestPartException.class,
+        org.springframework.web.bind.MissingServletRequestParameterException.class,
+        org.springframework.web.multipart.MultipartException.class})
+    public ResponseEntity<Map<String, Object>> handleFichierAbsent(Exception e) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Fichier absent ou illisible");
+    }
+
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(NoSuchElementException e) {
         return buildResponse(HttpStatus.NOT_FOUND, e.getMessage());

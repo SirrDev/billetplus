@@ -66,13 +66,16 @@ class EvenementsAffectesHttpIntegrationTest extends ContexteCompletTestBase {
         Event lointain = evenement(orga, "Lointain", maintenant.plus(20, ChronoUnit.DAYS), null);
         Event proche = evenement(orga, "Proche", maintenant.plus(2, ChronoUnit.DAYS), null);
         // Commencé il y a 3 h, sans heure de fin : portes encore ouvertes.
-        Event enCours = evenement(orga, "EnCours", maintenant.minus(3, ChronoUnit.HOURS), null);
+        Event enCours = evenement(orga, "EnCours", maintenant.plus(1, ChronoUnit.DAYS), null);
         Event brouillon = evenement(orga, "Brouillon", maintenant.plus(5, ChronoUnit.DAYS), null);
         Event annule = evenement(orga, "Annule", maintenant.plus(6, ChronoUnit.DAYS), null);
         Event nonAffecte = evenement(orga, "NonAffecte", maintenant.plus(7, ChronoUnit.DAYS), null);
         for (Event e : List.of(lointain, proche, enCours, annule, nonAffecte)) {
+            organisateurVerifie(orga);
             eventService.publier(e.getId(), orga);
         }
+        // Publié avant son début (ADR 0012), puis commencé il y a 3 h.
+        deplacerDates(enCours.getId(), maintenant.minus(3, ChronoUnit.HOURS), null);
         for (Event e : List.of(lointain, proche, enCours, brouillon, annule)) {
             affecter(orga, e, agent);
         }
@@ -94,13 +97,17 @@ class EvenementsAffectesHttpIntegrationTest extends ContexteCompletTestBase {
         UUID orga = organisateur();
         UUID agent = agentDe(orga);
         Instant maintenant = Instant.now();
-        Event passe = evenement(orga, "Passe", maintenant.minus(30, ChronoUnit.HOURS), null);
+        Event passe = evenement(orga, "Passe", maintenant.plus(1, ChronoUnit.DAYS), null);
         // Commencé hier, mais fin encore à venir : toujours à contrôler.
-        Event festival = evenement(orga, "Festival", maintenant.minus(30, ChronoUnit.HOURS), maintenant.plus(2, ChronoUnit.DAYS));
+        Event festival = evenement(orga, "Festival", maintenant.plus(1, ChronoUnit.DAYS), maintenant.plus(2, ChronoUnit.DAYS));
         for (Event e : List.of(passe, festival)) {
+            organisateurVerifie(orga);
             eventService.publier(e.getId(), orga);
             affecter(orga, e, agent);
         }
+        // Publiés avant leur début (ADR 0012), puis datés d'hier.
+        deplacerDates(passe.getId(), maintenant.minus(30, ChronoUnit.HOURS), null);
+        deplacerDates(festival.getId(), maintenant.minus(30, ChronoUnit.HOURS), maintenant.plus(2, ChronoUnit.DAYS));
 
         String reponse = mvc.perform(get("/api/events/affectes").with(connecte(agent, "AGENT")))
             .andExpect(status().isOk())
@@ -115,6 +122,7 @@ class EvenementsAffectesHttpIntegrationTest extends ContexteCompletTestBase {
         UUID agent = agentDe(orga);
         UUID collegue = agentDe(orga);
         Event e = evenement(orga, "Concert", Instant.now().plus(3, ChronoUnit.DAYS), null);
+        organisateurVerifie(orga);
         eventService.publier(e.getId(), orga);
         affecter(orga, e, agent);
 

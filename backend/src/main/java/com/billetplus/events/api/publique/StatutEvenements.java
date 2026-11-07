@@ -34,6 +34,12 @@ public interface StatutEvenements {
     Optional<UUID> organisateurDe(UUID eventId);
 
     /**
+     * Fin de l'événement (sa fin si elle est connue, sinon son début), s'il existe : le module
+     * orders n'autorise un reversement qu'à partir du lendemain (ADR 0012).
+     */
+    Optional<java.time.Instant> finDe(UUID eventId);
+
+    /**
      * Vrai si l'événement existe et accepte encore la configuration de sa
      * billetterie (catégories) : brouillon ou publié. Faux s'il est annulé ou terminé.
      */

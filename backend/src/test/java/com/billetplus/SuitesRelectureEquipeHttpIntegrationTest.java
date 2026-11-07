@@ -61,6 +61,7 @@ class SuitesRelectureEquipeHttpIntegrationTest extends ContexteCompletTestBase {
     private Event evenementPublie(UUID organisateur) {
         UUID lieu = venueService.create("Sorano", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.DAKAR).getId();
         Event e = eventService.create("Concert", null, Instant.now().plus(5, ChronoUnit.DAYS), null, lieu, organisateur, null);
+        organisateurVerifie(organisateur);
         eventService.publier(e.getId(), organisateur);
         return e;
     }

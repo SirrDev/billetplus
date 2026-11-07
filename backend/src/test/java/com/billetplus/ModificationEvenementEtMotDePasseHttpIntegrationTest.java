@@ -79,6 +79,7 @@ class ModificationEvenementEtMotDePasseHttpIntegrationTest extends ContexteCompl
     void un_evenement_publie_garde_ses_dates() throws Exception {
         UUID orga = organisateur();
         Event e = brouillon(orga);
+        organisateurVerifie(orga);
         eventService.publier(e.getId(), orga);
 
         mvc.perform(put("/api/events/{id}", e.getId()).with(connecte(orga, "ORGANISATEUR"))
@@ -103,6 +104,7 @@ class ModificationEvenementEtMotDePasseHttpIntegrationTest extends ContexteCompl
                 .contentType(MediaType.APPLICATION_JSON).content(corps("Pirate", DEBUT, FIN)))
             .andExpect(status().isNotFound());
         // Publié, donc d'existence publique : 403.
+        organisateurVerifie(orga);
         eventService.publier(e.getId(), orga);
         mvc.perform(put("/api/events/{id}", e.getId()).with(connecte(autre, "ORGANISATEUR"))
                 .contentType(MediaType.APPLICATION_JSON).content(corps("Pirate", DEBUT, FIN)))
@@ -132,6 +134,7 @@ class ModificationEvenementEtMotDePasseHttpIntegrationTest extends ContexteCompl
     void une_copie_perimee_ne_peut_pas_annuler_une_annulation() {
         UUID orga = organisateur();
         Event e = brouillon(orga);
+        organisateurVerifie(orga);
         eventService.publier(e.getId(), orga);
         // Lue avant l'annulation, comme par une modification concurrente.
         Event perimee = eventService.get(e.getId());

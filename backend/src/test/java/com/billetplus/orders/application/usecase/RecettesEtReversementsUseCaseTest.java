@@ -50,8 +50,19 @@ class RecettesEtReversementsUseCaseTest {
         return new ConsulterRecettesUseCase(orderRepository, reversementRepository, statutEvenements);
     }
 
+    /** Organisateur vérifié, un billet scanné (ADR 0012) : les conditions du virement ont leurs propres tests. */
+    private final com.billetplus.auth.api.publique.Comptes comptes = org.mockito.Mockito.mock(
+        com.billetplus.auth.api.publique.Comptes.class,
+        i -> i.getMethod().getReturnType() == boolean.class ? Boolean.TRUE : java.util.Optional.empty());
+    private final com.billetplus.tickets.api.publique.ControleEntrees controle = id -> 1;
+
     private EnregistrerReversementUseCase enregistrer() {
-        return new EnregistrerReversementUseCase(orderRepository, reversementRepository, statutEvenements,
+        org.mockito.Mockito.lenient().when(statutEvenements.organisateurDe(org.mockito.ArgumentMatchers.any()))
+            .thenReturn(java.util.Optional.of(organisateur));
+        org.mockito.Mockito.lenient().when(statutEvenements.finDe(org.mockito.ArgumentMatchers.any()))
+            .thenReturn(java.util.Optional.of(MAINTENANT.minus(java.time.Duration.ofDays(2))));
+        return new EnregistrerReversementUseCase(orderRepository, reversementRepository, statutEvenements, comptes,
+            controle, org.mockito.Mockito.mock(org.springframework.context.ApplicationEventPublisher.class),
             Clock.fixed(MAINTENANT, ZoneOffset.UTC));
     }
 
@@ -89,7 +100,8 @@ class RecettesEtReversementsUseCaseTest {
         lenient().when(statutEvenements.estAnnule(seulementReverse)).thenReturn(true);
 
         List<ListerReversementsUseCase.LigneReversement> lignes =
-            new ListerReversementsUseCase(orderRepository, reversementRepository, statutEvenements).execute();
+            new ListerReversementsUseCase(orderRepository, reversementRepository, statutEvenements, comptes, controle)
+                .execute();
 
         assertThat(lignes).extracting(ListerReversementsUseCase.LigneReversement::eventId)
             .containsExactly(grand, petit, seulementReverse);

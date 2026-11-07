@@ -121,6 +121,8 @@ class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
         Event event = evenement();
         assertThat(statutEvenements.estOuvertALaVente(event.getId())).isFalse();   // brouillon
 
+        organisateurVerifie(organisateur);
+
         eventService.publier(event.getId(), organisateur);
         assertThat(statutEvenements.estOuvertALaVente(event.getId())).isTrue();
 
@@ -146,6 +148,7 @@ class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
     @Test
     void annuler_un_evenement_annule_ses_billets_et_ferme_la_vente() {
         Event event = evenement();
+        organisateurVerifie(organisateur);
         eventService.publier(event.getId(), organisateur);
         TicketCategory category = categoriePour(event);
         issueTicket.execute(category.getId(), UUID.randomUUID(), 3);
@@ -167,6 +170,7 @@ class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
     @Test
     void si_l_annulation_des_billets_echoue_l_evenement_n_est_pas_annule() {
         Event event = evenement();
+        organisateurVerifie(organisateur);
         eventService.publier(event.getId(), organisateur);
         issueTicket.execute(categoriePour(event).getId(), UUID.randomUUID(), 2);
         doThrow(new IllegalStateException("Panne simulee pendant l'annulation des billets"))
@@ -262,6 +266,7 @@ class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
     @Test
     void un_visiteur_anonyme_voit_les_categories_d_un_evenement_publie_sans_le_stock() throws Exception {
         Event event = evenement();
+        organisateurVerifie(organisateur);
         eventService.publier(event.getId(), organisateur);
         categoriePour(event);
 
@@ -389,6 +394,7 @@ class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
         mvc.perform(put("/api/events/{id}/agents/{agentId}", event.getId(), agentDeLAutre).with(connecte(autreOrga, "ORGANISATEUR")))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.message").value("Événement introuvable : " + event.getId()));
+        organisateurVerifie(orga);
         eventService.publier(event.getId(), orga);
         mvc.perform(put("/api/events/{id}/agents/{agentId}", event.getId(), agentDeLAutre).with(connecte(autreOrga, "ORGANISATEUR")))
             .andExpect(status().isForbidden());
@@ -407,6 +413,7 @@ class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
         UUID agent = agentCreePar(orga);
         UUID venueId = venueService.create("Grand Theatre", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.DAKAR).getId();
         Event event = eventService.create("Concert", null, Instant.now().plus(30, ChronoUnit.DAYS), null, venueId, orga, null);
+        organisateurVerifie(orga);
         eventService.publier(event.getId(), orga);
         mvc.perform(put("/api/events/{id}/agents/{agentId}", event.getId(), agent).with(connecte(orga, "ORGANISATEUR")))
             .andExpect(status().isNoContent());
@@ -485,6 +492,7 @@ class ContexteCompletIntegrationTest extends ContexteCompletTestBase {
         Controle a = controlePret();
         UUID venueId = venueService.create("Stade", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.DAKAR).getId();
         Event b = eventService.create("Match", null, Instant.now().plus(40, ChronoUnit.DAYS), null, venueId, a.organisateur(), null);
+        organisateurVerifie(a.organisateur());
         eventService.publier(b.getId(), a.organisateur());
         mvc.perform(put("/api/events/{id}/agents/{agentId}", b.getId(), a.agent()).with(connecte(a.organisateur(), "ORGANISATEUR")))
             .andExpect(status().isNoContent());

@@ -73,11 +73,12 @@ class JpaReversementRepositoryAdapter implements ReversementRepository {
 
     private static ReversementJpaEntity versEntite(Reversement r) {
         return new ReversementJpaEntity(r.getId(), r.getEventId(), r.getMontantFcfa(), r.getReference(), r.getMotif(),
-            r.getReverseLe(), r.getEnregistrePar(), r.getEnregistreLe());
+            r.getReverseLe(), r.getEnregistrePar(), r.getEnregistreLe(), r.getDerogationScans(), r.getNumeroReversement());
     }
 
     private static Reversement versDomaine(ReversementJpaEntity e) {
         return Reversement.reconstituer(e.getId(), e.getEventId(), e.getMontantFcfa(), e.getReference(), e.getMotif(),
-            e.getReverseLe(), e.getEnregistrePar(), e.getEnregistreLe());
+            e.getReverseLe(), e.getEnregistrePar(), e.getEnregistreLe(), e.getDerogationScans())
+            .versLeNumero(e.getNumeroReversement());
     }
 }

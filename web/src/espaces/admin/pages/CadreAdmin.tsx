@@ -5,7 +5,7 @@ import { Bouton, Cadre } from '@/ui';
 import s from './admin.module.css';
 
 /**
- * Cadre de l'administration : deux écrans (remboursements, reversements), reliés par une
+ * Cadre de l'administration : trois écrans (remboursements, reversements, vérifications), reliés par une
  * barre sous l'en-tête qui passe à la ligne sur téléphone ; l'en-tête ne garde que la
  * déconnexion (trois boutons y débordaient à 375 px).
  */
@@ -38,6 +38,12 @@ export function CadreAdmin({ children }: { children: ReactNode }) {
           className={({ isActive }) => (isActive ? `${s.lienAdmin} ${s.lienActif}` : s.lienAdmin)}
         >
           Reversements
+        </NavLink>
+        <NavLink
+          to="/admin/verifications"
+          className={({ isActive }) => (isActive ? `${s.lienAdmin} ${s.lienActif}` : s.lienAdmin)}
+        >
+          Vérifications
         </NavLink>
       </nav>
       {children}

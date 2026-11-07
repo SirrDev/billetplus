@@ -95,6 +95,11 @@ class ConfirmerPaiementUseCaseTest {
         }
 
         @Override
+        public Optional<Instant> dernierePayee(UUID eventId) {
+            return Optional.empty();
+        }
+
+        @Override
         public Optional<Order> findByReferencePaiement(String reference) {
             return commandes.values().stream()
                 .filter(o -> o.getPaiement() != null && o.getPaiement().reference().equals(reference))

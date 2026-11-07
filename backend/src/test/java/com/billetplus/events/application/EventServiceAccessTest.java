@@ -46,13 +46,18 @@ class EventServiceAccessTest {
     @Mock
     private ApplicationEventPublisher publisher;
 
+    /** Organisateurs vérifiés (ADR 0012) : la règle de publication a ses propres tests. */
+    private static final com.billetplus.auth.api.publique.Comptes COMPTES_VERIFIES = org.mockito.Mockito.mock(
+        com.billetplus.auth.api.publique.Comptes.class,
+        i -> i.getMethod().getReturnType() == boolean.class ? Boolean.TRUE : null);
+
     private EventService service() {
-        return new EventService(eventRepository, venueRepository, publisher);
+        return new EventService(eventRepository, venueRepository, publisher, COMPTES_VERIFIES);
     }
 
     private Event brouillonDe(UUID proprietaire) {
         Venue venue = new Venue("Grand Theatre", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.dakar());
-        return new Event("Concert", null, Instant.now(), null, venue, proprietaire);
+        return new Event("Concert", null, Instant.now().plusSeconds(86_400), null, venue, proprietaire);
     }
 
     // ---------------------------------------------------------------- visibilité

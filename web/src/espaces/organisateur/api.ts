@@ -29,6 +29,8 @@ export interface EvenementOrganisateur {
   villeNom: string;
   pays: string;
   paysNom: string;
+  /** Motif d'une suspension par Billet+ (ADR 0012), rendu au seul organisateur ; null sinon. */
+  suspenduMotif: string | null;
 }
 
 /** VenueDto. */
@@ -288,6 +290,50 @@ export function recharger(corps: {
     method: 'POST',
     body: JSON.stringify(corps),
   });
+}
+
+export type StatutVerification = 'A_VERIFIER' | 'EN_REVUE' | 'VERIFIE' | 'REFUSE' | 'SUSPENDU';
+export type TypePiece = 'IDENTITE' | 'JUSTIFICATIF_REVERSEMENT' | 'NINEA_RCCM';
+
+/** VerificationDto (auth/api/dto, ADR 0012) : sans le contenu des pièces. */
+export interface Verification {
+  organisateurId: string;
+  statut: StatutVerification;
+  typeTitulaire: 'PERSONNE' | 'STRUCTURE' | null;
+  nomStructure: string | null;
+  ninea: string | null;
+  numeroReversement: string | null;
+  titulaireReversement: string | null;
+  motif: string | null;
+  soumisLe: string | null;
+  decideLe: string | null;
+  piecesExigees: TypePiece[];
+  pieces: Array<{ type: TypePiece; typeMime: string; taille: number; deposeLe: string }>;
+}
+
+export function lireVerification(): Promise<Verification> {
+  return http<Verification>('/verification', avecJeton);
+}
+
+export function declarerVerification(corps: {
+  typeTitulaire: 'PERSONNE' | 'STRUCTURE';
+  nomStructure: string | null;
+  ninea: string | null;
+  numeroReversement: string;
+  titulaireReversement: string;
+}): Promise<Verification> {
+  return http<Verification>('/verification', { ...avecJeton, method: 'PUT', body: JSON.stringify(corps) });
+}
+
+/** Dépôt (ou remplacement) d'une pièce : PDF, JPEG ou PNG, 5 Mo au plus, chiffrée par le backend. */
+export function deposerPiece(type: TypePiece, fichier: File): Promise<Verification> {
+  const formulaire = new FormData();
+  formulaire.append('fichier', fichier);
+  return http<Verification>(`/verification/pieces/${type}`, { ...avecJeton, method: 'POST', body: formulaire });
+}
+
+export function soumettreVerification(): Promise<Verification> {
+  return http<Verification>('/verification/soumission', { ...avecJeton, method: 'POST' });
 }
 
 export function mesAgents(): Promise<Agent[]> {

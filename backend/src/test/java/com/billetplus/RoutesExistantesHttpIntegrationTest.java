@@ -47,6 +47,7 @@ class RoutesExistantesHttpIntegrationTest extends ContexteCompletTestBase {
     private String organisateurConnecte() throws Exception {
         String email = emailUnique();
         inscrire(email);
+        organisateurVerifieParEmail(email);
         String reponse = mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"" + email + "\",\"motDePasse\":\"" + MOT_DE_PASSE + "\"}"))
             .andExpect(status().isOk())

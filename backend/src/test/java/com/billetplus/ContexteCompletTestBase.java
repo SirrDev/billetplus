@@ -116,6 +116,39 @@ public abstract class ContexteCompletTestBase {
     @Autowired
     protected MockMvc mvc;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcDeBase;
+
+    /**
+     * Rend {@code organisateurId} vérifié (ADR 0012), condition pour publier et recevoir un
+     * reversement : crée le compte ORGANISATEUR s'il n'existe pas (beaucoup de tests utilisent
+     * un identifiant tiré au hasard), puis sa vérification acceptée.
+     */
+    protected void organisateurVerifie(UUID organisateurId) {
+        jdbcDeBase.update("INSERT INTO users (id, email, mot_de_passe_hash, nom_complet, role, cree_le, version) "
+            + "VALUES (?, ?, 'x', 'Organisateur de test', 'ORGANISATEUR', now(), 0) ON CONFLICT (id) DO NOTHING",
+            organisateurId, organisateurId + "@test.billetplus.sn");
+        jdbcDeBase.update("INSERT INTO verifications_organisateurs (organisateur_id, statut, type_titulaire, "
+            + "numero_reversement, titulaire_reversement, version) VALUES (?, 'VERIFIE', 'PERSONNE', '+221770000000', "
+            + "'Organisateur de test', 0) ON CONFLICT (organisateur_id) DO UPDATE SET statut = 'VERIFIE', motif = NULL",
+            organisateurId);
+    }
+
+    /**
+     * Déplace les dates d'un événement déjà publié (on ne publie pas un événement commencé,
+     * ADR 0012) : pour tester un événement en cours ou passé.
+     */
+    protected void deplacerDates(UUID eventId, java.time.Instant debut, java.time.Instant fin) {
+        jdbcDeBase.update("UPDATE events SET debute_le = ?, termine_le = ? WHERE id = ?",
+            java.sql.Timestamp.from(debut), fin == null ? null : java.sql.Timestamp.from(fin), eventId);
+    }
+
+    /** Même chose pour un organisateur inscrit par l'API, retrouvé par son e-mail. */
+    protected void organisateurVerifieParEmail(String email) {
+        organisateurVerifie(jdbcDeBase.queryForObject("SELECT id FROM users WHERE email = ?", UUID.class,
+            email.trim().toLowerCase()));
+    }
+
     /** Même authentification que JwtAuthenticationFilter : principal = UUID, autorité ROLE_<rôle>. */
     protected static RequestPostProcessor connecte(UUID userId, String role) {
         return authentication(new UsernamePasswordAuthenticationToken(

@@ -51,6 +51,18 @@ export function ComptePage() {
           </Avis>
         </Panneau>
 
+        <Panneau titre="Vérification du compte" id="verification">
+          <p className={s.ligneDetail}>
+            Obligatoire pour publier un événement et recevoir vos reversements : pièce d'identité et numéro de
+            reversement, examinés par l'équipe Billet+.
+          </p>
+          <div>
+            <BoutonLien to="/organisateur/verification" variante="secondaire">
+              Voir ma vérification
+            </BoutonLien>
+          </div>
+        </Panneau>
+
         <Panneau titre="Mot de passe" id="mot-de-passe">
           <FormulaireMotDePasse />
         </Panneau>

@@ -41,8 +41,10 @@ class VerificationProduction {
                            @Value("${billetplus.security.qr-signing.public-key-path}") String clePublique,
                            @Value("${billetplus.limitation.active:true}") boolean limitationActive,
                            @Value("${billetplus.paiement.unitechpay.cle-api:}") String clePaiement,
+                           @Value("${billetplus.verification.cle-pieces:}") String clePieces,
                            StringRedisTemplate redis) {
-        List<String> erreurs = verifier(secretJwt, clePrivee, clePublique, limitationActive, clePaiement);
+        List<String> erreurs = new ArrayList<>(verifier(secretJwt, clePrivee, clePublique, limitationActive, clePaiement));
+        erreurs.addAll(verifierClePieces(clePieces));
         if (!erreurs.isEmpty()) {
             throw new IllegalStateException("Configuration de production refusée : " + String.join(" ; ", erreurs));
         }
@@ -72,6 +74,17 @@ class VerificationProduction {
             erreurs.add("UNITECHPAY_API_KEY est obligatoire en production (paiement et signature des webhooks)");
         }
         return erreurs;
+    }
+
+    /** Clé de dev d'application.yml, publique (ADR 0012). */
+    static final String CLE_PIECES_DE_DEV = "ZGV2LXVuaXF1ZW1lbnQtamFtYWlzLWVuLXByb2QtISE=";
+
+    /** La clé des pièces doit être propre à la production (son format est vérifié à part). */
+    static List<String> verifierClePieces(String clePieces) {
+        if (clePieces == null || clePieces.isBlank() || clePieces.trim().equals(CLE_PIECES_DE_DEV)) {
+            return List.of("BILLETPLUS_CLE_PIECES doit être une clé propre à la production (32 octets en Base64)");
+        }
+        return List.of();
     }
 
     private static void verifierPolitiqueRedis(StringRedisTemplate redis) {

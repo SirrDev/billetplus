@@ -45,6 +45,8 @@ class RecettesEtReversementsHttpIntegrationTest extends ContexteCompletTestBase 
     private OrderRepository orderRepository;
     @Autowired
     private PlatformTransactionManager transactionManager;
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcRecettes;
 
     private final UUID admin = UUID.randomUUID();
 
@@ -55,7 +57,11 @@ class RecettesEtReversementsHttpIntegrationTest extends ContexteCompletTestBase 
     private Event evenementPublie(UUID orga) {
         UUID lieu = venueService.create("Sorano", "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.DAKAR).getId();
         Event e = eventService.create("Concert", null, Instant.now().plus(10, ChronoUnit.DAYS), null, lieu, orga, null);
+        organisateurVerifie(orga);
         eventService.publier(e.getId(), orga);
+        // ADR 0012 : un virement n'est permis qu'à partir du lendemain de l'événement. Les
+        // dates d'un événement publié sont figées par l'application : passées ici en SQL.
+        jdbcRecettes.update("UPDATE events SET debute_le = now() - interval '3 days' WHERE id = ?", e.getId());
         return e;
     }
 
@@ -67,11 +73,15 @@ class RecettesEtReversementsHttpIntegrationTest extends ContexteCompletTestBase 
             new TauxCommission(tauxPointsBase)).commande();
         commande.marquerPayee(maintenant.plusSeconds(30));
         new TransactionTemplate(transactionManager).executeWithoutResult(s -> orderRepository.save(commande));
+        // ADR 0012 : le virement attend le lendemain de la dernière vente payée.
+        jdbcRecettes.update("UPDATE orders SET payee_le = now() - interval '3 days' WHERE id = ?", commande.getId());
     }
 
     private String reversement(UUID eventId, long montant, String reference, String motif) {
         return "{\"eventId\":\"" + eventId + "\",\"montantFcfa\":" + montant + ",\"reference\":\"" + reference + "\","
-            + (motif == null ? "" : "\"motif\":\"" + motif + "\",") + "\"reverseLe\":\"" + LocalDate.now() + "\"}";
+            + (motif == null ? "" : "\"motif\":\"" + motif + "\",") + "\"reverseLe\":\"" + LocalDate.now() + "\","
+            // Aucun billet scanné dans ces tests : dérogation motivée (ADR 0012), ignorée pour une correction.
+            + "\"derogationScans\":\"Entree sans controle (test)\"}";
     }
 
     @Test

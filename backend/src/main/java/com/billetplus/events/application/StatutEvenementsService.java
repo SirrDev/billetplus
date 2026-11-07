@@ -52,6 +52,12 @@ class StatutEvenementsService implements StatutEvenements {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<java.time.Instant> finDe(UUID eventId) {
+        return lire(eventId).map(e -> e.getTermineLe() != null ? e.getTermineLe() : e.getDebuteLe());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public boolean accepteDesCategories(UUID eventId) {
         return lire(eventId)
             .map(event -> event.getStatus() == EventStatus.BROUILLON || event.getStatus() == EventStatus.PUBLIE)

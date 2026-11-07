@@ -78,7 +78,9 @@ class VillesHttpIntegrationTest extends ContexteCompletTestBase {
         String marque = "Festival " + UUID.randomUUID().toString().substring(0, 8);
         Event dakar = evenement(marque + " Dakar", "SN-DAKAR");
         Event thies = evenement(marque + " Thies", "SN-THIES");
+        organisateurVerifie(orga);
         eventService.publier(dakar.getId(), orga);
+        organisateurVerifie(orga);
         eventService.publier(thies.getId(), orga);
 
         mvc.perform(get("/api/events").param("q", marque).param("ville", "SN-THIES"))
@@ -114,6 +116,7 @@ class VillesHttpIntegrationTest extends ContexteCompletTestBase {
     @Test
     void un_evenement_hors_du_senegal_se_prepare_mais_ne_se_publie_pas() throws Exception {
         Event abidjan = evenement("Concert Abidjan " + UUID.randomUUID(), "CI-ABIDJAN");
+        organisateurVerifie(orga);  // sinon le refus viendrait du compte non vérifié (ADR 0012)
 
         mvc.perform(post("/api/events/{id}/publier", abidjan.getId()).with(connecte(orga, "ORGANISATEUR")))
             .andExpect(status().isConflict())

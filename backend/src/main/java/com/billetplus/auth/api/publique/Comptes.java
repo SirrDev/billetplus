@@ -1,5 +1,6 @@
 package com.billetplus.auth.api.publique;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -20,4 +21,19 @@ public interface Comptes {
      * Faux pour tout autre cas (identifiant absent, inconnu, autre rôle, agent retiré).
      */
     boolean estAgentActif(UUID agentId);
+
+    /**
+     * Vrai si {@code organisateurId} est un compte ORGANISATEUR actif dont la vérification est
+     * acceptée (ADR 0012) : condition pour publier un événement et recevoir un reversement.
+     */
+    boolean estOrganisateurVerifie(UUID organisateurId);
+
+    /**
+     * Numéro de reversement vérifié (+2217XXXXXXXX) de l'organisateur, seulement s'il est
+     * {@link #estOrganisateurVerifie vérifié} : l'administrateur ne vire que vers lui.
+     */
+    Optional<String> numeroReversementVerifie(UUID organisateurId);
+
+    /** Titulaire du numéro de reversement vérifié (nom affiché à l'administrateur). */
+    Optional<String> titulaireReversementVerifie(UUID organisateurId);
 }

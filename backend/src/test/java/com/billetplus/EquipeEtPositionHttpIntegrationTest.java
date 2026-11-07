@@ -165,6 +165,7 @@ class EquipeEtPositionHttpIntegrationTest extends ContexteCompletTestBase {
     void un_evenement_publie_refuse_la_position_sans_ecrire_de_lieu() throws Exception {
         UUID orga = organisateur();
         Event e = evenement(orga, 14.7, -17.4);
+        organisateurVerifie(orga);
         eventService.publier(e.getId(), orga);
         int avant = jdbc.queryForObject("SELECT count(*) FROM venues", Integer.class);
 

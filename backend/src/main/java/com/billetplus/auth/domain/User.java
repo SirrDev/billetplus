@@ -129,6 +129,21 @@ public class User {
         }
     }
 
+    /**
+     * Suspend un compte ORGANISATEUR (ADR 0012) : comme un agent retiré, il ne peut plus se
+     * connecter, rafraîchir ses jetons ni lire /api/auth/me. Sans effet s'il l'est déjà.
+     *
+     * @throws IllegalStateException si le compte n'est pas un organisateur (défaut interne : 500)
+     */
+    public void suspendre(Instant maintenant) {
+        if (role != Role.ORGANISATEUR) {
+            throw new IllegalStateException("Seul un compte organisateur peut être suspendu");
+        }
+        if (desactiveLe == null) {
+            desactiveLe = maintenant;
+        }
+    }
+
     public boolean estActif() {
         return desactiveLe == null;
     }

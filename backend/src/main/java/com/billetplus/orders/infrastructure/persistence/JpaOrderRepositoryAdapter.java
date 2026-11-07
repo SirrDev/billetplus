@@ -66,6 +66,11 @@ class JpaOrderRepositoryAdapter implements OrderRepository {
     }
 
     @Override
+    public Optional<Instant> dernierePayee(UUID eventId) {
+        return Optional.ofNullable(springRepo.dernierePayee(eventId));
+    }
+
+    @Override
     public long compterBilletsGratuits(NumeroTelephone telephone, UUID eventId) {
         return springRepo.compterBilletsGratuits(telephone.valeur(), eventId);
     }
