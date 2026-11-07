@@ -30,13 +30,51 @@
   background: var(--bp-white);
   color: var(--bp-ink);
   text-decoration: none;
-  transition: border-color 120ms ease, transform 120ms ease;
+  transition: border-color 120ms ease, transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .carte:hover {
   border-color: var(--bp-line-strong);
   color: var(--bp-ink);
-  transform: translateY(-2px);
+}
+
+/*
+ * Le seul moment animé de « Découvrir » : à l'arrivée, l'affiche de la une se pose et les
+ * cartes montent en cascade (ease-out exponentiel, 60 ms d'écart, plafonné à 6 cartes).
+ * Contenu visible sans animation : fill-mode backwards seulement.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .carte:hover {
+    transform: translateY(-3px);
+  }
+
+  .grille > li {
+    animation: monte 520ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+
+  .grille > li:nth-child(2) { animation-delay: 60ms; }
+  .grille > li:nth-child(3) { animation-delay: 120ms; }
+  .grille > li:nth-child(4) { animation-delay: 180ms; }
+  .grille > li:nth-child(5) { animation-delay: 240ms; }
+  .grille > li:nth-child(n + 6) { animation-delay: 300ms; }
+
+  .uneAffiche > :first-child {
+    animation: pose 900ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+}
+
+@keyframes monte {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@keyframes pose {
+  from {
+    opacity: 0.4;
+    transform: scale(1.06);
+  }
 }
 
 .carteAffiche {
