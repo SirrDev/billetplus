@@ -25,6 +25,7 @@ import {
   lireAffectations,
   lireCategories,
   lireEvenement,
+  lireVerification,
   lireRecettes,
   lireTableauDeBord,
   mesAgents,
@@ -70,6 +71,18 @@ export function EvenementOrganisateurPage() {
   const [message, setMessage] = useState<{ ton: 'succes' | 'danger'; texte: string } | null>(null);
   const [confirmerAnnulation, setConfirmerAnnulation] = useState(false);
   const [action, setAction] = useState(false);
+  /** Statut de vérification du compte (ADR 0012) : sans « VERIFIE », pas de publication. null : pas encore lu. */
+  const [verifie, setVerifie] = useState<boolean | null>(null);
+  useEffect(() => {
+    let annule = false;
+    lireVerification()
+      .then((v) => !annule && setVerifie(v.statut === 'VERIFIE'))
+      // Lecture impossible : on laisse le backend trancher à la publication.
+      .catch(() => !annule && setVerifie(true));
+    return () => {
+      annule = true;
+    };
+  }, []);
 
   const { session } = useSession();
   const moi = session.etat === 'connecte' ? session.utilisateur.id : null;
@@ -184,7 +197,7 @@ export function EvenementOrganisateurPage() {
                 </BoutonLien>
               </>
             )}
-            {evenement.status === 'BROUILLON' && !horsSenegal && (
+            {evenement.status === 'BROUILLON' && !horsSenegal && verifie !== false && (
               <Bouton onClick={() => void changerStatut('publier')} disabled={action || categories.length === 0}>
                 Publier
               </Bouton>
@@ -202,6 +215,24 @@ export function EvenementOrganisateurPage() {
           </div>
         </div>
 
+        {verifie === false && evenement.status === 'BROUILLON' && (
+          <Avis ton="attention">
+            <p>
+              Votre compte doit être vérifié avant de publier : déposez vos pièces, l'équipe Billet+ les examine.
+            </p>
+            <div>
+              <BoutonLien to="/organisateur/verification">Faire vérifier mon compte</BoutonLien>
+            </div>
+          </Avis>
+        )}
+        {evenement.status === 'ANNULE' && evenement.suspenduMotif && (
+          <Avis ton="danger" icone="croix">
+            <p>
+              <strong>Événement suspendu par Billet+.</strong> Motif : {evenement.suspenduMotif}. Les billets sont annulés
+              et les acheteurs remboursés par l'équipe Billet+.
+            </p>
+          </Avis>
+        )}
         {horsSenegal && evenement.status === 'BROUILLON' && (
           <Avis ton="attention">
             <p>

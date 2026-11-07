@@ -1,4 +1,4 @@
-import { http } from '@/commun/http';
+import { http, httpFichier } from '@/commun/http';
 
 /*
  * Espace administrateur : remboursements manuels (décision B, ADR 0006). Contrat recopié
@@ -38,11 +38,17 @@ export interface Recettes {
   resteAReverserFcfa: number;
 }
 
-/** ReversementsDto.Ligne. */
+/** ReversementsDto.Ligne, avec les conditions du virement (ADR 0012). */
 export interface LigneReversement {
   eventId: string;
   evenementAnnule: boolean;
   recettes: Recettes;
+  /** Premier jour où un virement est permis (lendemain de l'événement), AAAA-MM-JJ. */
+  reversableLe: string | null;
+  billetsScannes: number;
+  /** Numéro vérifié de l'organisateur ; null s'il n'est pas vérifié (aucun virement possible). */
+  numeroReversement: string | null;
+  titulaireReversement: string | null;
 }
 
 export function lireReversements(): Promise<LigneReversement[]> {
@@ -56,6 +62,8 @@ export function enregistrerReversement(corps: {
   reference: string;
   motif: string | null;
   reverseLe: string;
+  /** Virement sans billet scanné (entrée sans contrôle) : motif obligatoire, sinon null. */
+  derogationScans?: string | null;
 }): Promise<unknown> {
   return http<unknown>('/admin/reversements', { authentifie: true, method: 'POST', body: JSON.stringify(corps) });
 }
@@ -71,4 +79,69 @@ export async function titreEvenement(id: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+export type StatutVerification = 'A_VERIFIER' | 'EN_REVUE' | 'VERIFIE' | 'REFUSE' | 'SUSPENDU';
+export type TypePiece = 'IDENTITE' | 'JUSTIFICATIF_REVERSEMENT' | 'NINEA_RCCM';
+
+/** VerificationDto (ADR 0012), sans le contenu des pièces. */
+export interface VerificationOrganisateur {
+  organisateurId: string;
+  nomComplet: string | null;
+  email: string | null;
+  statut: StatutVerification;
+  typeTitulaire: 'PERSONNE' | 'STRUCTURE' | null;
+  nomStructure: string | null;
+  ninea: string | null;
+  numeroReversement: string | null;
+  titulaireReversement: string | null;
+  motif: string | null;
+  soumisLe: string | null;
+  decideLe: string | null;
+  piecesExigees: TypePiece[];
+  pieces: Array<{ type: TypePiece; typeMime: string; taille: number; deposeLe: string }>;
+}
+
+export function lireVerifications(statut: StatutVerification): Promise<VerificationOrganisateur[]> {
+  return http<VerificationOrganisateur[]>(`/admin/verifications?statut=${statut}`, { authentifie: true });
+}
+
+/** Pièce déchiffrée par le backend, pour la consulter (jamais gardée par la PWA). */
+export function lirePiece(organisateurId: string, type: TypePiece): Promise<Blob> {
+  return httpFichier(`/admin/verifications/${encodeURIComponent(organisateurId)}/pieces/${type}`, {
+    authentifie: true,
+  });
+}
+
+export function accepterVerification(organisateurId: string): Promise<VerificationOrganisateur> {
+  return http<VerificationOrganisateur>(`/admin/verifications/${encodeURIComponent(organisateurId)}/acceptation`, {
+    authentifie: true,
+    method: 'POST',
+  });
+}
+
+export function refuserVerification(organisateurId: string, motif: string): Promise<VerificationOrganisateur> {
+  return http<VerificationOrganisateur>(`/admin/verifications/${encodeURIComponent(organisateurId)}/refus`, {
+    authentifie: true,
+    method: 'POST',
+    body: JSON.stringify({ motif }),
+  });
+}
+
+/** Suspension définitive : connexion bloquée, événements à venir annulés (ADR 0012). */
+export function suspendreCompte(organisateurId: string, motif: string): Promise<VerificationOrganisateur> {
+  return http<VerificationOrganisateur>(`/admin/verifications/${encodeURIComponent(organisateurId)}/suspension`, {
+    authentifie: true,
+    method: 'POST',
+    body: JSON.stringify({ motif }),
+  });
+}
+
+/** Suspension d'un événement : vente fermée, billets annulés, acheteurs à rembourser (ADR 0012). */
+export function suspendreEvenement(eventId: string, motif: string): Promise<unknown> {
+  return http<unknown>(`/admin/evenements/${encodeURIComponent(eventId)}/suspension`, {
+    authentifie: true,
+    method: 'POST',
+    body: JSON.stringify({ motif }),
+  });
 }

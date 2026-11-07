@@ -22,6 +22,7 @@ import {
   MesEvenementsPage,
   ModifierEvenementPage,
   NouvelEvenementPage,
+  VerificationPage,
 } from '@/espaces/organisateur';
 import { Cadre, Chargement } from '@/ui';
 
@@ -42,6 +43,7 @@ const CompteAdminPage = lazy(() => espaceAdmin().then((m) => ({ default: m.Compt
 const ConnexionAdminPage = lazy(() => espaceAdmin().then((m) => ({ default: m.ConnexionAdminPage })));
 const RemboursementsPage = lazy(() => espaceAdmin().then((m) => ({ default: m.RemboursementsPage })));
 const ReversementsPage = lazy(() => espaceAdmin().then((m) => ({ default: m.ReversementsPage })));
+const VerificationsPage = lazy(() => espaceAdmin().then((m) => ({ default: m.VerificationsPage })));
 
 const enChargement = (
   <Cadre sansNav>
@@ -106,6 +108,7 @@ export function Routage() {
         <Route path="/organisateur/equipe" element={organisateur(<EquipePage />)} />
         <Route path="/organisateur/compte" element={organisateur(<ComptePage />)} />
         <Route path="/organisateur/credit" element={organisateur(<CreditPage />)} />
+        <Route path="/organisateur/verification" element={organisateur(<VerificationPage />)} />
 
         <Route
           path="/scanner/connexion"
@@ -129,6 +132,7 @@ export function Routage() {
         />
         <Route path="/admin" element={admin(<RemboursementsPage />)} />
         <Route path="/admin/reversements" element={admin(<ReversementsPage />)} />
+        <Route path="/admin/verifications" element={admin(<VerificationsPage />)} />
         <Route path="/admin/compte" element={admin(<CompteAdminPage />)} />
 
         <Route path="*" element={<PageIntrouvable />} />
