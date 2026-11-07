@@ -35,6 +35,28 @@ p {
 
 a {
   color: var(--bp-accent-text);
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Surfaces du navigateur aux couleurs de Billet+ : sélection, curseur de saisie, cases. */
+::selection {
+  background: var(--bp-accent-soft);
+  color: var(--bp-accent-ink);
+}
+
+input,
+textarea {
+  caret-color: var(--bp-accent);
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--bp-accent);
 }
 
 button,
