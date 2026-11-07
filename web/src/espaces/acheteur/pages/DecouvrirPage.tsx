@@ -116,6 +116,7 @@ export function DecouvrirPage() {
             {villes !== null && villes.length > 0 && (
               <ChampChoix
                 libelle="Ville"
+                libelleMasque
                 options={optionsVilles(villes, 'Toutes les villes')}
                 valeur={ville}
                 onChange={setVille}
