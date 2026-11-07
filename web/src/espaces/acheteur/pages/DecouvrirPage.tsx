@@ -103,8 +103,8 @@ export function DecouvrirPage() {
       <div className={s.pile}>
         <div className={s.entete}>
           <div>
-            <p className={s.surtitre}>{nomVille ?? "Afrique de l'Ouest"}</p>
             <h1 className={s.titrePage}>Découvrir</h1>
+            <p className={s.sousTitre}>{nomVille ?? "Afrique de l'Ouest"}</p>
           </div>
           <div className={s.recherche}>
             <ChampRecherche
@@ -116,6 +116,7 @@ export function DecouvrirPage() {
             {villes !== null && villes.length > 0 && (
               <ChampChoix
                 libelle="Ville"
+                libelleMasque
                 options={optionsVilles(villes, 'Toutes les villes')}
                 valeur={ville}
                 onChange={setVille}

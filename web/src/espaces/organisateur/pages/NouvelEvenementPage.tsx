@@ -74,8 +74,8 @@ export function NouvelEvenementPage() {
     <CadreOrganisateur etroit>
       <div className={s.pile}>
         <div>
-          <p className={s.surtitre}>Brouillon, invisible du public jusqu'à sa publication</p>
           <h1 className={s.titrePage}>Nouvel événement</h1>
+          <p className={s.sousTitre}>Brouillon, invisible du public jusqu'à sa publication</p>
         </div>
         <form className={s.formulaire} onSubmit={valider}>
           <Panneau titre="L'événement" id="evenement">

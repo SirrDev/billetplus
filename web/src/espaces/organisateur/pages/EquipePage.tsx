@@ -107,8 +107,8 @@ export function EquipePage() {
     <CadreOrganisateur>
       <div className={s.pile}>
         <div>
-          <p className={s.surtitre}>Contrôle d'entrée</p>
           <h1 className={s.titrePage}>Équipe</h1>
+          <p className={s.sousTitre}>Contrôle d'entrée</p>
         </div>
         {retourListe && (
           <Avis ton={retourListe.ton}>

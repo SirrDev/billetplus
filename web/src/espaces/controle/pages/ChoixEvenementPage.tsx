@@ -78,8 +78,8 @@ export function ChoixEvenementPage() {
     <CadreControle>
       <div className={s.pile}>
         <div>
-          <p className={s.surtitre}>Connecté : {utilisateur?.nomComplet}</p>
           <h1 className={s.titrePage}>Événement à contrôler</h1>
+          <p className={s.sousTitre}>Connecté : {utilisateur?.nomComplet}</p>
           {!organisateur && (
             <p className={s.texte} style={{ marginTop: 8 }}>
               <Link to="/scanner/compte">Mon compte et mot de passe</Link>

@@ -25,8 +25,8 @@ export function ComptePage() {
     <CadreOrganisateur etroit>
       <div className={s.pile}>
         <div>
-          <p className={s.surtitre}>Espace organisateur</p>
           <h1 className={s.titrePage}>Mon compte</h1>
+          <p className={s.sousTitre}>Espace organisateur</p>
         </div>
 
         <Panneau titre="Identité" id="identite">

@@ -92,6 +92,13 @@
   animation: tourne 0.8s linear infinite;
 }
 
+/* Mouvement réduit : la roue tourne lentement, le texte « Chargement… » porte l'état. */
+@media (prefers-reduced-motion: reduce) {
+  .roue {
+    animation-duration: 2.4s;
+  }
+}
+
 @keyframes tourne {
   to {
     transform: rotate(360deg);

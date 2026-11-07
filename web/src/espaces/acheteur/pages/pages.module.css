@@ -18,9 +18,11 @@
   gap: 16px;
 }
 
-.surtitre {
+/* Précision sous le titre de page (jamais au-dessus : le titre porte seul la page). */
+.sousTitre {
+  margin-top: 6px;
   color: var(--bp-ink-2);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .titrePage {
@@ -37,9 +39,18 @@
   font-size: 24px;
 }
 
+/* Recherche + ville : empilées sur téléphone, sur une ligne dès 720 px (recherche extensible). */
 .recherche {
   flex: 1 1 280px;
-  max-width: 420px;
+  max-width: 560px;
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 720px) {
+  .recherche {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 200px);
+  }
 }
 
 .suite {

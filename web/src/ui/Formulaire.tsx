@@ -219,8 +219,11 @@ export function ChampChoix<V extends string>({
   valeur,
   onChange,
   aide,
+  libelleMasque = false,
 }: {
   libelle: string;
+  /** Libellé lu par les lecteurs d'écran seulement, quand la première option le dit déjà (filtre). */
+  libelleMasque?: boolean;
   /** groupe : options consécutives du même groupe réunies dans un <optgroup> (villes par pays). */
   options: ReadonlyArray<{ valeur: V; libelle: string; groupe?: string }>;
   valeur: V;
@@ -241,7 +244,7 @@ export function ChampChoix<V extends string>({
   );
   return (
     <div className={s.champ}>
-      <label htmlFor={id} className={s.libelle}>
+      <label htmlFor={id} className={libelleMasque ? 'visually-hidden' : s.libelle}>
         {libelle}
       </label>
       <div className={s.saisie}>

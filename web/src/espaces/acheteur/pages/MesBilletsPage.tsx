@@ -28,8 +28,8 @@ export function MesBilletsPage() {
     <Cadre>
       <div className={s.pile}>
         <div>
-          <p className={s.surtitre}>Enregistrés sur cet appareil</p>
           <h1 className={s.titrePage}>Mes billets</h1>
+          <p className={s.sousTitre}>Enregistrés sur cet appareil</p>
         </div>
 
         {commandes === null && <Chargement />}

@@ -24,6 +24,17 @@
   --bp-amber-soft: #fff4db;
   --bp-amber-ink: #6b4500;
 
+  /* Surfaces sombres : écran du scanner (lisible de nuit) et carte « À l'affiche ».
+     Contrastes sur --bp-dark : --bp-dark-text 12,2 · --bp-dark-text-2 8,7. */
+  --bp-dark: #0b0c10;
+  --bp-dark-1: #17191f;
+  --bp-dark-2: #1a1c24;
+  --bp-dark-3: #22252e;
+  --bp-dark-line: #3a3e4b;
+  --bp-dark-text: #c9ccd6;
+  --bp-dark-text-2: #a9adba;
+  --bp-dark-success: #8ee6b8;
+
   --bp-success: #0f7b4f;
   --bp-success-soft: #e5f4ec;
   --bp-danger: #b42318;

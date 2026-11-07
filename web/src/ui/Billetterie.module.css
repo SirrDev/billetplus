@@ -65,6 +65,7 @@
   font-family: var(--bp-font-display);
   font-weight: 700;
   font-size: 24px;
+  font-variant-numeric: tabular-nums;
 }
 
 .barreAction {

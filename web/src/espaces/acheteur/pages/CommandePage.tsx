@@ -207,10 +207,10 @@ export function CommandePage() {
           <>
             {payee && <Etapes courante={3} gratuit={gratuite} />}
             <div>
-              <p className={s.surtitre}>
+              <h1 className={s.titrePage}>Vos billets</h1>
+              <p className={s.sousTitre}>
                 {payee ? (gratuite ? 'Billets gratuits confirmés' : 'Paiement confirmé') : 'Billets enregistrés'}
               </p>
-              <h1 className={s.titrePage}>Vos billets</h1>
             </div>
             {billetsAffiches?.some((b) => b.statut === 'ANNULE') && (
               // Un billet n'est annulé que par l'annulation de son événement (CancelEventTicketsUseCase) :

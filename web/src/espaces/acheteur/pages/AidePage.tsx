@@ -140,8 +140,8 @@ export function AidePage() {
     <Cadre>
       <div className={s.pile}>
         <div>
-          <p className={s.surtitre}>Questions fréquentes</p>
           <h1 className={s.titrePage}>Aide</h1>
+          <p className={s.sousTitre}>Questions fréquentes</p>
         </div>
         <div className={s.aide}>
           {RUBRIQUES.map((r) => (

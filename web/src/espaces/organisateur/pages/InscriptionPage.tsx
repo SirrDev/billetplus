@@ -53,8 +53,8 @@ export function InscriptionPage() {
               </BoutonLien>
             </div>
             <div>
-              <p className={s.surtitre}>Espace organisateur</p>
               <h1 className={s.titrePage}>Créer un compte</h1>
+              <p className={s.sousTitre}>Espace organisateur</p>
             </div>
             <ChampTexte libelle="Nom ou structure" valeur={nom} onChange={setNom} requis maxLength={TEXTE_MAX} autoComplete="organization" />
             <ChampTexte
