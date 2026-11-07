@@ -31,9 +31,30 @@ class VerificationProductionTest {
         return redis;
     }
 
+    /** Clé des pièces propre à la production (ADR 0012), différente de celle d'application.yml. */
+    private static final String CLE_PIECES = "Y2xlLWRlcy1waWVjZXMtcG91ci1sZXMtdGVzdHMtISE=";
+
+    /** Même valeur que la clé de dev d'application.yml : sinon la production l'accepterait (ADR 0012). */
+    @Test
+    void la_cle_de_dev_refusee_est_bien_celle_d_application_yml() throws java.io.IOException {
+        try (java.io.InputStream yml = getClass().getResourceAsStream("/application.yml")) {
+            assertThat(new String(yml.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8))
+                .contains("${BILLETPLUS_CLE_PIECES:" + VerificationProduction.CLE_PIECES_DE_DEV + "}");
+        }
+    }
+
+    @Test
+    void la_cle_des_pieces_de_developpement_ou_absente_est_refusee() {
+        assertThat(VerificationProduction.verifierClePieces(VerificationProduction.CLE_PIECES_DE_DEV)).hasSize(1);
+        assertThat(VerificationProduction.verifierClePieces("")).hasSize(1);
+        assertThat(VerificationProduction.verifierClePieces(null)).singleElement()
+            .asString().contains("BILLETPLUS_CLE_PIECES").doesNotContain(VerificationProduction.CLE_PIECES_DE_DEV);
+        assertThat(VerificationProduction.verifierClePieces(CLE_PIECES)).isEmpty();
+    }
+
     @Test
     void une_configuration_de_production_correcte_est_acceptee() {
-        assertThatCode(() -> new VerificationProduction(SECRET, PRIVEE, PUBLIQUE, true, CLE, redisAvecPolitique("noeviction")))
+        assertThatCode(() -> new VerificationProduction(SECRET, PRIVEE, PUBLIQUE, true, CLE, CLE_PIECES, redisAvecPolitique("noeviction")))
             .doesNotThrowAnyException();
     }
 
@@ -54,7 +75,7 @@ class VerificationProductionTest {
     @Test
     void toutes_les_erreurs_sont_signalees_ensemble_sans_reveler_les_valeurs() {
         String secretFaible = "secret-trop-court";
-        assertThatThrownBy(() -> new VerificationProduction(secretFaible, "classpath:a", PUBLIQUE, true, CLE,
+        assertThatThrownBy(() -> new VerificationProduction(secretFaible, "classpath:a", PUBLIQUE, true, CLE, CLE_PIECES,
                 redisAvecPolitique("noeviction")))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("JWT_SECRET")
@@ -71,7 +92,7 @@ class VerificationProductionTest {
 
     @Test
     void une_politique_d_eviction_de_redis_autre_que_noeviction_empeche_le_demarrage() {
-        assertThatThrownBy(() -> new VerificationProduction(SECRET, PRIVEE, PUBLIQUE, true, CLE,
+        assertThatThrownBy(() -> new VerificationProduction(SECRET, PRIVEE, PUBLIQUE, true, CLE, CLE_PIECES,
                 redisAvecPolitique("allkeys-lru")))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("allkeys-lru");
@@ -82,9 +103,9 @@ class VerificationProductionTest {
         StringRedisTemplate injoignable = mock(StringRedisTemplate.class);
         when(injoignable.execute(any(RedisCallback.class))).thenThrow(new QueryTimeoutException("CONFIG refusé"));
 
-        assertThatCode(() -> new VerificationProduction(SECRET, PRIVEE, PUBLIQUE, true, CLE, injoignable))
+        assertThatCode(() -> new VerificationProduction(SECRET, PRIVEE, PUBLIQUE, true, CLE, CLE_PIECES, injoignable))
             .doesNotThrowAnyException();
-        assertThatCode(() -> new VerificationProduction(SECRET, PRIVEE, PUBLIQUE, true, CLE, redisAvecPolitique(null)))
+        assertThatCode(() -> new VerificationProduction(SECRET, PRIVEE, PUBLIQUE, true, CLE, CLE_PIECES, redisAvecPolitique(null)))
             .doesNotThrowAnyException();
     }
 }

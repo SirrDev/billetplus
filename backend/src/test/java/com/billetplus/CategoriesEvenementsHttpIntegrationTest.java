@@ -42,6 +42,7 @@ class CategoriesEvenementsHttpIntegrationTest extends ContexteCompletTestBase {
     private Event publie(UUID orga, String titre, CategorieEvenement categorie) {
         UUID lieu = venueService.create("Lieu " + titre, "Dakar", null, null, com.billetplus.events.domain.VillesDeTest.DAKAR).getId();
         Event e = eventService.create(titre, null, Instant.now().plus(5, ChronoUnit.DAYS), null, lieu, orga, categorie);
+        organisateurVerifie(orga);
         eventService.publier(e.getId(), orga);
         return e;
     }
@@ -86,6 +87,7 @@ class CategoriesEvenementsHttpIntegrationTest extends ContexteCompletTestBase {
             .andExpect(jsonPath("$.categorie").value("SPECTACLE"))
             .andReturn().getResponse().getContentAsString();
         UUID id = UUID.fromString(JsonPath.read(cree, "$.id"));
+        organisateurVerifie(orga);
         eventService.publier(id, orga);
 
         mvc.perform(put("/api/events/{id}", id).with(connecte(orga, "ORGANISATEUR"))

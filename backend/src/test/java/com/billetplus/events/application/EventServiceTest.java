@@ -30,8 +30,13 @@ class EventServiceTest {
     @Mock
     private ApplicationEventPublisher publisher;
 
+    /** Organisateurs vérifiés (ADR 0012) : la règle de publication a ses propres tests. */
+    private static final com.billetplus.auth.api.publique.Comptes COMPTES_VERIFIES = org.mockito.Mockito.mock(
+        com.billetplus.auth.api.publique.Comptes.class,
+        i -> i.getMethod().getReturnType() == boolean.class ? Boolean.TRUE : null);
+
     private EventService service() {
-        return new EventService(eventRepository, venueRepository, publisher);
+        return new EventService(eventRepository, venueRepository, publisher, COMPTES_VERIFIES);
     }
 
     private Venue venue() {
@@ -63,7 +68,7 @@ class EventServiceTest {
     @Test
     void permet_a_l_organisateur_de_publier_son_propre_evenement() {
         UUID organizerId = UUID.randomUUID();
-        Event event = new Event("Concert", null, Instant.now(), null, venue(), organizerId);
+        Event event = new Event("Concert", null, Instant.now().plusSeconds(86_400), null, venue(), organizerId);
         when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
         when(eventRepository.save(any(Event.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -76,7 +81,7 @@ class EventServiceTest {
     void refuse_qu_un_autre_utilisateur_publie_l_evenement() {
         UUID organizerId = UUID.randomUUID();
         UUID autreUtilisateur = UUID.randomUUID();
-        Event event = new Event("Concert", null, Instant.now(), null, venue(), organizerId);
+        Event event = new Event("Concert", null, Instant.now().plusSeconds(86_400), null, venue(), organizerId);
         when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
 
         // Brouillon d'un autre : 404, indiscernable d'un identifiant inconnu.
@@ -91,7 +96,7 @@ class EventServiceTest {
     void refuse_qu_un_autre_utilisateur_annule_l_evenement() {
         UUID organizerId = UUID.randomUUID();
         UUID autreUtilisateur = UUID.randomUUID();
-        Event event = new Event("Concert", null, Instant.now(), null, venue(), organizerId);
+        Event event = new Event("Concert", null, Instant.now().plusSeconds(86_400), null, venue(), organizerId);
         when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
 
         assertThatThrownBy(() -> service().annuler(event.getId(), autreUtilisateur))
@@ -102,7 +107,7 @@ class EventServiceTest {
     @Test
     void refuse_en_403_qu_un_autre_utilisateur_annule_un_evenement_publie() {
         UUID organizerId = UUID.randomUUID();
-        Event event = new Event("Concert", null, Instant.now(), null, venue(), organizerId);
+        Event event = new Event("Concert", null, Instant.now().plusSeconds(86_400), null, venue(), organizerId);
         event.publier();
         when(eventRepository.findById(event.getId())).thenReturn(Optional.of(event));
 

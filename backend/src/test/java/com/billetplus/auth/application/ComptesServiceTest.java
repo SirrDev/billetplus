@@ -12,6 +12,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -21,7 +22,7 @@ class ComptesServiceTest {
     private UserRepository userRepository;
 
     private ComptesService service() {
-        return new ComptesService(userRepository);
+        return new ComptesService(userRepository, mock(VerificationRepository.class));
     }
 
     @Test
