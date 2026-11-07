@@ -49,8 +49,8 @@ export function ConnexionAdminPage() {
         <Panneau>
           <form className={s.formulaire} onSubmit={valider}>
             <div>
-              <p className={s.surtitre}>Administration Billet+</p>
               <h1 className={s.titrePage}>Connexion</h1>
+              <p className={s.sousTitre}>Administration Billet+</p>
             </div>
             <ChampTexte
               libelle="E-mail"

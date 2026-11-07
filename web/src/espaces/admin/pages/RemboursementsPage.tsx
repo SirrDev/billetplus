@@ -135,8 +135,8 @@ export function RemboursementsPage() {
       <div className={s.pile}>
         <div className={s.entete}>
           <div>
-            <p className={s.surtitre}>Administration Billet+</p>
             <h1 className={s.titrePage}>Remboursements</h1>
+            <p className={s.sousTitre}>Administration Billet+</p>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
             {commandes && commandes.length > 0 && (

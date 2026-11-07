@@ -104,10 +104,10 @@ export function TransfertBilletPage() {
     <Cadre etroit>
       <div className={s.pile}>
         <div>
-          <p className={s.surtitre}>
+          <h1 className={s.titrePage}>{affiche ? 'Billet transféré' : 'Transférer ce billet'}</h1>
+          <p className={s.sousTitre}>
             {billet.categorie} · {locale.titre}
           </p>
-          <h1 className={s.titrePage}>{affiche ? 'Billet transféré' : 'Transférer ce billet'}</h1>
         </div>
 
         {affiche ? (

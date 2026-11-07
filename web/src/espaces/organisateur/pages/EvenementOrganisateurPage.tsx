@@ -176,10 +176,10 @@ export function EvenementOrganisateurPage() {
       <div className={s.pile}>
         <div className={s.entete}>
           <div>
-            <p className={s.surtitre}>
+            <h1 className={s.titrePage}>{evenement.titre}</h1>
+            <p className={s.sousTitre}>
               {formatDateCourte(evenement.debuteLe)} · {evenement.venueNom}
             </p>
-            <h1 className={s.titrePage}>{evenement.titre}</h1>
             <div style={{ marginTop: 8 }}>
               <Pastille ton={statut.ton} icone={statut.icone}>
                 {statut.libelle}

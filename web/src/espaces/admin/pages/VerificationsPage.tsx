@@ -61,8 +61,8 @@ export function VerificationsPage() {
     <CadreAdmin>
       <div className={s.pile}>
         <div>
-          <p className={s.surtitre}>Administration</p>
           <h1 className={s.titrePage}>Vérification des organisateurs</h1>
+          <p className={s.sousTitre}>Administration</p>
         </div>
         <Avis>
           <p>

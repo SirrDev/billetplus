@@ -33,8 +33,8 @@ export function MesEvenementsPage() {
       <div className={s.pile}>
         <div className={s.entete}>
           <div>
-            <p className={s.surtitre}>Espace organisateur</p>
             <h1 className={s.titrePage}>Mes événements</h1>
+            <p className={s.sousTitre}>Espace organisateur</p>
           </div>
           <BoutonLien to="/organisateur/evenements/nouveau">Nouvel événement</BoutonLien>
         </div>

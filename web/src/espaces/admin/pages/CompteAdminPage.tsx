@@ -16,8 +16,8 @@ export function CompteAdminPage() {
     <CadreAdmin>
       <div className={s.pile}>
         <div>
-          <p className={s.surtitre}>{utilisateur?.email}</p>
           <h1 className={s.titrePage}>Mon compte</h1>
+          <p className={s.sousTitre}>{utilisateur?.email}</p>
         </div>
         <Panneau titre="Mot de passe" id="mot-de-passe">
           <FormulaireMotDePasse />

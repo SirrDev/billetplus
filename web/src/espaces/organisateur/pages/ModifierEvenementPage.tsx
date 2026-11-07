@@ -153,8 +153,8 @@ export function ModifierEvenementPage() {
     <CadreOrganisateur etroit>
       <div className={s.pile}>
         <div>
-          <p className={s.surtitre}>{evenement.venueNom}</p>
           <h1 className={s.titrePage}>Modifier l'événement</h1>
+          <p className={s.sousTitre}>{evenement.venueNom}</p>
         </div>
 
         {!modifiable ? (

@@ -18,9 +18,11 @@
   gap: 16px;
 }
 
-.surtitre {
+/* Précision sous le titre de page (jamais au-dessus : le titre porte seul la page). */
+.sousTitre {
+  margin-top: 6px;
   color: var(--bp-ink-2);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .titrePage {

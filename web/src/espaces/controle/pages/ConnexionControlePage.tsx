@@ -54,8 +54,8 @@ export function ConnexionControlePage() {
               </BoutonLien>
             </div>
             <div>
-              <p className={s.surtitre}>Contrôle d'entrée</p>
               <h1 className={s.titrePage}>Connexion de l'agent</h1>
+              <p className={s.sousTitre}>Contrôle d'entrée</p>
             </div>
             <ChampTexte
               libelle="E-mail"

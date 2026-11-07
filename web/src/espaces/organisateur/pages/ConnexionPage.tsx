@@ -53,8 +53,8 @@ export function ConnexionPage() {
               </BoutonLien>
             </div>
             <div>
-              <p className={s.surtitre}>Espace organisateur</p>
               <h1 className={s.titrePage}>Connexion</h1>
+              <p className={s.sousTitre}>Espace organisateur</p>
             </div>
             <ChampTexte
               libelle="E-mail"

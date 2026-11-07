@@ -95,8 +95,8 @@ export function VerificationPage() {
     <CadreOrganisateur etroit>
       <div className={s.pile}>
         <div>
-          <p className={s.surtitre}>Espace organisateur</p>
           <h1 className={s.titrePage}>Vérification du compte</h1>
+          <p className={s.sousTitre}>Espace organisateur</p>
         </div>
         {erreur && (
           <Avis ton="danger">

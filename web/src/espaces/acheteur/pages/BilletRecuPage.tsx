@@ -103,8 +103,8 @@ export function BilletRecuPage() {
       <Cadre etroit>
         <div className={s.pile}>
           <div>
-            <p className={s.surtitre}>Billet reçu</p>
             <h1 className={s.titrePage}>{local.titre}</h1>
+            <p className={s.sousTitre}>Billet reçu</p>
           </div>
           <Avis ton="succes" icone="cadenas">
             <p>Billet enregistré sur cet appareil : il s'affiche même sans réseau, dans « Mes billets ».</p>
@@ -147,8 +147,8 @@ export function BilletRecuPage() {
     <Cadre etroit>
       <div className={s.pile}>
         <div>
-          <p className={s.surtitre}>Billet transféré</p>
           <h1 className={s.titrePage}>Ouvrir mon billet</h1>
+          <p className={s.sousTitre}>Billet transféré</p>
         </div>
         <form className={s.formulaire} onSubmit={ouvrir} noValidate>
           <Panneau titre="Votre numéro" id="numero">

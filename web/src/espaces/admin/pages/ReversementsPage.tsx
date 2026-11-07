@@ -113,8 +113,8 @@ export function ReversementsPage() {
     <CadreAdmin>
       <div className={s.pile}>
         <div>
-          <p className={s.surtitre}>Administration</p>
           <h1 className={s.titrePage}>Reversements aux organisateurs</h1>
+          <p className={s.sousTitre}>Administration</p>
         </div>
         <Avis>
           <p>

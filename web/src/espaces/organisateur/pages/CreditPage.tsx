@@ -83,8 +83,8 @@ export function CreditPage() {
     <CadreOrganisateur>
       <div className={s.pile}>
         <div>
-          <p className={s.surtitre}>Espace organisateur</p>
           <h1 className={s.titrePage}>Crédit entrée libre</h1>
+          <p className={s.sousTitre}>Espace organisateur</p>
         </div>
         {erreurChargement && (
           <Avis ton="danger">
