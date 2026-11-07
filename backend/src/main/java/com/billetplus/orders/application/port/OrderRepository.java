@@ -60,6 +60,9 @@ public interface OrderRepository {
     /** Totaux de chaque événement qui a au moins une commande payée. */
     List<TotauxPayees> totauxPayeesParEvenement();
 
+    /** Date de la dernière commande PAYEE de l'événement (ADR 0012 : le reversement attend le lendemain). */
+    Optional<Instant> dernierePayee(UUID eventId);
+
     /** Vrai si l'événement a au moins une commande PAYEE (servie par idx_orders_event_id_status). */
     boolean existeCommandePayee(UUID eventId);
 

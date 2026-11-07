@@ -21,7 +21,9 @@ public record EventDto(
     String villeCode,
     String villeNom,
     String pays,
-    String paysNom
+    String paysNom,
+    /** Motif de la suspension par Billet+ (ADR 0012) : rendu au seul organisateur. */
+    String suspenduMotif
 ) {
     /**
      * Pour la route publique GET /api/events/{id} : l'identifiant de l'organisateur
@@ -38,7 +40,7 @@ public record EventDto(
         return new EventDto(complet.id(), complet.titre(), complet.description(), complet.debuteLe(),
             complet.termineLe(), complet.venueId(), complet.venueNom(), null, complet.status(),
             complet.creeLe(), complet.categorie(), complet.villeCode(), complet.villeNom(), complet.pays(),
-            complet.paysNom());
+            complet.paysNom(), null);
     }
 
     /** Réponses réservées à l'organisateur de l'événement (routes protégées par son rôle et la propriété). */
@@ -50,7 +52,8 @@ public record EventDto(
             event.getOrganizerId(), event.getStatus().name(), event.getCreeLe(),
             event.getCategorie().name(),
             event.getVenue().getVille().getCode(), event.getVenue().getVille().getNom(),
-            event.getVenue().getVille().getPays().name(), event.getVenue().getVille().getPays().getNom()
+            event.getVenue().getVille().getPays().name(), event.getVenue().getVille().getPays().getNom(),
+            event.getSuspenduMotif()
         );
     }
 }

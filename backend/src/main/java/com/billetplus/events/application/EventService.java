@@ -1,9 +1,11 @@
 package com.billetplus.events.application;
 
+import com.billetplus.auth.api.publique.Comptes;
 import com.billetplus.events.domain.CategorieEvenement;
 import com.billetplus.events.domain.Event;
 import com.billetplus.events.domain.Venue;
 import com.billetplus.shared.evenements.EvenementAnnule;
+import com.billetplus.shared.exception.BusinessConflictException;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -20,12 +22,16 @@ public class EventService {
     private final EventRepository eventRepository;
     private final VenueRepository venueRepository;
     private final ApplicationEventPublisher publisher;
+    /** Port public du module auth (ADR 0005) : vérification de l'organisateur (ADR 0012). */
+    private final Comptes comptes;
 
     public EventService(EventRepository eventRepository, VenueRepository venueRepository,
-                        ApplicationEventPublisher publisher) {
+                        ApplicationEventPublisher publisher,
+                        Comptes comptes) {
         this.eventRepository = eventRepository;
         this.venueRepository = venueRepository;
         this.publisher = publisher;
+        this.comptes = comptes;
     }
 
     /** @param categorie null : AUTRE */
@@ -78,6 +84,15 @@ public class EventService {
     public Event publier(UUID eventId, UUID requestingUserId) {
         Event event = get(eventId);
         verifierProprietaire(event, requestingUserId);
+        // ADR 0012 : un compte non vérifié prépare ses brouillons, mais ne met rien en vente.
+        if (!comptes.estOrganisateurVerifie(event.getOrganizerId())) {
+            throw new BusinessConflictException("Votre compte doit être vérifié avant de publier");
+        }
+        // ADR 0012 : un événement daté dans le passé, publié puis vendu, permettrait un
+        // reversement immédiat (J+1 déjà atteint). On publie avant le début, jamais après.
+        if (!event.getDebuteLe().isAfter(Instant.now())) {
+            throw new BusinessConflictException("Un événement déjà commencé ne peut pas être publié");
+        }
         event.publier();
         return eventRepository.save(event);
     }
@@ -133,6 +148,35 @@ public class EventService {
         Event enregistre = eventRepository.save(event);
         publisher.publishEvent(new EvenementAnnule(enregistre.getId()));
         return enregistre;
+    }
+
+    /**
+     * Suspension d'un événement par l'administrateur (ADR 0012) : sans contrôle de
+     * propriété, avec un motif. Publie {@link EvenementAnnule} comme une annulation.
+     */
+    @Transactional
+    public Event suspendre(UUID eventId, String motif) {
+        Event event = get(eventId);
+        event.suspendre(motif);
+        Event enregistre = eventRepository.save(event);
+        publisher.publishEvent(new EvenementAnnule(enregistre.getId()));
+        return enregistre;
+    }
+
+    /**
+     * Compte de l'organisateur suspendu (ADR 0012) : chacun de ses événements encore actifs
+     * (brouillon ou publié) est suspendu, dans la transaction de la suspension du compte.
+     */
+    @Transactional
+    public int suspendreTousLesEvenementsDe(UUID organisateurId) {
+        int suspendus = 0;
+        for (Event event : eventRepository.findByOrganizerId(organisateurId)) {
+            if (event.estActif()) {
+                suspendre(event.getId(), "Compte de l'organisateur suspendu par Billet+");
+                suspendus++;
+            }
+        }
+        return suspendus;
     }
 
     /**

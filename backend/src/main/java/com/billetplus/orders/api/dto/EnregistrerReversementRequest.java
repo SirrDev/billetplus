@@ -31,5 +31,9 @@ public record EnregistrerReversementRequest(
     String motif,
 
     @NotNull
-    LocalDate reverseLe
+    LocalDate reverseLe,
+
+    /** Virement sans billet scanné (entrée sans contrôle, ADR 0012) : motif obligatoire, sinon null. */
+    @Size(max = 255, message = "Le motif de la dérogation ne doit pas dépasser 255 caractères")
+    String derogationScans
 ) {}

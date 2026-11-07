@@ -62,6 +62,10 @@ interface SpringDataOrderRepository extends JpaRepository<OrderJpaEntity, UUID> 
         + "GROUP BY o.id, o.event_id, o.taux_commission_points_base) t GROUP BY t.event_id", nativeQuery = true)
     List<Object[]> totauxPayeesParEvenement();
 
+    @Query("select max(o.payeeLe) from OrderJpaEntity o where o.eventId = :eventId "
+        + "and o.status = com.billetplus.orders.domain.OrderStatus.PAYEE")
+    Instant dernierePayee(@Param("eventId") UUID eventId);
+
     /** Servie par idx_orders_entree_libre_telephone (V17). */
     @Query(value = "SELECT CAST(coalesce(sum(l.quantite), 0) AS BIGINT) FROM orders o "
         + "JOIN order_lines l ON l.order_id = o.id "

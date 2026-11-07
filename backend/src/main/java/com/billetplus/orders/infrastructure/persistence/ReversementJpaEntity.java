@@ -42,12 +42,23 @@ class ReversementJpaEntity {
     @Column(nullable = false, updatable = false)
     private Instant enregistreLe;
 
+    /** V19 (ADR 0012) : motif d'un virement sans billet scanné. */
+    @Column(updatable = false, length = 255)
+    private String derogationScans;
+
+    /** V19 : copie du numéro vérifié vers lequel le virement a été fait. */
+    @Column(updatable = false, length = 13)
+    private String numeroReversement;
+
     protected ReversementJpaEntity() {
         // requis par JPA
     }
 
     ReversementJpaEntity(UUID id, UUID eventId, long montantFcfa, String reference, String motif,
-                         LocalDate reverseLe, UUID enregistrePar, Instant enregistreLe) {
+                         LocalDate reverseLe, UUID enregistrePar, Instant enregistreLe, String derogationScans,
+                         String numeroReversement) {
+        this.derogationScans = derogationScans;
+        this.numeroReversement = numeroReversement;
         this.id = id;
         this.eventId = eventId;
         this.montantFcfa = montantFcfa;
@@ -88,5 +99,13 @@ class ReversementJpaEntity {
 
     Instant getEnregistreLe() {
         return enregistreLe;
+    }
+
+    String getDerogationScans() {
+        return derogationScans;
+    }
+
+    String getNumeroReversement() {
+        return numeroReversement;
     }
 }

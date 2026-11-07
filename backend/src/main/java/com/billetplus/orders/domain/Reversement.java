@@ -17,6 +17,8 @@ public final class Reversement {
     public static final long MONTANT_MAX_FCFA = 1_000_000_000_000L;
     public static final int REFERENCE_MAX = 100;
     public static final int MOTIF_MAX = 255;
+    /** Une dérogation de scan se motive vraiment (ADR 0012) : pas d'un seul caractère. */
+    public static final int DEROGATION_MIN = 10;
 
     private final UUID id;
     private final UUID eventId;
@@ -26,9 +28,14 @@ public final class Reversement {
     private final LocalDate reverseLe;
     private final UUID enregistrePar;
     private final Instant enregistreLe;
+    /** Motif d'un reversement sans billet scanné (ADR 0012) ; null sinon. */
+    private final String derogationScans;
+    /** Numéro vérifié vers lequel le virement a été fait (ADR 0012) ; null pour une correction. */
+    private String numeroReversement;
 
     private Reversement(UUID id, UUID eventId, long montantFcfa, String reference, String motif,
-                        LocalDate reverseLe, UUID enregistrePar, Instant enregistreLe) {
+                        LocalDate reverseLe, UUID enregistrePar, Instant enregistreLe, String derogationScans) {
+        this.derogationScans = derogationScans;
         this.id = id;
         this.eventId = eventId;
         this.montantFcfa = montantFcfa;
@@ -46,6 +53,16 @@ public final class Reversement {
      */
     public static Reversement enregistrer(UUID eventId, long montantFcfa, String reference, String motif,
                                           LocalDate reverseLe, UUID enregistrePar, Instant maintenant) {
+        return enregistrer(eventId, montantFcfa, reference, motif, reverseLe, enregistrePar, maintenant, null);
+    }
+
+    /**
+     * @param derogationScans motif d'un virement sans billet scanné (entrée sans contrôle,
+     *                        ADR 0012) ; null ou vide sinon
+     */
+    public static Reversement enregistrer(UUID eventId, long montantFcfa, String reference, String motif,
+                                          LocalDate reverseLe, UUID enregistrePar, Instant maintenant,
+                                          String derogationScans) {
         if (eventId == null) {
             throw new IllegalArgumentException("L'événement est obligatoire");
         }
@@ -81,14 +98,23 @@ public final class Reversement {
         if (reverseLe.isAfter(LocalDate.ofInstant(maintenant, ZoneOffset.UTC))) {
             throw new IllegalArgumentException("La date du virement ne peut pas être dans le futur");
         }
+        String derogation = derogationScans == null || derogationScans.isBlank() ? null : derogationScans.trim();
+        if (derogation != null && derogation.length() < DEROGATION_MIN) {
+            throw new IllegalArgumentException("Motivez la dérogation en " + DEROGATION_MIN + " caractères au moins");
+        }
+        if (derogation != null && derogation.length() > MOTIF_MAX) {
+            throw new IllegalArgumentException("Le motif de la dérogation ne doit pas dépasser " + MOTIF_MAX + " caractères");
+        }
         return new Reversement(UUID.randomUUID(), eventId, montantFcfa, referenceNettoyee, motifNettoye, reverseLe,
-            enregistrePar, maintenant.truncatedTo(ChronoUnit.MICROS));
+            enregistrePar, maintenant.truncatedTo(ChronoUnit.MICROS), derogation);
     }
 
     /** Reconstruction depuis la persistance : l'état est supposé déjà valide en base. */
     public static Reversement reconstituer(UUID id, UUID eventId, long montantFcfa, String reference, String motif,
-                                           LocalDate reverseLe, UUID enregistrePar, Instant enregistreLe) {
-        return new Reversement(id, eventId, montantFcfa, reference, motif, reverseLe, enregistrePar, enregistreLe);
+                                           LocalDate reverseLe, UUID enregistrePar, Instant enregistreLe,
+                                           String derogationScans) {
+        return new Reversement(id, eventId, montantFcfa, reference, motif, reverseLe, enregistrePar, enregistreLe,
+            derogationScans);
     }
 
     public UUID getId() {
@@ -121,5 +147,19 @@ public final class Reversement {
 
     public Instant getEnregistreLe() {
         return enregistreLe;
+    }
+
+    public String getDerogationScans() {
+        return derogationScans;
+    }
+
+    public String getNumeroReversement() {
+        return numeroReversement;
+    }
+
+    /** Garde la trace du numéro vérifié vers lequel le virement a été fait (copie, pas une référence). */
+    public Reversement versLeNumero(String numero) {
+        this.numeroReversement = numero;
+        return this;
     }
 }

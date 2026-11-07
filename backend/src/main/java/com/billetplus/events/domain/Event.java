@@ -34,6 +34,10 @@ public class Event {
 
     private Instant termineLe;
 
+    /** Motif de la suspension par l'administrateur (ADR 0012, V19) ; null sinon. Événement alors ANNULE. */
+    @Column(length = 500)
+    private String suspenduMotif;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "venue_id", nullable = false)
     private Venue venue;
@@ -132,6 +136,31 @@ public class Event {
             throw new BusinessConflictException("L'événement est déjà annulé");
         }
         this.status = EventStatus.ANNULE;
+    }
+
+    /**
+     * Suspension par l'administrateur (ADR 0012, point 6) : annulation, avec son motif, que
+     * l'organisateur lit dans son espace. Mêmes effets qu'une annulation (EvenementAnnule).
+     *
+     * @throws IllegalArgumentException  (400) motif absent ou trop long
+     * @throws BusinessConflictException (409) événement déjà annulé ou terminé
+     */
+    public void suspendre(String motif) {
+        String m = motif == null ? null : motif.trim();
+        if (m == null || m.isEmpty() || m.length() > 500) {
+            throw new IllegalArgumentException("Le motif de la suspension est obligatoire (500 caractères au plus)");
+        }
+        annuler();
+        this.suspenduMotif = m;
+    }
+
+    /** Vrai si l'événement est encore à venir ou en cours de préparation : brouillon ou publié. */
+    public boolean estActif() {
+        return status == EventStatus.BROUILLON || status == EventStatus.PUBLIE;
+    }
+
+    public String getSuspenduMotif() {
+        return suspenduMotif;
     }
 
     /**
