@@ -120,7 +120,7 @@
 /* Bannière de l'événement : affiche en fond, titre par-dessus. */
 .banniere {
   position: relative;
-  height: 220px;
+  height: 280px;
   border-radius: var(--bp-radius-xl);
   overflow: hidden;
 }
@@ -135,30 +135,29 @@
 
 .banniereCategorie {
   display: inline-block;
-  margin-bottom: 8px;
-  padding: 3px 12px;
+  margin-bottom: 10px;
+  padding: 4px 12px;
   border-radius: 999px;
-  background: rgb(255 255 255 / 0.18);
+  background: var(--bp-amber);
+  color: var(--bp-ink);
   font-size: 13px;
   font-weight: 700;
 }
 
 .banniereTitre {
-  font-size: 32px;
-  letter-spacing: -0.03em;
+  font-size: clamp(36px, 9vw, 76px);
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+  text-wrap: balance;
 }
 
 @media (min-width: 720px) {
   .banniere {
-    height: 320px;
+    height: 440px;
   }
 
   .banniereTexte {
     padding: 64px 28px 26px;
-  }
-
-  .banniereTitre {
-    font-size: 46px;
   }
 }
 
