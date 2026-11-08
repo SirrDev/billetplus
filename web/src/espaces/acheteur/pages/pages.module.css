@@ -39,6 +39,12 @@
   font-size: 24px;
 }
 
+@media (min-width: 720px) {
+  .titreSection {
+    font-size: 30px;
+  }
+}
+
 /* Recherche + ville : empilées sur téléphone, sur une ligne dès 720 px (recherche extensible). */
 .recherche {
   flex: 1 1 280px;
@@ -47,13 +53,65 @@
   gap: 12px;
 }
 
+/* Deux colonnes seulement si le choix de ville est là (la liste des villes peut manquer). */
 @media (min-width: 720px) {
   .recherche:has(> :nth-child(2)) {
     grid-template-columns: minmax(0, 1fr) minmax(0, 200px);
   }
 }
 
-/* Deux colonnes seulement si le choix de ville est là (la liste des villes peut manquer). */
+/*
+ * Vitrine de « Découvrir » : bandeau de nuit pleine largeur (titre, recherche, filtres, une).
+ * Le fond déborde du conteneur par une ombre étendue rognée par clip-path : aucune largeur en
+ * 100vw, donc aucun défilement horizontal. En haut, il rejoint l'en-tête (marge du <main>).
+ */
+.vitrine {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-bottom: 36px;
+  background: var(--bp-night);
+  box-shadow: 0 0 0 100vmax var(--bp-night);
+  clip-path: inset(-32px -100vmax 0 -100vmax);
+  color: var(--bp-white);
+
+  /* Filtres clairs sur fond de nuit ; la pastille active passe à l'ambre. */
+  --filtre-fond: transparent;
+  --filtre-texte: var(--bp-white);
+  --filtre-bord: color-mix(in srgb, var(--bp-white) 30%, transparent);
+  --filtre-bord-survol: var(--bp-white);
+  --filtre-actif-fond: var(--bp-amber);
+  --filtre-actif-texte: var(--bp-ink);
+}
+
+.vitrine .titrePage {
+  font-size: clamp(48px, 13vw, 96px);
+  letter-spacing: -0.04em;
+  line-height: 0.92;
+}
+
+.vitrine .sousTitre {
+  margin-top: 10px;
+  color: var(--bp-amber-light);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.vitrine .entete {
+  padding-top: 8px;
+}
+
+@media (min-width: 720px) {
+  .vitrine {
+    gap: 32px;
+    padding-bottom: 56px;
+  }
+
+  .vitrine .entete {
+    padding-top: 24px;
+  }
+}
+
 .suite {
   display: flex;
   justify-content: center;
@@ -266,14 +324,33 @@
   }
 }
 
-/* Accueil : invitation des organisateurs, avant les atouts. */
+/* Accueil : invitation des organisateurs, avant les atouts. Bloc violet plein, action ambre. */
 .organisateurs {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 24px;
-  border: 1px solid var(--bp-line);
-  border-radius: var(--bp-radius-l);
+  gap: 20px;
+  padding: 28px 24px;
+  border-radius: var(--bp-radius-xl);
+  background: var(--bp-accent);
+  color: var(--bp-white);
+}
+
+.organisateurs .titreSection {
+  font-size: clamp(28px, 6vw, 40px);
+  letter-spacing: -0.03em;
+}
+
+.organisateurs .infoDetail {
+  max-width: 60ch;
+  margin-top: 10px;
+  color: var(--bp-accent-soft);
+  font-size: 16px;
+}
+
+@media (min-width: 720px) {
+  .organisateurs {
+    padding: 40px;
+  }
 }
 
 .organisateursActions {
