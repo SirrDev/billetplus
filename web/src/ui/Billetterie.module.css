@@ -185,8 +185,11 @@
   flex-direction: column;
 }
 
+/* Haut du billet en violet plein, comme un billet de concert ; le QR reste sur blanc (lecture). */
 .passeHaut {
-  padding: 20px 22px 16px;
+  padding: 22px 22px 20px;
+  background: var(--bp-accent);
+  color: var(--bp-white);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -202,13 +205,16 @@
 .categorie {
   padding: 5px 10px;
   border-radius: 999px;
-  background: var(--bp-accent-soft);
+  background: var(--bp-white);
   color: var(--bp-accent-ink);
   font-weight: 700;
   font-size: 13px;
 }
 
 .statut {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bp-white);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -225,11 +231,14 @@
 }
 
 .passeTitre {
-  font-size: 24px;
+  margin-top: 6px;
+  font-size: 28px;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
 }
 
 .passeSous {
-  color: var(--bp-ink-2);
+  color: var(--bp-accent-soft);
   font-size: 15px;
 }
 
@@ -292,4 +301,9 @@
 .consigne {
   color: var(--bp-ink-2);
   font-size: 14px;
+}
+
+/* Billet qui ne permet plus d'entrer (utilisé, annulé, transféré) : haut gris, plus de violet. */
+.passe:has(.statutInactif) .passeHaut {
+  background: var(--bp-ink-2);
 }

@@ -35,7 +35,10 @@ function versResume(e: EvenementPublic): ResumeEvenement {
 }
 
 type Filtre = CategorieEvenement | 'TOUT';
-const FILTRES: ReadonlyArray<{ valeur: Filtre; libelle: string }> = [{ valeur: 'TOUT', libelle: 'Tout' }, ...CATEGORIES];
+const FILTRES: ReadonlyArray<{ valeur: Filtre; libelle: string }> = [
+  { valeur: 'TOUT', libelle: 'Tout' },
+  ...CATEGORIES,
+];
 
 const AVANTAGES: ReadonlyArray<{ icone: NomIcone; titre: string; texte: string }> = [
   { icone: 'mobile', titre: 'Sans compte', texte: 'Votre numéro de mobile suffit pour acheter.' },
@@ -101,31 +104,35 @@ export function DecouvrirPage() {
   return (
     <Cadre>
       <div className={s.pile}>
-        <div className={s.entete}>
-          <div>
-            <h1 className={s.titrePage}>Découvrir</h1>
-            <p className={s.sousTitre}>{nomVille ?? "Afrique de l'Ouest"}</p>
-          </div>
-          <div className={s.recherche}>
-            <ChampRecherche
-              valeur={saisie}
-              onChange={setSaisie}
-              libelle="Rechercher un événement"
-              placeholder="Concert, match, conférence…"
-            />
-            {villes !== null && villes.length > 0 && (
-              <ChampChoix
-                libelle="Ville"
-                libelleMasque
-                options={optionsVilles(villes, 'Toutes les villes')}
-                valeur={ville}
-                onChange={setVille}
+        <div className={s.vitrine}>
+          <div className={s.entete}>
+            <div>
+              <h1 className={s.titrePage}>Découvrir</h1>
+              <p className={s.sousTitre}>{nomVille ?? "Afrique de l'Ouest"}</p>
+            </div>
+            <div className={s.recherche}>
+              <ChampRecherche
+                valeur={saisie}
+                onChange={setSaisie}
+                libelle="Rechercher un événement"
+                placeholder="Concert, match, conférence…"
               />
-            )}
+              {villes !== null && villes.length > 0 && (
+                <ChampChoix
+                  libelle="Ville"
+                  libelleMasque
+                  options={optionsVilles(villes, 'Toutes les villes')}
+                  valeur={ville}
+                  onChange={setVille}
+                />
+              )}
+            </div>
           </div>
-        </div>
 
-        <Filtres libelle="Catégories d'événements" options={FILTRES} valeur={filtre} onChange={setFiltre} />
+          <Filtres libelle="Catégories d'événements" options={FILTRES} valeur={filtre} onChange={setFiltre} />
+
+          {aLaUne && <EvenementALaUne evenement={versResume(aLaUne)} vers={`/evenements/${aLaUne.id}`} />}
+        </div>
 
         {erreur && (
           <Avis ton="danger">
@@ -137,8 +144,6 @@ export function DecouvrirPage() {
             </div>
           </Avis>
         )}
-
-        {aLaUne && <EvenementALaUne evenement={versResume(aLaUne)} vers={`/evenements/${aLaUne.id}`} />}
 
         {!erreur && !chargement && evenements.length === 0 && (
           <EtatVide
@@ -190,12 +195,14 @@ export function DecouvrirPage() {
               Vous organisez un événement ?
             </h2>
             <p className={s.infoDetail}>
-              Vendez vos billets avec Billet+ : paiement Wave et Orange Money, billets à QR code infalsifiable, tableau de
-              bord des ventes et contrôle d'entrée, même sans réseau.
+              Vendez vos billets avec Billet+ : paiement Wave et Orange Money, billets à QR code infalsifiable, tableau
+              de bord des ventes et contrôle d'entrée, même sans réseau.
             </p>
           </div>
           <div className={s.organisateursActions}>
-            <BoutonLien to="/organisateur/inscription">Créer mon compte organisateur</BoutonLien>
+            <BoutonLien to="/organisateur/inscription" variante="festif">
+              Créer mon compte organisateur
+            </BoutonLien>
             <BoutonLien to="/organisateur/connexion" variante="secondaire">
               Se connecter
             </BoutonLien>

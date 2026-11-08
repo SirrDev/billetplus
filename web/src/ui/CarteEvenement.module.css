@@ -1,7 +1,12 @@
+/*
+ * Cartes et « À l'affiche » dessinées comme des billets : affiche, perforation en pointillés
+ * avec deux encoches, puis talon daté. Les encoches prennent la couleur du fond sur lequel
+ * le billet est posé (--entaille), pour paraître découpées.
+ */
 .grille {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  gap: 20px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -10,7 +15,7 @@
 @media (min-width: 720px) {
   .grille {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 24px;
+    gap: 28px 24px;
   }
 }
 
@@ -21,6 +26,7 @@
 }
 
 .carte {
+  --entaille: var(--bp-white);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -30,12 +36,259 @@
   background: var(--bp-white);
   color: var(--bp-ink);
   text-decoration: none;
-  transition: border-color 120ms ease, transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    border-color 120ms ease,
+    box-shadow 200ms ease,
+    transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .carte:hover {
   border-color: var(--bp-line-strong);
   color: var(--bp-ink);
+  box-shadow: 0 14px 28px -18px color-mix(in srgb, var(--bp-night) 45%, transparent);
+}
+
+.carteAffiche {
+  position: relative;
+  height: 176px;
+}
+
+/* Catégorie posée sur l'affiche, comme un tampon. */
+.etiquette {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: var(--bp-white);
+  color: var(--bp-ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.carteCorps {
+  position: relative;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  border-top: 2px dashed var(--bp-line-strong);
+}
+
+/* Les deux encoches de la perforation, coupées à moitié par le bord de la carte. */
+.carteCorps::before,
+.carteCorps::after {
+  content: '';
+  position: absolute;
+  top: -12px;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--bp-line);
+  border-radius: 50%;
+  background: var(--entaille);
+}
+
+.carteCorps::before {
+  left: -12px;
+}
+
+.carteCorps::after {
+  right: -12px;
+}
+
+.talon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 0 16px;
+  border-right: 2px dashed var(--bp-line);
+}
+
+.talonJour {
+  font-family: var(--bp-font-display);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--bp-accent-text);
+}
+
+.talonMois {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--bp-ink-2);
+}
+
+.carteInfos {
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.titre {
+  font-size: 20px;
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+.lieu {
+  color: var(--bp-ink-2);
+  font-size: 15px;
+}
+
+.heure {
+  margin-top: 2px;
+  color: var(--bp-accent-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/*
+ * Grande carte « À l'affiche » : un billet géant posé sur la vitrine de nuit. Affiche puis
+ * corps ambre ; perforation horizontale sur téléphone, verticale dès 720 px.
+ */
+.une {
+  --entaille: var(--bp-night);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border-radius: var(--bp-radius-xl);
+  overflow: hidden;
+  background: var(--bp-amber);
+  color: var(--bp-ink);
+}
+
+.uneAffiche {
+  position: relative;
+  min-height: 220px;
+}
+
+.pastille {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--bp-amber);
+  color: var(--bp-ink);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.uneCorps {
+  position: relative;
+  padding: 28px 24px 26px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  border-top: 3px dashed color-mix(in srgb, var(--bp-ink) 35%, transparent);
+}
+
+.uneCorps::before,
+.uneCorps::after {
+  content: '';
+  position: absolute;
+  top: -15px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--entaille);
+}
+
+.uneCorps::before {
+  left: -15px;
+}
+
+.uneCorps::after {
+  right: -15px;
+}
+
+/* Talon de la une : la date en très grand, dans le coin, comme sur un billet de concert. */
+.uneTalon {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--bp-ink);
+}
+
+.uneTalon .talonJour {
+  font-size: 44px;
+  color: var(--bp-ink);
+}
+
+.uneTalon .talonMois {
+  color: var(--bp-ink);
+}
+
+.uneDate {
+  padding-right: 72px;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.uneTitre {
+  font-size: clamp(36px, 9vw, 64px);
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+.uneLieu {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.uneCorps > :last-child {
+  margin-top: 8px;
+}
+
+@media (min-width: 720px) {
+  .une {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  }
+
+  .uneAffiche {
+    min-height: 380px;
+  }
+
+  .uneCorps {
+    padding: 44px 40px;
+    border-top: 0;
+    border-left: 3px dashed color-mix(in srgb, var(--bp-ink) 35%, transparent);
+  }
+
+  .uneCorps::before,
+  .uneCorps::after {
+    left: -15px;
+    right: auto;
+  }
+
+  .uneCorps::before {
+    top: -15px;
+  }
+
+  .uneCorps::after {
+    top: auto;
+    bottom: -15px;
+  }
+
+  .uneTalon {
+    top: 32px;
+    right: 32px;
+  }
+
+  .uneTalon .talonJour {
+    font-size: 56px;
+  }
 }
 
 /*
@@ -45,18 +298,28 @@
  */
 @media (prefers-reduced-motion: no-preference) {
   .carte:hover {
-    transform: translateY(-3px);
+    transform: translateY(-4px);
   }
 
   .grille > li {
     animation: monte 520ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
   }
 
-  .grille > li:nth-child(2) { animation-delay: 60ms; }
-  .grille > li:nth-child(3) { animation-delay: 120ms; }
-  .grille > li:nth-child(4) { animation-delay: 180ms; }
-  .grille > li:nth-child(5) { animation-delay: 240ms; }
-  .grille > li:nth-child(n + 6) { animation-delay: 300ms; }
+  .grille > li:nth-child(2) {
+    animation-delay: 60ms;
+  }
+  .grille > li:nth-child(3) {
+    animation-delay: 120ms;
+  }
+  .grille > li:nth-child(4) {
+    animation-delay: 180ms;
+  }
+  .grille > li:nth-child(5) {
+    animation-delay: 240ms;
+  }
+  .grille > li:nth-child(n + 6) {
+    animation-delay: 300ms;
+  }
 
   .uneAffiche > :first-child {
     animation: pose 900ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
@@ -76,112 +339,3 @@
     transform: scale(1.06);
   }
 }
-
-.carteAffiche {
-  height: 168px;
-}
-
-.carteCorps {
-  padding: 16px 18px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.date {
-  color: var(--bp-accent-text);
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.titre {
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.lieu {
-  color: var(--bp-ink-2);
-  font-size: 15px;
-}
-
-/* Grande carte « à l'affiche » : empilée sur mobile, affiche et texte côte à côte dès 720 px. */
-.une {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  border-radius: var(--bp-radius-xl);
-  overflow: hidden;
-  background: var(--bp-ink);
-  color: var(--bp-white);
-}
-
-.uneAffiche {
-  position: relative;
-  min-height: 220px;
-}
-
-.pastille {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: var(--bp-amber);
-  color: var(--bp-ink);
-  font-weight: 700;
-  font-size: 13px;
-}
-
-.uneCorps {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 14px;
-}
-
-.uneDate {
-  color: var(--bp-amber-light);
-  font-weight: 600;
-  font-size: 15px;
-}
-
-.uneTitre {
-  font-size: 34px;
-  letter-spacing: -0.03em;
-  line-height: 1.02;
-}
-
-.uneLieu {
-  color: var(--bp-dark-text);
-  font-size: 16px;
-}
-
-@media (min-width: 720px) {
-  .une {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .uneAffiche {
-    min-height: 340px;
-  }
-
-  .uneCorps {
-    padding: 40px;
-  }
-
-  .uneTitre {
-    font-size: 48px;
-  }
-}
-
-/* Catégorie de l'événement, au-dessus de la date. */
-.etiquette {
-  align-self: flex-start;
-  padding: 2px 10px;
-  border-radius: 999px;
-  background: var(--bp-surface);
-  color: var(--bp-ink-2);
-  font-size: 12px;
-  font-weight: 700;
-}
-
