@@ -241,18 +241,13 @@
 }
 
 /*
- * Pied de page public : bandeau de nuit, comme la vitrine de « Découvrir ». Sur téléphone,
- * il passe au-dessus de la barre de navigation basse (marge du bas) et le <main> n'a plus
- * besoin de la réserver.
+ * Pied de page public : bandeau de nuit, comme la vitrine de « Découvrir ». Masqué sur
+ * téléphone, comme le pied privé : la barre de navigation basse suffit.
  */
-.site:has(.piedPublic) .principal {
-  padding-bottom: 48px;
-}
-
 .piedPublic {
+  display: none;
   background: var(--bp-night);
   color: var(--bp-dark-text);
-  padding-bottom: calc(80px + env(safe-area-inset-bottom));
 }
 
 .piedPublicInterieur {
@@ -347,7 +342,7 @@
 
 @media (min-width: 720px) {
   .piedPublic {
-    padding-bottom: 0;
+    display: block;
   }
 
   .site:has(.piedPublic) .principal {
