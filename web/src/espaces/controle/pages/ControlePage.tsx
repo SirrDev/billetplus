@@ -2,7 +2,17 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { formatDateCourte } from '@/commun/format';
 import { ApiError } from '@/commun/http';
-import { Avis, Bouton, BoutonLien, CompteursControle, EcranControle, Icone, PanneauVerdict, Viseur } from '@/ui';
+import {
+  Avis,
+  Bouton,
+  BoutonLien,
+  CompteursControle,
+  EcranControle,
+  Icone,
+  LienRetour,
+  PanneauVerdict,
+  Viseur,
+} from '@/ui';
 import { lireEvenement, scanner, type EvenementControle } from '../api';
 import { decider, type Verdict } from '../decision';
 import {
@@ -214,6 +224,7 @@ function PosteControle({ eventId: id, onNonAffecte }: { eventId: string; onNonAf
 
   return (
     <EcranControle>
+      <LienRetour to="/scanner">Changer d'événement</LienRetour>
       <div className={s.enTeteSombre}>
         <div>
           <p>{evenement ? `${formatDateCourte(evenement.debuteLe)} · ${evenement.venueNom}` : "Contrôle d'entrée"}</p>

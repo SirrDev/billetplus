@@ -13,7 +13,7 @@ export {
   SelecteurQuantite,
   type LigneRecap,
 } from './Billetterie';
-export { Bouton, BoutonLien } from './Bouton';
+export { Bouton, BoutonLien, LienRetour } from './Bouton';
 export { Cadre } from './Cadre';
 export { CompteursControle, EcranControle, PanneauVerdict, Viseur } from './Controle';
 export { CarteEvenement, EvenementALaUne, GrilleEvenements, type ResumeEvenement } from './CarteEvenement';
