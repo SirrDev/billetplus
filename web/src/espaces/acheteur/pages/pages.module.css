@@ -48,11 +48,12 @@
 }
 
 @media (min-width: 720px) {
-  .recherche {
+  .recherche:has(> :nth-child(2)) {
     grid-template-columns: minmax(0, 1fr) minmax(0, 200px);
   }
 }
 
+/* Deux colonnes seulement si le choix de ville est là (la liste des villes peut manquer). */
 .suite {
   display: flex;
   justify-content: center;
