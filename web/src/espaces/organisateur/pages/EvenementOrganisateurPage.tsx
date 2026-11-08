@@ -11,6 +11,7 @@ import {
   Chargement,
   EtatVide,
   Indicateur,
+  LienRetour,
   Indicateurs,
   Panneau,
   Pastille,
@@ -174,6 +175,7 @@ export function EvenementOrganisateurPage() {
   return (
     <CadreOrganisateur>
       <div className={s.pile}>
+        <LienRetour to="/organisateur">Mes événements</LienRetour>
         <div className={s.entete}>
           <div>
             <h1 className={s.titrePage}>{evenement.titre}</h1>

@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Link, type LinkProps } from 'react-router-dom';
+import { Icone } from './Icone';
 import s from './Bouton.module.css';
 
 type Variante = 'principal' | 'secondaire' | 'festif';
@@ -38,5 +39,17 @@ export function BoutonLien({
     <Link className={classes({ variante, grand, pleineLargeur }, className)} {...reste}>
       {children}
     </Link>
+  );
+}
+
+/** Retour à l'écran précédent du parcours : lien secondaire avec flèche, seul sur sa ligne. */
+export function LienRetour({ children, ...reste }: LinkProps & { children: ReactNode }) {
+  return (
+    <div>
+      <BoutonLien variante="secondaire" {...reste}>
+        <Icone nom="retour" />
+        {children}
+      </BoutonLien>
+    </div>
   );
 }

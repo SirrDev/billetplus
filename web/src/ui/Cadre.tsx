@@ -114,13 +114,76 @@ export function Cadre({
       <main id="contenu" tabIndex={-1} className={[s.principal, etroit && s.etroit].filter(Boolean).join(' ')}>
         {children}
       </main>
-      <footer className={s.pied}>
-        <div className={s.piedInterieur}>
-          <span>Billet+ · Billetterie événementielle, Dakar</span>
-          {espacePublic && <Link to="/organisateur/inscription">Vendre ses billets avec Billet+</Link>}
-          <span>Paiement Wave et Orange Money</span>
-        </div>
-      </footer>
+      {espacePublic ? (
+        <PiedPublic />
+      ) : (
+        <footer className={s.pied}>
+          <div className={s.piedInterieur}>
+            <span>Billet+ · Billetterie événementielle, Dakar</span>
+            <span>Paiement Wave et Orange Money</span>
+          </div>
+        </footer>
+      )}
     </div>
+  );
+}
+
+/**
+ * Pied de page de l'espace public, à toutes les tailles : marque, liens utiles, moyens de
+ * paiement. Les libellés diffèrent de ceux de l'en-tête (pas deux liens au même nom).
+ */
+function PiedPublic() {
+  return (
+    <footer className={s.piedPublic}>
+      <div className={s.piedPublicInterieur}>
+        <div className={s.piedMarque}>
+          <span className={s.logoMarque} aria-hidden="true">
+            B+
+          </span>
+          <div>
+            <p className={s.piedNom}>Billet+</p>
+            <p className={s.piedAccroche}>Billetterie événementielle, Dakar</p>
+          </div>
+        </div>
+        <nav aria-label="Liens du pied de page" className={s.piedColonnes}>
+          <div>
+            <p className={s.piedTitre}>Acheter</p>
+            <ul className={s.piedListe}>
+              <li>
+                <Link to="/">Tous les événements</Link>
+              </li>
+              <li>
+                <Link to="/billets">Retrouver mes billets</Link>
+              </li>
+              <li>
+                <Link to="/aide">Questions fréquentes</Link>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <p className={s.piedTitre}>Organiser</p>
+            <ul className={s.piedListe}>
+              <li>
+                <Link to="/organisateur/inscription">Vendre ses billets avec Billet+</Link>
+              </li>
+              <li>
+                <Link to="/organisateur">Espace organisateur</Link>
+              </li>
+              <li>
+                <Link to="/scanner">Contrôler les entrées</Link>
+              </li>
+            </ul>
+          </div>
+        </nav>
+        <div>
+          <p className={s.piedTitre}>Paiement</p>
+          <p className={s.piedMoyens}>
+            <span className={s.piedMoyen}>Wave</span>
+            <span className={s.piedMoyen}>Orange Money</span>
+          </p>
+        </div>
+      </div>
+      <p className={s.piedBas}>© {new Date().getFullYear()} Billet+ · Dakar, Sénégal</p>
+    </footer>
   );
 }

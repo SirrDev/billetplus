@@ -4,7 +4,7 @@ import { useSession } from '@/commun/auth';
 import { CLE_LISTE_CONTROLE } from '@/commun/session';
 import { formatDateCourte } from '@/commun/format';
 import { ApiError, messageErreur } from '@/commun/http';
-import { Affiche, Avis, Chargement, EtatVide, Icone } from '@/ui';
+import { Affiche, Avis, Chargement, EtatVide, Icone, LienRetour } from '@/ui';
 import { evenementsAffectes, evenementsDeLOrganisateur, type EvenementControle } from '../api';
 import { CadreControle } from './CadreControle';
 import s from './controle.module.css';
@@ -77,6 +77,7 @@ export function ChoixEvenementPage() {
   return (
     <CadreControle>
       <div className={s.pile}>
+        {organisateur && <LienRetour to="/organisateur">Retour à mon espace</LienRetour>}
         <div>
           <h1 className={s.titrePage}>Événement à contrôler</h1>
           <p className={s.sousTitre}>Connecté : {utilisateur?.nomComplet}</p>

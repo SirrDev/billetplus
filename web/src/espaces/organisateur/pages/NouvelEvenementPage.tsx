@@ -4,7 +4,7 @@ import { CATEGORIES, type CategorieEvenement } from '@/commun/categories';
 import { heureDakarVersInstant } from '@/commun/format';
 import { messageErreur } from '@/commun/http';
 import { optionsVilles, paysDeLaVille, useVilles } from '@/commun/villes';
-import { Avis, Bouton, ChampChoix, ChampTexte, Panneau } from '@/ui';
+import { Avis, Bouton, BoutonLien, ChampChoix, ChampTexte, LienRetour, Panneau } from '@/ui';
 import { creerEvenement, creerLieu, LIMITES, lireCoordonnees } from '../api';
 import { CadreOrganisateur } from './CadreOrganisateur';
 import { CartePosition } from './CartePosition';
@@ -73,6 +73,7 @@ export function NouvelEvenementPage() {
   return (
     <CadreOrganisateur etroit>
       <div className={s.pile}>
+        <LienRetour to="/organisateur">Mes événements</LienRetour>
         <div>
           <h1 className={s.titrePage}>Nouvel événement</h1>
           <p className={s.sousTitre}>Brouillon, invisible du public jusqu'à sa publication</p>
@@ -159,9 +160,14 @@ export function NouvelEvenementPage() {
               <p>{erreur}</p>
             </Avis>
           )}
-          <Bouton type="submit" grand disabled={envoi}>
-            {envoi ? 'Création…' : 'Créer le brouillon'}
-          </Bouton>
+          <div className={s.actions}>
+            <Bouton type="submit" grand disabled={envoi}>
+              {envoi ? 'Création…' : 'Créer le brouillon'}
+            </Bouton>
+            <BoutonLien to="/organisateur" variante="secondaire" grand>
+              Annuler
+            </BoutonLien>
+          </div>
         </form>
       </div>
     </CadreOrganisateur>

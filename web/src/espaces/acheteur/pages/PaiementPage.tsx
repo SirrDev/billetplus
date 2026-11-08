@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { estMobileSenegalais, formatDateCourte, versE164 } from '@/commun/format';
 import { messageErreur } from '@/commun/http';
-import { Avis, Bouton, Cadre, ChampTelephone, Chargement, Panneau, Recapitulatif } from '@/ui';
+import { Avis, Bouton, BoutonLien, Cadre, ChampTelephone, Chargement, LienRetour, Panneau, Recapitulatif } from '@/ui';
 import { creerCommande, creerEntreeLibre, ouvrirPaiement, type MoyenPaiement } from '../api';
 import { enregistrerCommande, verifierStockage } from '../commandesLocales';
 import { ChoixMoyen, Etapes } from './paiement';
@@ -130,6 +130,11 @@ export function PaiementPage() {
     <Cadre sansNav etroit fondGris>
       <div className={s.pile}>
         <Etapes courante={2} gratuit={gratuite} />
+        {!envoi && (
+          <LienRetour to={`/evenements/${id}`} state={{ quantites }}>
+            Modifier mes billets
+          </LienRetour>
+        )}
         <div className={s.formulaireEtAside}>
           <Panneau>
             <form className={s.formulaire} onSubmit={payer} noValidate>
@@ -161,6 +166,12 @@ export function PaiementPage() {
                     ? 'Redirection vers le paiement…'
                     : `Payer avec ${nomDuMoyen(moyen)}`}
               </Bouton>
+              {/* Aucune commande n'existe avant l'envoi : annuler, c'est revenir à l'événement sans sélection. */}
+              {!envoi && (
+                <BoutonLien to={`/evenements/${id}`} variante="secondaire" pleineLargeur>
+                  Annuler
+                </BoutonLien>
+              )}
             </form>
           </Panneau>
 

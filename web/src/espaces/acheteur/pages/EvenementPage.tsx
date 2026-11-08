@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { libelleCategorie } from '@/commun/categories';
 import { formatDateLongue, formatFcfa, formatHeure, majusculeInitiale } from '@/commun/format';
 import { libelleVille } from '@/commun/villes';
@@ -10,6 +10,7 @@ import {
   Bouton,
   BoutonLien,
   Cadre,
+  LienRetour,
   Chargement,
   EtatVide,
   Icone,
@@ -24,7 +25,9 @@ export function EvenementPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const chargement = useEvenement(id);
-  const [quantites, setQuantites] = useState<Quantites>({});
+  // Retour depuis le paiement (« Modifier mes billets ») : la sélection revient avec la navigation.
+  const selectionPrecedente = (useLocation().state as EtatNavigationPaiement | null)?.quantites;
+  const [quantites, setQuantites] = useState<Quantites>(selectionPrecedente ?? {});
 
   if (chargement.etat === 'chargement') {
     return (
@@ -82,6 +85,7 @@ export function EvenementPage() {
   return (
     <Cadre fondGris>
       <div className={s.pile}>
+        <LienRetour to="/">Tous les événements</LienRetour>
         <div className={s.banniere}>
           <Affiche id={evenement.id} />
           <div className={s.banniereTexte}>

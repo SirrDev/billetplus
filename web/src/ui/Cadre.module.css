@@ -239,3 +239,124 @@
     clip: auto;
   }
 }
+
+/*
+ * Pied de page public : bandeau de nuit, comme la vitrine de « Découvrir ». Sur téléphone,
+ * il passe au-dessus de la barre de navigation basse (marge du bas) et le <main> n'a plus
+ * besoin de la réserver.
+ */
+.site:has(.piedPublic) .principal {
+  padding-bottom: 48px;
+}
+
+.piedPublic {
+  background: var(--bp-night);
+  color: var(--bp-dark-text);
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+}
+
+.piedPublicInterieur {
+  max-width: var(--bp-content-max);
+  margin: 0 auto;
+  padding: 40px var(--bp-gutter) 28px;
+  display: grid;
+  gap: 32px;
+}
+
+.piedMarque {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.piedNom {
+  font-family: var(--bp-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--bp-white);
+}
+
+.piedAccroche {
+  font-size: 14px;
+}
+
+.piedColonnes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.piedTitre {
+  margin-bottom: 10px;
+  color: var(--bp-amber-light);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.piedListe {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+}
+
+/* Cible de 44 px sur téléphone, sans changer la mise en page. */
+.piedListe a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--bp-white);
+  font-size: 15px;
+  text-decoration: none;
+  border-radius: 6px;
+}
+
+.piedListe a:hover {
+  text-decoration: underline;
+}
+
+.piedMoyens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.piedMoyen {
+  padding: 6px 12px;
+  border: 1px solid var(--bp-dark-line);
+  border-radius: 999px;
+  color: var(--bp-white);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.piedBas {
+  /* Filet aligné sur le texte : la largeur retire les gouttières au lieu de les mettre en padding. */
+  width: calc(100% - 2 * var(--bp-gutter));
+  max-width: calc(var(--bp-content-max) - 2 * var(--bp-gutter));
+  margin: 0 auto;
+  padding: 18px 0 24px;
+  border-top: 1px solid var(--bp-dark-line);
+  color: var(--bp-dark-text-2);
+  font-size: 13px;
+}
+
+@media (min-width: 720px) {
+  .piedPublic {
+    padding-bottom: 0;
+  }
+
+  .site:has(.piedPublic) .principal {
+    padding-bottom: 64px;
+  }
+
+  .piedPublicInterieur {
+    padding-top: 56px;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}

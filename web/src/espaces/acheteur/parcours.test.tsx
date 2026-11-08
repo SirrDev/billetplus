@@ -111,6 +111,25 @@ describe('Découvrir', () => {
 });
 
 describe('Achat', () => {
+  it('revient du paiement au choix des billets sans perdre la sélection, ou annule', async () => {
+    backend({
+      'GET /api/events/e1/categories': () => CATEGORIES,
+      'GET /api/events/e1': () => EVENEMENT,
+    });
+    ouvrir('/evenements/e1');
+    const plus = await screen.findByRole('button', { name: 'Ajouter un billet Standard' });
+    await userEvent.click(plus);
+    await userEvent.click(plus);
+    await userEvent.click(screen.getByRole('button', { name: 'Continuer vers le paiement' }));
+
+    await userEvent.click(await screen.findByRole('link', { name: 'Modifier mes billets' }));
+    expect(espaces(screen.getByText(/billets · total/).nextElementSibling?.textContent ?? '')).toBe('10 000 FCFA');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Continuer vers le paiement' }));
+    await userEvent.click(await screen.findByRole('link', { name: 'Annuler' }));
+    expect(await screen.findByRole('button', { name: 'Continuer vers le paiement' })).toBeDisabled();
+  });
+
   it("choisit des billets, crée la commande, garde le jeton sur l'appareil et part payer", async () => {
     const appels = backend({
       'GET /api/events/e1/categories': () => CATEGORIES,
