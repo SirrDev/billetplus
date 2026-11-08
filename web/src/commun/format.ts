@@ -55,6 +55,14 @@ export function formatDateCourte(valeur: string | Date): string {
   return `${DATE_COURTE.format(enDate(valeur))} · ${formatHeure(valeur)}`;
 }
 
+const PARTIES = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, weekday: 'short', day: '2-digit', month: 'short' });
+
+/** Talon d'un billet : { jour: '14', mois: 'nov.', jourSemaine: 'sam.' }, heure de Dakar. */
+export function partiesDate(valeur: string | Date): { jour: string; mois: string; jourSemaine: string } {
+  const p = Object.fromEntries(PARTIES.formatToParts(enDate(valeur)).map((x) => [x.type, x.value]));
+  return { jour: p.day ?? '', mois: p.month ?? '', jourSemaine: p.weekday ?? '' };
+}
+
 /** « samedi 14 novembre 2026 » */
 export function formatDateLongue(valeur: string | Date): string {
   return DATE_LONGUE.format(enDate(valeur));

@@ -1,4 +1,5 @@
 import {
+  partiesDate,
   chiffresNationaux,
   estMobileSenegalais,
   formatCompteARebours,
@@ -79,5 +80,12 @@ describe('numéros sénégalais', () => {
     expect(formatMobile('7712')).toBe('77 12');
     expect(formatMobile('771234567')).toBe('77 123 45 67');
     expect(versE164('77 123 45 67')).toBe('+221771234567');
+  });
+});
+
+describe('partiesDate', () => {
+  it("découpe la date du talon à l'heure de Dakar, même juste avant minuit UTC", () => {
+    expect(partiesDate('2026-11-14T23:30:00Z')).toEqual({ jour: '14', mois: 'nov.', jourSemaine: 'sam.' });
+    expect(partiesDate('2026-11-08T20:00:00Z')).toEqual({ jour: '08', mois: 'nov.', jourSemaine: 'dim.' });
   });
 });

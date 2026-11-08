@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { formatDateCourte } from '@/commun/format';
+import { formatDateCourte, formatHeure, majusculeInitiale, partiesDate } from '@/commun/format';
 import { Affiche } from './Affiche';
 import { BoutonLien } from './Bouton';
 import s from './CarteEvenement.module.css';
@@ -23,19 +23,40 @@ export function GrilleEvenements({ children, libelle }: { children: ReactNode; l
   );
 }
 
-/** Une carte de la grille. À placer dans GrilleEvenements (elle rend un <li>). */
+/**
+ * Talon daté d'un billet (jour en grand, mois dessous). Décoratif pour les lecteurs d'écran :
+ * la date complète est lue dans le texte masqué qui l'accompagne.
+ */
+function Talon({ debuteLe, className }: { debuteLe: string; className: string | undefined }) {
+  const { jour, mois } = partiesDate(debuteLe);
+  return (
+    <span className={className} aria-hidden="true">
+      <span className={s.talonJour}>{jour}</span>
+      <span className={s.talonMois}>{mois.replace('.', '')}</span>
+    </span>
+  );
+}
+
+/** Une carte de la grille, dessinée comme un billet. À placer dans GrilleEvenements (elle rend un <li>). */
 export function CarteEvenement({ evenement, vers }: { evenement: ResumeEvenement; vers: string }) {
+  const { jourSemaine } = partiesDate(evenement.debuteLe);
   return (
     <li>
       <Link to={vers} className={s.carte}>
         <div className={s.carteAffiche}>
           <Affiche id={evenement.id} />
+          {evenement.categorie && <span className={s.etiquette}>{evenement.categorie}</span>}
         </div>
         <div className={s.carteCorps}>
-          {evenement.categorie && <span className={s.etiquette}>{evenement.categorie}</span>}
-          <span className={s.date}>{formatDateCourte(evenement.debuteLe)}</span>
-          <h3 className={s.titre}>{evenement.titre}</h3>
-          <span className={s.lieu}>{evenement.lieu}</span>
+          <Talon debuteLe={evenement.debuteLe} className={s.talon} />
+          <div className={s.carteInfos}>
+            <span className="visually-hidden">{formatDateCourte(evenement.debuteLe)}</span>
+            <h3 className={s.titre}>{evenement.titre}</h3>
+            <span className={s.lieu}>{evenement.lieu}</span>
+            <span className={s.heure} aria-hidden="true">
+              {majusculeInitiale(jourSemaine)} · {formatHeure(evenement.debuteLe)}
+            </span>
+          </div>
         </div>
       </Link>
     </li>
@@ -52,6 +73,7 @@ export function EvenementALaUne({ evenement, vers }: { evenement: ResumeEvenemen
         <span className={s.pastille}>À l'affiche</span>
       </div>
       <div className={s.uneCorps}>
+        <Talon debuteLe={evenement.debuteLe} className={s.uneTalon} />
         <p className={s.uneDate}>{formatDateCourte(evenement.debuteLe)}</p>
         <h2 id={idTitre} className={s.uneTitre}>
           {evenement.titre}
